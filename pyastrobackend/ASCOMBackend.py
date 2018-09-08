@@ -93,7 +93,7 @@ class Camera(BaseCamera):
         Returns
         -------
         image_data : numpy array
-            Data is in traditional column first/row second format!
+            Data is in row-major format!
         """
         # FIXME Is this best way to determine data type from camera??
         maxadu =  self.cam.MaxADU
@@ -103,12 +103,12 @@ class Camera(BaseCamera):
             logging.error(f'Unknown MAXADU {maxadu} in getImageData!!')
             return None
 
-        image_data = np.array(self.cam.ImageArray, dtype=out_dtype)
+        # Transpose to get into row-major
+        image_data = np.array(self.cam.ImageArray, dtype=out_dtype).T
 
         logging.info(f'in backend image shape is {image_data.shape}')
 
-        # FIXME is this what we want (in order to return it in more trad col-row)
-        return image_data.T
+        return image_data
 
 #    def saveimageCamera(self, path):
 #        # FIXME make better temp name
