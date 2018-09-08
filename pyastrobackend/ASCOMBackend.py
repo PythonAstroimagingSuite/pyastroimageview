@@ -188,6 +188,18 @@ class Camera(BaseCamera):
 #        return self.cam.Connected
 
 class Focuser(BaseFocuser):
+    def __init__(self):
+        self.focus = None
+
+    def show_chooser(self, last_choice):
+        logging.info("showFocuserChooser main thread")
+        logging.info("showFocsuerChooser - calling CoInitialize()")
+        pythoncom.CoInitialize()
+        chooser = win32com.client.Dispatch("ASCOM.Utilities.Chooser")
+        chooser.DeviceType="Focuser"
+        focuser = chooser.Choose(last_choice)
+        logging.info(f'choice = {focuser}')
+        return focuser
 
     def connect(self, name):
         if self.mainThread:

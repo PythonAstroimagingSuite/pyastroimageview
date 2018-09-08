@@ -110,6 +110,9 @@ class BaseCamera(metaclass=ABCMeta):
         pass
 
 class BaseFocuser(metaclass=ABCMeta):
+    @abstractmethod
+    def show_chooser(self, last_choice):
+        pass
 
     @abstractmethod
     def connect(self, name):
