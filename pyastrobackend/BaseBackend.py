@@ -7,6 +7,10 @@ class BaseDeviceBackend(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def disconnect(self):
+        pass
+
+    @abstractmethod
     def isConnected(self):
         pass
 
@@ -119,6 +123,10 @@ class BaseFocuser(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def disconnect(self):
+        pass
+
+    @abstractmethod
     def is_connected(self):
         pass
 
@@ -156,6 +164,10 @@ class BaseFilterWheel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def disconnect(self):
+        pass
+
+    @abstractmethod
     def is_connected(self):
         pass
 
@@ -187,6 +199,10 @@ class BaseMount(metaclass=ABCMeta):
 
     @abstractmethod
     def connect(self, name):
+        pass
+
+    @abstractmethod
+    def disconnect(self):
         pass
 
     @abstractmethod

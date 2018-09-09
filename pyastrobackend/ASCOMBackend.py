@@ -19,6 +19,9 @@ class DeviceBackend(BaseDeviceBackend):
     def connect(self):
         self.connected = True
 
+    def disconnect(self):
+        pass
+
     def isConnected(self):
         return self.connected
 
@@ -214,6 +217,12 @@ class Focuser(BaseFocuser):
 
         return True
 
+    def disconnect(self):
+        if self.focuser:
+            if self.focuser.Connected:
+                self.focuser.Connected = False
+                self.focuser = None
+
     def is_connected(self):
         if self.focus:
             return self.focus.Connected
@@ -258,7 +267,7 @@ class FilterWheel(BaseFilterWheel):
         if self.filterwheel.Connected:
             logging.info("	-> filterwheel was already connected")
         else:
-            self.focus.Connected = True
+            self.filterwheel.Connected = True
 
         if self.filterwheel.Connected:
             logging.info(f"	Connected to filter wheel {name} now")
@@ -267,8 +276,17 @@ class FilterWheel(BaseFilterWheel):
 
         return True
 
+    def disconnect(self):
+        if self.filterwheel:
+            if self.filterwheel.Connected:
+                self.filterwheel.Connected = False
+                self.filterwheel = None
+
     def is_connected(self):
-        return self.filterwheel.Connected
+        if self.filterwheel:
+            return self.filterwheel.Connected
+        else:
+            return False
 
     def get_position(self):
         return self.filterwheel.Position
@@ -276,7 +294,7 @@ class FilterWheel(BaseFilterWheel):
     def set_position(self, pos):
         self.filterwheel.Position = pos
 
-    def is_moving(self, pos):
+    def is_moving(self):
         # ASCOM API defines position of -1 as wheel in motion
         return self.get_position() == -1
 
@@ -285,7 +303,7 @@ class FilterWheel(BaseFilterWheel):
         return self.filterwheel.Names
 
     def get_num_positions(self):
-        return len(self.get_names)
+        return len(self.get_names())
 
 class Mount(BaseMount):
     def __init__(self):
@@ -315,8 +333,17 @@ class Mount(BaseMount):
 
         return True
 
+    def disconnect(self):
+        if self.mount:
+            if self.mount.Connected:
+                self.mount.Connected = False
+                self.mount = None
+
     def is_connected(self):
-        return self.mount.Connected
+        if self.mount:
+            return self.mount.Connected
+        else:
+            return False
 
     def can_park(self):
         return self.mount.CanPark
