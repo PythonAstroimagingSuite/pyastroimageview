@@ -1,5 +1,6 @@
 """ Pure ASCOM solution """
 from pyastrobackend.BaseBackend import BaseDeviceBackend, BaseCamera, BaseFocuser
+from pyastrobackend.BaseBackend import BaseFilterWheel, BaseMount
 
 import logging
 
@@ -26,8 +27,6 @@ class Camera(BaseCamera):
         self.cam = None
 
     def show_chooser(self, last_choice):
-        logging.info("showCameraChooser main thread")
-        logging.info("showCameraChooser - calling CoInitialize()")
         pythoncom.CoInitialize()
         chooser = win32com.client.Dispatch("ASCOM.Utilities.Chooser")
         chooser.DeviceType="Camera"
@@ -36,13 +35,9 @@ class Camera(BaseCamera):
         return camera
 
     def connect(self, name):
-
-        logging.info("connectCamera main thread")
-        logging.info("connectCamera - calling CoInitialize()")
         pythoncom.CoInitialize()
         self.cam = win32com.client.Dispatch(name)
         self.cam.Connected = True
-
         return True
 
     def disconnect(self):
@@ -192,8 +187,6 @@ class Focuser(BaseFocuser):
         self.focus = None
 
     def show_chooser(self, last_choice):
-        logging.info("showFocuserChooser main thread")
-        logging.info("showFocsuerChooser - calling CoInitialize()")
         pythoncom.CoInitialize()
         chooser = win32com.client.Dispatch("ASCOM.Utilities.Chooser")
         chooser.DeviceType="Focuser"
@@ -202,16 +195,8 @@ class Focuser(BaseFocuser):
         return focuser
 
     def connect(self, name):
-
-        logging.info("connectFocuser - calling CoInitialize()")
-
         pythoncom.CoInitialize()
-
-        logging.info(f"focuser = {name}")
-
         self.focus = win32com.client.Dispatch(name)
-
-        logging.info(f"self.focus = {self.focus}")
 
         if self.focus.Connected:
             logging.info("	-> Focuser was already connected")
@@ -253,4 +238,121 @@ class Focuser(BaseFocuser):
 
     def is_moving(self):
         return self.focus.isMoving
+
+class FilterWheel(BaseFilterWheel):
+    def __init__(self):
+        self.filterwheel = None
+
+    def show_chooser(self, last_choice):
+        pythoncom.CoInitialize()
+        chooser = win32com.client.Dispatch("ASCOM.Utilities.Chooser")
+        chooser.DeviceType="FilterWheel"
+        filterwheel = chooser.Choose(last_choice)
+        logging.info(f'choice = {filterwheel}')
+        return filterwheel
+
+    def connect(self, name):
+        pythoncom.CoInitialize()
+        self.filterwheel = win32com.client.Dispatch(name)
+
+        if self.filterwheel.Connected:
+            logging.info("	-> filterwheel was already connected")
+        else:
+            self.focus.Connected = True
+
+        if self.filterwheel.Connected:
+            logging.info(f"	Connected to filter wheel {name} now")
+        else:
+            logging.info("	Unable to connect to filter wheel, expect exception")
+
+        return True
+
+    def is_connected(self):
+        return self.filterwheel.Connected
+
+    def get_position(self):
+        return self.filterwheel.Position
+
+    def set_position(self, pos):
+        self.filterwheel.Position = pos
+
+    def is_moving(self, pos):
+        # ASCOM API defines position of -1 as wheel in motion
+        return self.get_position() == -1
+
+    def get_names(self):
+        # names are setup in the 'Setup' dialog for the filter wheel
+        return self.filterwheel.Names
+
+    def get_num_positions(self):
+        return len(self.get_names)
+
+class Mount(BaseMount):
+    def __init__(self):
+        self.mount = None
+
+    def show_chooser(self, last_choice):
+        pythoncom.CoInitialize()
+        chooser = win32com.client.Dispatch("ASCOM.Utilities.Chooser")
+        chooser.DeviceType="Telescope"
+        mount = chooser.Choose(last_choice)
+        logging.info(f'choice = {mount}')
+        return mount
+
+    def connect(self, name):
+        pythoncom.CoInitialize()
+        self.mount = win32com.client.Dispatch(name)
+
+        if self.mount.Connected:
+            logging.info("	-> mount was already connected")
+        else:
+            self.mount.Connected = True
+
+        if self.mount.Connected:
+            logging.info(f"	Connected to mount {name} now")
+        else:
+            logging.info("	Unable to connect to mount, expect exception")
+
+        return True
+
+    def is_connected(self):
+        return self.mount.Connected
+
+    def can_park(self):
+        return self.mount.CanPark
+
+    def is_parked(self):
+        return self.AtPark
+
+    def get_position_altaz(self):
+        """Returns tuple of (alt, az) in degrees"""
+        alt = self.mount.Altitude
+        az = self.mount.Azimuth
+        return (alt, az)
+
+    def get_position_radec(self):
+        """Returns tuple of (ra, dec) with ra in decimal hours and dec in degrees"""
+        ra = self.mount.RightAscension
+        dec = self.mount.Declination
+        return (ra, dec)
+
+    def is_slewing(self):
+        return self.mount.Slewing
+
+    def abort_slew(self):
+        self.mount.AbortSlew()
+
+    def park(self):
+        self.mount.Park()
+
+    def slew(self, ra, dec):
+        """Slew to ra/dec with ra in decimal hours and dec in degrees"""
+        self.mount.SlewToCoordinates(ra, dec)
+
+    def sync(self, ra, dec):
+        """Sync to ra/dec with ra in decimal hours and dec in degrees"""
+        self.mount.SyncToCoordinates(ra, dec)
+
+    def unpark(self):
+        self.mount.Unpark()
 

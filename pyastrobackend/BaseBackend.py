@@ -118,6 +118,7 @@ class BaseFocuser(metaclass=ABCMeta):
     def connect(self, name):
         pass
 
+    @abstractmethod
     def is_connected(self):
         pass
 
@@ -142,4 +143,96 @@ class BaseFocuser(metaclass=ABCMeta):
 
     @abstractmethod
     def is_moving(self):
+        pass
+
+class BaseFilterWheel(metaclass=ABCMeta):
+
+    @abstractmethod
+    def show_chooser(self, last_choice):
+        pass
+
+    @abstractmethod
+    def connect(self, name):
+        pass
+
+    @abstractmethod
+    def is_connected(self):
+        pass
+
+    @abstractmethod
+    def get_position(self):
+        pass
+
+    @abstractmethod
+    def set_position(self, abspos):
+        pass
+
+    @abstractmethod
+    def is_moving(self):
+        pass
+
+    @abstractmethod
+    def get_names(self):
+        pass
+
+    @abstractmethod
+    def get_num_positions(self):
+        pass
+
+class BaseMount(metaclass=ABCMeta):
+
+    @abstractmethod
+    def show_chooser(self, last_choice):
+        pass
+
+    @abstractmethod
+    def connect(self, name):
+        pass
+
+    @abstractmethod
+    def is_connected(self):
+        pass
+
+    @abstractmethod
+    def can_park(self):
+        pass
+
+    @abstractmethod
+    def is_parked(self):
+        pass
+
+    @abstractmethod
+    def get_position_altaz(self):
+        """Returns tuple of (alt, az) in degrees"""
+        pass
+
+    @abstractmethod
+    def get_position_radec(self):
+        """Returns tuple of (ra, dec) with ra in decimal hours and dec in degrees"""
+        pass
+
+    @abstractmethod
+    def is_slewing(self):
+        pass
+
+    @abstractmethod
+    def abort_slew(self):
+        pass
+
+    @abstractmethod
+    def park(self):
+        pass
+
+    @abstractmethod
+    def slew(self, ra, dec):
+        """Slew to ra/dec with ra in decimal hours and dec in degrees"""
+        pass
+
+    @abstractmethod
+    def sync(self, ra, dec):
+        """Sync to ra/dec with ra in decimal hours and dec in degrees"""
+        pass
+
+    @abstractmethod
+    def unpark(self):
         pass
