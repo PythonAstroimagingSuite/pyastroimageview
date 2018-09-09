@@ -118,12 +118,26 @@ class BaseFocuser(metaclass=ABCMeta):
     def connect(self, name):
         pass
 
-    @abstractmethod
-    def get_absolute_positon(self):
+    def is_connected(self):
         pass
 
     @abstractmethod
-    def set_absolute_position(self, abspos):
+    def get_absolute_position(self):
+        pass
+
+    @abstractmethod
+    def move_absolute_position(self, abspos):
+        pass
+
+    @abstractmethod
+    def get_current_temperature(self):
+        pass
+
+    def get_max_absolute_position(self):
+        pass
+
+    @abstractmethod
+    def stop(self):
         pass
 
     @abstractmethod

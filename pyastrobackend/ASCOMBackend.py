@@ -202,40 +202,54 @@ class Focuser(BaseFocuser):
         return focuser
 
     def connect(self, name):
-        if self.mainThread:
-            import pythoncom
-            logging.info("connectFocuser - calling CoInitialize()")
-            pythoncom.CoInitialize()
-            import win32com.client
-            logging.info(f"focuser = {name}")
-            self.focus = win32com.client.Dispatch(name)
-            logging.info(f"self.focus = {self.focus}")
-            if self.focus.Connected:
-                logging.info("	-> Focuser was already connected")
-            else:
-                self.focus.Connected = True
 
-            if self.focus.Connected:
-                logging.info(f"	Connected to focuser {name} now")
-            else:
-                logging.info("	Unable to connect to focuser, expect exception")
+        logging.info("connectFocuser - calling CoInitialize()")
 
-            # check focuser works in absolute position
-            if not self.focus.Absolute:
-                logging.info("ERROR - focuser does not use absolute position!")
+        pythoncom.CoInitialize()
+
+        logging.info(f"focuser = {name}")
+
+        self.focus = win32com.client.Dispatch(name)
+
+        logging.info(f"self.focus = {self.focus}")
+
+        if self.focus.Connected:
+            logging.info("	-> Focuser was already connected")
         else:
-            # in other threads do nothing
-            pass
+            self.focus.Connected = True
+
+        if self.focus.Connected:
+            logging.info(f"	Connected to focuser {name} now")
+        else:
+            logging.info("	Unable to connect to focuser, expect exception")
+
+        # check focuser works in absolute position
+        if not self.focus.Absolute:
+            logging.info("ERROR - focuser does not use absolute position!")
 
         return True
 
-    def get_absolute_positon(self):
+    def is_connected(self):
+        if self.focus:
+            return self.focus.Connected
+        else:
+            return False
+
+    def get_absolute_position(self):
         return self.focus.Position
 
-    def set_absolute_position(self, abspos):
+    def move_absolute_position(self, abspos):
         self.focus.Move(abspos)
-
         return True
+
+    def get_max_absolute_position(self):
+        return self.focus.MaxStep
+
+    def get_current_temperature(self):
+        return self.focus.Temperature
+
+    def stop(self):
+        self.focus.Halt()
 
     def is_moving(self):
         return self.focus.isMoving
