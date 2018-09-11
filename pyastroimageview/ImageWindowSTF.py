@@ -175,7 +175,7 @@ class ImageWindowSTF(pg.GraphicsLayoutWidget):
 
         logging.info('loading fits file')
 
-        self.image_data = pyfits.getdata(image_file).T
+        self.image_data = pyfits.getdata(image_file)
 
         logging.info('setting image data')
 
