@@ -3,7 +3,7 @@ import pyqtgraph as pg
 
 from PyQt5 import QtCore, QtWidgets, QtGui
 
-from pyastroimageview.uic.pyastroimageview_imagearea_info_uic import Ui_Form
+from pyastroimageview.uic.imagearea_info_uic import Ui_Form
 
 class ImageAreaInfo(QtWidgets.QWidget):
     view_changed = QtCore.pyqtSignal(int)
