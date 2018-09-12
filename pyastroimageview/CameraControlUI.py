@@ -18,7 +18,7 @@ class CameraControlUI(QtWidgets.QWidget):
             self.ui = Ui_camera_set_roi_dialog()
             self.ui.setupUi(self)
 
-    def __init__(self, camera_manager):
+    def __init__(self, camera_manager, settings):
         super().__init__()
 
         self.ui = Ui_camera_settings_widget()
@@ -38,11 +38,13 @@ class CameraControlUI(QtWidgets.QWidget):
         self.camera_manager.signals.exposure_complete.connect(self.camera_exposure_complete)
 
         # for DEBUG - should be None normally
-        self.camera_driver = 'ASCOM.Simulator.Camera'
+        #self.camera_driver = 'ASCOM.Simulator.Camera'
         #self.camera_driver = None
 
-        if self.camera_driver:
-            self.ui.camera_driver_label.setText(self.camera_driver)
+        self.settings = settings
+
+        if self.settings.camera_driver:
+            self.ui.camera_driver_label.setText(self.settings.camera_driver)
 
         # some vars we may or may not want here
         self.xsize = None
@@ -135,14 +137,15 @@ class CameraControlUI(QtWidgets.QWidget):
             logging.warning('camera_exposure_complete: no exposure was ongoing!')
 
     def camera_setup(self):
-        if self.camera_driver:
-            last_choice = self.camera_driver
+        if self.settings.camera_driver:
+            last_choice = self.settings.camera_driver
         else:
             last_choice = ''
 
         camera_choice = self.camera_manager.show_chooser(last_choice)
         if len(camera_choice) > 0:
-            self.camera_driver = camera_choice
+            self.settings.camera_driver = camera_choice
+            self.settings.write()
             self.ui.camera_driver_label.setText(camera_choice)
 
     def set_roi(self):
@@ -260,12 +263,12 @@ class CameraControlUI(QtWidgets.QWidget):
         self.reset_roi()
 
     def camera_connect(self):
-        if self.camera_driver:
+        if self.settings.camera_driver:
             if not self.camera_manager.get_lock():
                 logging.warning('CCUI: camera_connect: could not get lock!')
                 return
 
-            self.camera_manager.connect(self.camera_driver)
+            self.camera_manager.connect(self.settings.camera_driver)
 
             self.set_widget_states()
 

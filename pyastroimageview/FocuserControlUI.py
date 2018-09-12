@@ -6,7 +6,7 @@ from pyastroimageview.uic.focuser_settings_uic import Ui_focuser_settings_widget
 
 class FocuserControlUI(QtWidgets.QWidget):
 
-    def __init__(self, focuser_manager):
+    def __init__(self, focuser_manager, settings):
         super().__init__()
 
         self.ui = Ui_focuser_settings_widget()
@@ -26,10 +26,12 @@ class FocuserControlUI(QtWidgets.QWidget):
         self.focuser_manager = focuser_manager
 
         # for DEBUG - should be None normally
-        self.focuser_driver = 'ASCOM.Simulator.Focuser'
+        #self.focuser_driver = 'ASCOM.Simulator.Focuser'
 
-        if self.focuser_driver:
-            self.ui.focuser_driver_label.setText(self.focuser_driver)
+        self.settings = settings
+
+        if self.settings.focuser_driver:
+            self.ui.focuser_driver_label.setText(self.settings.focuser_driver)
 
         self.set_widget_states()
 
@@ -88,19 +90,20 @@ class FocuserControlUI(QtWidgets.QWidget):
             self.ui.focuser_setting_moveabs_spinbox.setMaximum(maxpos)
 
     def focuser_setup(self):
-        if self.focuser_driver:
-            last_choice = self.focuser_driver
+        if self.settings.focuser_driver:
+            last_choice = self.settings.focuser_driver
         else:
             last_choice = ''
 
         focuser_choice = self.focuser_manager.show_chooser(last_choice)
         if len(focuser_choice) > 0:
-            self.focuser_driver = focuser_choice
+            self.settings.focuser_driver = focuser_choice
+            self.settings.write()
             self.ui.focuser_driver_label.setText(focuser_choice)
 
     def focuser_connect(self):
-        if self.focuser_driver:
-            self.focuser_manager.connect(self.focuser_driver)
+        if self.settings.focuser_driver:
+            self.focuser_manager.connect(self.settings.focuser_driver)
             self.set_widget_states()
 
             maxpos = self.focuser_manager.get_max_absolute_position()

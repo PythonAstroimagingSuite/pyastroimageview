@@ -8,7 +8,7 @@ from pyastroimageview.uic.mount_settings_uic import Ui_mount_settings_widget
 
 class MountControlUI(QtWidgets.QWidget):
 
-    def __init__(self, mount_manager):
+    def __init__(self, mount_manager, settings):
         super().__init__()
 
         self.ui = Ui_mount_settings_widget()
@@ -20,11 +20,14 @@ class MountControlUI(QtWidgets.QWidget):
 
         self.mount_manager = mount_manager
 
-        # for DEBUG - should be None normally
-        self.mount_driver = 'ASCOM.Simulator.Telescope'
+        self.settings = settings
 
-        if self.mount_driver:
-            self.ui.mount_driver_label.setText(self.mount_driver)
+        # for DEBUG - should be None normally
+        #self.mount_driver = 'ASCOM.Simulator.Telescope'
+        #self.mount_driver =
+
+        if self.settings.mount_driver:
+            self.ui.mount_driver_label.setText(self.settings.mount_driver)
 
         self.set_widget_states()
 
@@ -74,19 +77,20 @@ class MountControlUI(QtWidgets.QWidget):
 #            self.ui.mount_setting_position_dec.setText(f'{dec:06.2f}')
 
     def mount_setup(self):
-        if self.mount_driver:
-            last_choice = self.mount_driver
+        if self.settings.mount_driver:
+            last_choice = self.settings.mount_driver
         else:
             last_choice = ''
 
         mount_choice = self.mount_manager.show_chooser(last_choice)
         if len(mount_choice) > 0:
-            self.mount_driver = mount_choice
+            self.settings.mount_driver = mount_choice
+            self.settings.write()
             self.ui.mount_driver_label.setText(mount_choice)
 
     def mount_connect(self):
-        if self.mount_driver:
-            self.mount_manager.connect(self.mount_driver)
+        if self.settings.mount_driver:
+            self.mount_manager.connect(self.settings.mount_driver)
             self.set_widget_states()
 
     def mount_disconnect(self):

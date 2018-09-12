@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Dialog</class>
- <widget class="QDialog" name="Dialog">
+ <class>GeneralSettingsDialog</class>
+ <widget class="QDialog" name="GeneralSettingsDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -34,7 +34,7 @@
        </widget>
       </item>
       <item row="0" column="1">
-       <widget class="QPlainTextEdit" name="plainTextEdit_2">
+       <widget class="QPlainTextEdit" name="location_name">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
           <horstretch>0</horstretch>
@@ -74,7 +74,7 @@
       <item row="1" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_4">
         <item>
-         <widget class="QSpinBox" name="spinBox_3">
+         <widget class="QSpinBox" name="location_lat_degrees">
           <property name="minimum">
            <number>-90</number>
           </property>
@@ -84,14 +84,14 @@
          </widget>
         </item>
         <item>
-         <widget class="QSpinBox" name="spinBox_4">
+         <widget class="QSpinBox" name="location_lat_minutes">
           <property name="maximum">
            <number>59</number>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="doubleSpinBox_3">
+         <widget class="QDoubleSpinBox" name="location_lat_seconds">
           <property name="decimals">
            <number>3</number>
           </property>
@@ -132,7 +132,7 @@
       <item row="2" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_3">
         <item>
-         <widget class="QSpinBox" name="spinBox_5">
+         <widget class="QSpinBox" name="location_lon_degrees">
           <property name="minimum">
            <number>-90</number>
           </property>
@@ -142,14 +142,14 @@
          </widget>
         </item>
         <item>
-         <widget class="QSpinBox" name="spinBox_6">
+         <widget class="QSpinBox" name="location_lon_minutes">
           <property name="maximum">
            <number>59</number>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="doubleSpinBox_2">
+         <widget class="QDoubleSpinBox" name="location_lon_seconds">
           <property name="decimals">
            <number>3</number>
           </property>
@@ -180,15 +180,15 @@
         </item>
        </layout>
       </item>
-      <item row="3" column="0">
+      <item row="4" column="0">
        <widget class="QLabel" name="label_7">
         <property name="text">
          <string>Notes</string>
         </property>
        </widget>
       </item>
-      <item row="3" column="1">
-       <widget class="QPlainTextEdit" name="plainTextEdit_3">
+      <item row="4" column="1">
+       <widget class="QPlainTextEdit" name="observer_notes">
         <property name="minimumSize">
          <size>
           <width>0</width>
@@ -205,6 +205,47 @@
          <bool>true</bool>
         </property>
        </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_12">
+        <property name="text">
+         <string>Altitude</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <layout class="QHBoxLayout" name="horizontalLayout_6">
+        <item>
+         <widget class="QDoubleSpinBox" name="location_altitude">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <double>10000.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_13">
+          <property name="text">
+           <string>(meters)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_6">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>
@@ -235,7 +276,7 @@
        </widget>
       </item>
       <item row="0" column="1">
-       <widget class="QPlainTextEdit" name="plainTextEdit">
+       <widget class="QPlainTextEdit" name="telescope_description">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
           <horstretch>0</horstretch>
@@ -282,7 +323,7 @@
       <item row="1" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
-         <widget class="QSpinBox" name="spinBox_2">
+         <widget class="QSpinBox" name="telescope_aperture">
           <property name="minimumSize">
            <size>
             <width>50</width>
@@ -319,7 +360,7 @@
       <item row="2" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
-         <widget class="QDoubleSpinBox" name="doubleSpinBox">
+         <widget class="QDoubleSpinBox" name="telescope_obstruction">
           <property name="minimumSize">
            <size>
             <width>50</width>
@@ -395,24 +436,25 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>plainTextEdit</tabstop>
-  <tabstop>spinBox_2</tabstop>
-  <tabstop>doubleSpinBox</tabstop>
-  <tabstop>plainTextEdit_2</tabstop>
-  <tabstop>spinBox_3</tabstop>
-  <tabstop>spinBox_4</tabstop>
-  <tabstop>doubleSpinBox_3</tabstop>
-  <tabstop>spinBox_5</tabstop>
-  <tabstop>spinBox_6</tabstop>
-  <tabstop>doubleSpinBox_2</tabstop>
-  <tabstop>plainTextEdit_3</tabstop>
+  <tabstop>telescope_description</tabstop>
+  <tabstop>telescope_aperture</tabstop>
+  <tabstop>telescope_obstruction</tabstop>
+  <tabstop>location_name</tabstop>
+  <tabstop>location_lat_degrees</tabstop>
+  <tabstop>location_lat_minutes</tabstop>
+  <tabstop>location_lat_seconds</tabstop>
+  <tabstop>location_lon_degrees</tabstop>
+  <tabstop>location_lon_minutes</tabstop>
+  <tabstop>location_lon_seconds</tabstop>
+  <tabstop>location_altitude</tabstop>
+  <tabstop>observer_notes</tabstop>
  </tabstops>
  <resources/>
  <connections>
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>Dialog</receiver>
+   <receiver>GeneralSettingsDialog</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -428,7 +470,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>Dialog</receiver>
+   <receiver>GeneralSettingsDialog</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">

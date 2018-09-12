@@ -6,7 +6,7 @@ from pyastroimageview.uic.filterwheel_settings_uic import Ui_filterwheel_setting
 
 class FilterWheelControlUI(QtWidgets.QWidget):
 
-    def __init__(self, filterwheel_manager):
+    def __init__(self, filterwheel_manager, settings):
         super().__init__()
 
         self.ui = Ui_filterwheel_settings_widget()
@@ -21,10 +21,12 @@ class FilterWheelControlUI(QtWidgets.QWidget):
         self.filterwheel_manager = filterwheel_manager
 
         # for DEBUG - should be None normally
-        self.filterwheel_driver = 'ASCOM.Simulator.FilterWheel'
+        #self.filterwheel_driver = 'ASCOM.Simulator.FilterWheel'
 
-        if self.filterwheel_driver:
-            self.ui.filterwheel_driver_label.setText(self.filterwheel_driver)
+        self.settings = settings
+
+        if self.settings.filterwheel_driver:
+            self.ui.filterwheel_driver_label.setText(self.settings.filterwheel_driver)
 
         self.set_widget_states()
 
@@ -67,19 +69,20 @@ class FilterWheelControlUI(QtWidgets.QWidget):
             self.ui.filterwheel_setting_position.setText(posstr)
 
     def filterwheel_setup(self):
-        if self.filterwheel_driver:
-            last_choice = self.filterwheel_driver
+        if self.settings.filterwheel_driver:
+            last_choice = self.settings.filterwheel_driver
         else:
             last_choice = ''
 
         filterwheel_choice = self.filterwheel_manager.show_chooser(last_choice)
         if len(filterwheel_choice) > 0:
-            self.filterwheel_driver = filterwheel_choice
+            self.settings.filterwheel_driver = filterwheel_choice
+            self.settings.write()
             self.ui.filterwheel_driver_label.setText(filterwheel_choice)
 
     def filterwheel_connect(self):
-        if self.filterwheel_driver:
-            self.filterwheel_manager.connect(self.filterwheel_driver)
+        if self.settings.filterwheel_driver:
+            self.filterwheel_manager.connect(self.settings.filterwheel_driver)
             self.set_widget_states()
 
 #            maxpos = self.filterwheel_manager.get_num_positions()
