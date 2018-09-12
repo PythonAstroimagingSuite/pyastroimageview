@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'pyastroimage_imagearea_info.ui'
+# Form implementation generated from reading ui file 'pyastroimageview_imagearea_info.ui'
 #
 # Created by: PyQt5 UI code generator 5.9.2
 #
