@@ -4,8 +4,8 @@ from PyQt5 import QtCore, QtWidgets
 
 from pyastroimageview.CameraManager import CameraState, CameraSettings
 
-from pyastroimageview.uic.pyastroimageview_camera_settings_uic import Ui_camera_settings_widget
-from pyastroimageview.uic.pyastroimageview_camera_roidialog_uic import Ui_camera_set_roi_dialog
+from pyastroimageview.uic.camera_settings_uic import Ui_camera_settings_widget
+from pyastroimageview.uic.camera_roidialog_uic import Ui_camera_set_roi_dialog
 
 class CameraControlUI(QtWidgets.QWidget):
     new_camera_image = QtCore.pyqtSignal(object)

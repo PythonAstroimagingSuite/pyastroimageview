@@ -2,7 +2,7 @@ import logging
 
 from PyQt5 import QtCore, QtWidgets
 
-from pyastroimageview.uic.pyastroimageview_filterwheel_settings_uic import Ui_filterwheel_settings_widget
+from pyastroimageview.uic.filterwheel_settings_uic import Ui_filterwheel_settings_widget
 
 class FilterWheelControlUI(QtWidgets.QWidget):
 

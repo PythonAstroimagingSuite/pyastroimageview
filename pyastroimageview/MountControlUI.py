@@ -4,7 +4,7 @@ from astropy.coordinates import SkyCoord
 
 from PyQt5 import QtCore, QtWidgets
 
-from pyastroimageview.uic.pyastroimageview_mount_settings_uic import Ui_mount_settings_widget
+from pyastroimageview.uic.mount_settings_uic import Ui_mount_settings_widget
 
 class MountControlUI(QtWidgets.QWidget):
 

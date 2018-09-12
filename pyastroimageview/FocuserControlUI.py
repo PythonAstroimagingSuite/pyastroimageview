@@ -2,7 +2,7 @@ import logging
 
 from PyQt5 import QtCore, QtWidgets
 
-from pyastroimageview.uic.pyastroimageview_focuser_settings_uic import Ui_focuser_settings_widget
+from pyastroimageview.uic.focuser_settings_uic import Ui_focuser_settings_widget
 
 class FocuserControlUI(QtWidgets.QWidget):
 
