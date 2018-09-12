@@ -126,8 +126,8 @@ class Ui_SequenceSettingsUI(object):
     def retranslateUi(self, SequenceSettingsUI):
         _translate = QtCore.QCoreApplication.translate
         SequenceSettingsUI.setWindowTitle(_translate("SequenceSettingsUI", "Form"))
-        self.label.setText(_translate("SequenceSettingsUI", "Name"))
-        self.label_2.setText(_translate("SequenceSettingsUI", "Title Elements"))
+        self.label.setText(_translate("SequenceSettingsUI", "Base Name"))
+        self.label_2.setText(_translate("SequenceSettingsUI", "Name  Elements"))
         self.sequence_elements_help.setText(_translate("SequenceSettingsUI", "?"))
         self.label_6.setText(_translate("SequenceSettingsUI", "Preview"))
         self.sequence_preview.setText(_translate("SequenceSettingsUI", "TextLabel"))

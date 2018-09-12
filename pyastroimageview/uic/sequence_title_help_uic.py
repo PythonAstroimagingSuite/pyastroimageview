@@ -33,7 +33,7 @@ class Ui_SequenceTitleHelpWindow(object):
         SequenceTitleHelpWindow.setWindowTitle(_translate("SequenceTitleHelpWindow", "MainWindow"))
         self.plainTextEdit.setPlainText(_translate("SequenceTitleHelpWindow", "Title Elements Help\n"
 "\n"
-"{name}      Name\n"
+"{name}      Base Name\n"
 "{tempC}    Camera temperature\n"
 "{bin}                 Camera Binning\n"
 "{exp}    Length of exposure\n"

@@ -44,7 +44,7 @@
       <property name="plainText">
        <string>Title Elements Help
 
-{name}  	Name
+{name}  	Base Name
 {tempC}	Camera temperature
 {bin}             	Camera Binning
 {exp}	Length of exposure
