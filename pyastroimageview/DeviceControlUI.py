@@ -29,6 +29,8 @@ class DeviceControlUI(QtWidgets.QMainWindow):
 
         self.setCentralWidget(window)
 
+        self.setWindowTitle('Device Control')
+
         self.activateWindow()
         window_flags = self.windowFlags()
         self.setWindowFlags(window_flags | QtCore.Qt.WindowStaysOnTopHint)
