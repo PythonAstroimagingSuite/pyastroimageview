@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>380</width>
-    <height>176</height>
+    <width>431</width>
+    <height>231</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,6 +18,160 @@
     <widget class="QLabel" name="label">
      <property name="text">
       <string>Base Name</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="1">
+    <widget class="QComboBox" name="sequence_frametype">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <item>
+      <property name="text">
+       <string>Light</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Flat</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Dark</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Bias</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <widget class="QDoubleSpinBox" name="sequence_exposure">
+     <property name="decimals">
+      <number>3</number>
+     </property>
+     <property name="maximum">
+      <double>3600.000000000000000</double>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="0">
+    <widget class="QLabel" name="label_3">
+     <property name="text">
+      <string>Frame Type</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="1">
+    <widget class="QSpinBox" name="sequence_number">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimum">
+      <number>1</number>
+     </property>
+     <property name="maximum">
+      <number>999</number>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0">
+    <widget class="QLabel" name="label_4">
+     <property name="text">
+      <string>Number</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1">
+    <widget class="QSpinBox" name="sequence_start">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimum">
+      <number>1</number>
+     </property>
+     <property name="maximum">
+      <number>999</number>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QLabel" name="label_5">
+     <property name="text">
+      <string>Starting Index</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="QLabel" name="sequence_preview">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>20</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>20</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>TextLabel</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="label_6">
+     <property name="font">
+      <font>
+       <weight>50</weight>
+       <italic>false</italic>
+       <bold>false</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Preview</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="3">
+    <widget class="QPushButton" name="sequence_elements_help">
+     <property name="minimumSize">
+      <size>
+       <width>25</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>25</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>?</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
@@ -78,53 +232,25 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="3">
-    <widget class="QPushButton" name="sequence_elements_help">
-     <property name="minimumSize">
-      <size>
-       <width>25</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>25</width>
-       <height>16777215</height>
-      </size>
-     </property>
+   <item row="3" column="0">
+    <widget class="QLabel" name="label_7">
      <property name="text">
-      <string>?</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
+      <string>Exposure</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="label_6">
-     <property name="font">
-      <font>
-       <weight>50</weight>
-       <italic>false</italic>
-       <bold>false</bold>
-      </font>
-     </property>
+   <item row="7" column="0">
+    <widget class="QLabel" name="label_8">
      <property name="text">
-      <string>Preview</string>
+      <string>Target Dir</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="1">
-    <widget class="QLabel" name="sequence_preview">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
+   <item row="7" column="1" colspan="2">
+    <widget class="QPlainTextEdit" name="sequence_targetdir">
      <property name="minimumSize">
       <size>
-       <width>0</width>
+       <width>300</width>
        <height>20</height>
       </size>
      </property>
@@ -134,95 +260,43 @@
        <height>20</height>
       </size>
      </property>
+     <property name="verticalScrollBarPolicy">
+      <enum>Qt::ScrollBarAlwaysOff</enum>
+     </property>
+     <property name="horizontalScrollBarPolicy">
+      <enum>Qt::ScrollBarAlwaysOff</enum>
+     </property>
+     <property name="tabChangesFocus">
+      <bool>true</bool>
+     </property>
+     <property name="lineWrapMode">
+      <enum>QPlainTextEdit::NoWrap</enum>
+     </property>
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="3">
+    <widget class="QPushButton" name="sequence_select_targetdir">
+     <property name="minimumSize">
+      <size>
+       <width>24</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>24</width>
+       <height>16777215</height>
+      </size>
+     </property>
      <property name="text">
-      <string>TextLabel</string>
+      <string>...</string>
      </property>
     </widget>
    </item>
-   <item row="3" column="0">
-    <widget class="QLabel" name="label_5">
-     <property name="text">
-      <string>Starting Index</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="1">
-    <widget class="QSpinBox" name="sequence_start">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimum">
-      <number>1</number>
-     </property>
-     <property name="maximum">
-      <number>999</number>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="0">
-    <widget class="QLabel" name="label_4">
-     <property name="text">
-      <string>Number</string>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="1">
-    <widget class="QSpinBox" name="sequence_number">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimum">
-      <number>1</number>
-     </property>
-     <property name="maximum">
-      <number>999</number>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="0">
-    <widget class="QLabel" name="label_3">
-     <property name="text">
-      <string>Frame Type</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="1">
-    <widget class="QComboBox" name="sequence_frametype">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <item>
-      <property name="text">
-       <string>Light</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Flat</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Dark</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Bias</string>
-      </property>
-     </item>
-    </widget>
-   </item>
-   <item row="4" column="2">
+   <item row="5" column="2" colspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <spacer name="horizontalSpacer">
@@ -252,9 +326,12 @@
   <tabstop>sequence_name</tabstop>
   <tabstop>sequence_elements</tabstop>
   <tabstop>sequence_elements_help</tabstop>
+  <tabstop>sequence_exposure</tabstop>
   <tabstop>sequence_start</tabstop>
   <tabstop>sequence_number</tabstop>
   <tabstop>sequence_frametype</tabstop>
+  <tabstop>sequence_targetdir</tabstop>
+  <tabstop>sequence_select_targetdir</tabstop>
   <tabstop>sequence_start_stop</tabstop>
  </tabstops>
  <resources/>

@@ -291,6 +291,10 @@ class FilterWheel(BaseFilterWheel):
     def get_position(self):
         return self.filterwheel.Position
 
+    def get_position_name(self):
+        #FIXME this should check return from get names, etc
+        return self.get_names()[self.get_position()]
+
     def set_position(self, pos):
         self.filterwheel.Position = pos
 

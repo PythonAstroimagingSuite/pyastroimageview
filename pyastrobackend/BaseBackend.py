@@ -176,6 +176,10 @@ class BaseFilterWheel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def get_position_name(self):
+        pass
+
+    @abstractmethod
     def set_position(self, abspos):
         pass
 
