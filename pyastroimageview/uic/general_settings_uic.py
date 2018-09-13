@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_GeneralSettingsDialog(object):
     def setupUi(self, GeneralSettingsDialog):
         GeneralSettingsDialog.setObjectName("GeneralSettingsDialog")
-        GeneralSettingsDialog.resize(619, 484)
+        GeneralSettingsDialog.resize(618, 470)
         self.verticalLayout = QtWidgets.QVBoxLayout(GeneralSettingsDialog)
         self.verticalLayout.setObjectName("verticalLayout")
         self.groupBox = QtWidgets.QGroupBox(GeneralSettingsDialog)
@@ -186,7 +186,8 @@ class Ui_GeneralSettingsDialog(object):
         self.gridLayoutWidget.setGeometry(QtCore.QRect(0, 20, 601, 80))
         self.gridLayoutWidget.setObjectName("gridLayoutWidget")
         self.gridLayout = QtWidgets.QGridLayout(self.gridLayoutWidget)
-        self.gridLayout.setContentsMargins(9, 4, 9, 4)
+        self.gridLayout.setContentsMargins(6, 0, 6, 0)
+        self.gridLayout.setSpacing(0)
         self.gridLayout.setObjectName("gridLayout")
         self.sequence_targetdir = QtWidgets.QPlainTextEdit(self.gridLayoutWidget)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
