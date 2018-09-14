@@ -149,6 +149,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             if self.sequence.current_index >= stop_idx:
                 self.exposure_ongoing = False
                 self.device_manager.camera.release_lock()
+                self.device_manager.filterwheel.release_lock()
                 logging.info('sequence complete')
                 self.set_startstop_state(True)
 
@@ -169,11 +170,26 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                                            QtWidgets.QMessageBox.Ok)
             return
 
+        # make sure filter wheel is connected
+        if not self.device_manager.filterwheel.is_connected():
+            logging.error('start_sequence: filter is not connected!')
+            QtWidgets.QMessageBox.critical(None, 'Error', 'Please connect filter first',
+                                           QtWidgets.QMessageBox.Ok)
+            return
+
         # try to lock camera
         if not self.device_manager.camera.get_lock():
             logging.error('start_sequence: unable to get camera lock!')
             QtWidgets.QMessageBox.critical(None, 'Error', 'Camera is busy',
                                            QtWidgets.QMessageBox.Ok)
+            return
+
+        # try to lock filter wheel
+        if not self.device_manager.filterwheel.get_lock():
+            logging.error('start_sequence: unable to get filter lock!')
+            QtWidgets.QMessageBox.critical(None, 'Error', 'Filter is busy',
+                                           QtWidgets.QMessageBox.Ok)
+            self.device_manager.camera.release_lock()
             return
 
         self.set_startstop_state(False)
@@ -193,15 +209,19 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.exposure_ongoing = True
 
     def stop_sequence(self):
+        logging.info('Stopping sequence!')
         # release camera
         if self.exposure_ongoing:
             self.device_manager.camera.stop_exposure()
+            self.exposure_ongoing = False
 
         self.device_manager.camera.release_lock()
+        self.device_manager.filterwheel.release_lock()
         self.set_startstop_state(True)
 
     def set_startstop_state(self, state):
         """Controls start/stop button state"""
+        logging.info(f'imagecontrolui: set_startstop_state: {state}')
         if state:
             self.ui.sequence_start_stop.setText('Start')
             self.ui.sequence_start_stop.pressed.disconnect(self.stop_sequence)

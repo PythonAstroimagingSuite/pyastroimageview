@@ -141,7 +141,7 @@ class MainWindow(QtGui.QMainWindow):
         file_toolbar.addAction(measure_hfr_action)
 
         settings_action = QtGui.QAction(QtGui.QIcon('../resources/pyastroimageview/icons/gear.png'), "Settings", self)
-        settings_action.triggered.connect(self.settings)
+        settings_action.triggered.connect(self.edit_settings)
         tool_menu.addAction(settings_action)
         file_toolbar.addAction(settings_action)
 
@@ -172,7 +172,7 @@ class MainWindow(QtGui.QMainWindow):
         curtab = self.image_area_ui.get_current_view_index()
         self.image_documents[curtab].image_widget.set_stars_visibility(state)
 
-    def settings(self):
+    def edit_settings(self):
         dlg = GeneralSettingsDialog()
         dlg.run(self.settings)
 

@@ -156,11 +156,11 @@ class CameraManager(Backend.Camera):
                 self.signals.exposure_complete.emit((complete, fits_image))
 
     def get_lock(self):
-        logging.info(f'get_lock: {self.lock.available()}')
+        logging.info(f'camera get_lock: {self.lock.available()}')
         return self.lock.tryAcquire(1)
 
     def release_lock(self):
-        logging.info(f'release lock: {self.lock.available()}')
+        logging.info(f'camera release lock: {self.lock.available()}')
         return self.lock.release(1)
 
 #    def show_chooser(self, last_choice):

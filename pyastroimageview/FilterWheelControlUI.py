@@ -67,6 +67,7 @@ class FilterWheelControlUI(QtWidgets.QWidget):
                 logging.info(f'pos = {pos}')
                 posstr += f' {self.names[pos]}'
             self.ui.filterwheel_setting_position.setText(posstr)
+            #self.ui.filterwheel_setting_filter_combobox.setCurrentIndex(pos)
 
     def filterwheel_setup(self):
         if self.settings.filterwheel_driver:
@@ -105,5 +106,17 @@ class FilterWheelControlUI(QtWidgets.QWidget):
         self.names = None
 
     def filterwheel_move(self):
+        # try to lock filter wheel
+        if not self.filterwheel_manager.get_lock():
+            logging.error('start_sequence: unable to get filter lock!')
+            QtWidgets.QMessageBox.critical(None, 'Error', 'Filter is busy',
+                                           QtWidgets.QMessageBox.Ok)
+
+            # restore combobox
+            pos = self.filterwheel_manager.get_position()
+            self.ui.filterwheel_setting_filter_combobox.setCurrentIndex(pos)
+            return
+
         newpos = self.ui.filterwheel_setting_filter_combobox.currentIndex()
         self.filterwheel_manager.set_position(newpos)
+        self.filterwheel_manager.release_lock()
