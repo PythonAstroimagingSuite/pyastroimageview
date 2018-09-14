@@ -86,7 +86,6 @@ class FocuserControlUI(QtWidgets.QWidget):
             self.ui.focuser_setting_position.setText(f'{pos:05d}')
 
             maxpos = self.focuser_manager.get_max_absolute_position()
-            logging.info(f'focuser maxpos = {maxpos}')
             self.ui.focuser_setting_moveabs_spinbox.setMaximum(maxpos)
 
     def focuser_setup(self):

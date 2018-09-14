@@ -64,7 +64,7 @@ class FilterWheelControlUI(QtWidgets.QWidget):
             pos = self.filterwheel_manager.get_position()
             posstr = f'{pos:05d}'
             if pos >= 0:
-                logging.info(f'pos = {pos}')
+#                logging.info(f'pos = {pos}')
                 posstr += f' {self.names[pos]}'
             self.ui.filterwheel_setting_position.setText(posstr)
             #self.ui.filterwheel_setting_filter_combobox.setCurrentIndex(pos)

@@ -124,36 +124,6 @@ class Camera(BaseCamera):
 
         return image_data
 
-#    def saveimageCamera(self, path):
-#        # FIXME make better temp name
-#        # FIXME specify cwd as path for file - otherwise not sure where it goes!
-#        logging.info(f"saveimageCamera: saving to {path}")
-#
-#        try:
-#            self.cam.SaveImage(path)
-#        except:
-#            exc_type, exc_value = sys.exc_info()[:2]
-#            logging.info('saveimageCamera %s exception with message "%s" in %s' % \
-#                              (exc_type.__name__, exc_value, current_thread().name))
-#            logging.error(f"Error saving {path} in saveimageCamera()!")
-#            return False
-#
-#        return True
-#
-#    def closeimageCamera(self):
-#        # not all backends need this
-#        # MAXIM does
-#        if self.mainThread:
-#            # import win32com.client
-#            # app = win32com.client.Dispatch("MaxIm.Application")
-#            # app.CurrentDocument.Close
-#
-#            # alt way
-#            self.cam.Document.Close
-#        else:
-#            # in other threads this is a noop
-#            pass
-
     def get_pixelsize(self):
         return self.cam.PixelSizeX, self.cam.PixelSizeY
 
@@ -312,7 +282,39 @@ class FilterWheel(BaseFilterWheel):
         return self.get_names()[self.get_position()]
 
     def set_position(self, pos):
-        self.filterwheel.Position = pos
+        """Sends request to driver to move filter wheel position
+
+        This DOES NOT wait for filter to move into position!
+
+        Use is_moving() method to check if its done.
+        """
+        if pos < self.get_num_positions():
+            self.filterwheel.Position = pos
+            return True
+        else:
+            return False
+
+    def set_position_name(self, name):
+        """Sends request to driver to move filter wheel position
+
+        This DOES NOT wait for filter to move into position!
+
+        Use is_moving() method to check if its done.
+        """
+        names = self.filterwheel.Names
+        print(name)
+        print(names)
+        print(type(names))
+        try:
+            newpos = names.index(name)
+        except ValueError as e:
+            newpos = -1
+
+        if newpos == -1:
+            return False
+        else:
+            self.filterwheel.Position = newpos
+            return True
 
     def is_moving(self):
         # ASCOM API defines position of -1 as wheel in motion

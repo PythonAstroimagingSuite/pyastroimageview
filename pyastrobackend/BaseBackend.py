@@ -192,6 +192,10 @@ class BaseFilterWheel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def set_position_name(self, name):
+        pass
+
+    @abstractmethod
     def is_moving(self):
         pass
 

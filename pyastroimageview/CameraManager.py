@@ -22,9 +22,7 @@ class CameraState(Enum):
     ERROR = 5          # fatal error condition in camera
 
     def exposure_in_progress(self):
-        logging.info(f'exposure_in_progress: {self.value}')
         r = self.value != self.UNKNOWN.value and self.value != self.IDLE.value and self.value != self.ERROR.value
-        logging.info(f'exposure_in_progress: {self.value} {r}')
         return r
 
     def pretty_name(self):
@@ -190,7 +188,7 @@ class CameraManager(Backend.Camera):
                 status.exposure_progress = super().get_exposure_progress()
             status.image_ready = super().check_exposure()
 
-        logging.info(f'status: {status}')
+#       logging.info(f'status: {status}')
 
         return status
 

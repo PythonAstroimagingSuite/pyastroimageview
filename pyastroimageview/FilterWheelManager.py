@@ -6,6 +6,7 @@ from PyQt5 import QtCore
 # all source files for hw managers reference contrete backend class this way
 from pyastrobackend import ASCOMBackend as Backend
 
+
 #
 # Going to try implementing as inheriting from backend focuser
 #

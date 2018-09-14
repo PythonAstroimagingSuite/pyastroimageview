@@ -7,6 +7,7 @@ class ImageSequence:
         self.start_index = 1
         self.number_frames = 1
         self.current_index = 1
+        self.filter = None
         self.frame_type = 'Light'
         self.exposure = 5
         self.binning = 1
@@ -64,6 +65,7 @@ class ImageSequence:
             f'start index = {self.start_index}\n' + \
             f'number frames = {self.number_frames}\n' + \
             f'current index = {self.current_index}\n' + \
+            f'filter = {self.filter}\n' + \
             f'frame type = {self.frame_type}\n' + \
             f'exposure = {self.exposure}\n' + \
             f'binning = {self.binning}\n' + \

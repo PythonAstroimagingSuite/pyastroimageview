@@ -1,3 +1,4 @@
+import time
 import logging
 
 from PyQt5 import QtWidgets, QtGui, QtCore
@@ -55,6 +56,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.ui.sequence_frametype.currentIndexChanged.connect(self.values_changed)
         self.ui.sequence_exposure.valueChanged.connect(self.values_changed)
         self.ui.sequence_start.valueChanged.connect(self.values_changed)
+        self.ui.sequence_filter.currentIndexChanged.connect(self.values_changed)
         self.ui.sequence_start_stop.pressed.connect(self.start_sequence)
 
         self.ui.sequence_binning.valueChanged.connect(self.binning_changed)
@@ -65,11 +67,18 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
         self.title_help = self.HelpWindow()
 
+        self.filterwheel_ui_initialized = False
+
         self.exposure_ongoing = False
 
         self.setWindowTitle('Sequence')
 
         self.show()
+
+        # polling camera status
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.filterwheel_status_poll)
+        self.timer.start(1000)
 
     def binning_changed(self, newbin):
         self.device_manager.camera.set_binning(newbin, newbin)
@@ -95,10 +104,27 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
             self.update_ui()
 
+    # FIXME we have to poll filterwheel and camera because we don't have a
+    # dbus like mechanism to notify application-wide of connect/disconnect
+    # and other device events
+    def filterwheel_status_poll(self):
+        if self.device_manager.filterwheel.is_connected():
+            if not self.filterwheel_ui_initialized:
+                # fill in filter wheel
+                filter_names = self.device_manager.filterwheel.get_names()
+
+                self.ui.sequence_filter.clear()
+                for idx, n in enumerate(filter_names, start=0):
+                    self.ui.sequence_filter.insertItem(idx, n)
+
+                curpos = self.device_manager.filterwheel.get_position()
+                self.ui.sequence_filter.setCurrentIndex(curpos)
+                self.filterwheel_ui_initialized = True
+
     # ripped from cameracontrolUI
     def camera_status_poll(self, status):
 
-        logging.info(f'imagesequencecontrol poll={status}')
+#        logging.info(f'imagesequencecontrol poll={status}')
         # FIXME Need a better way to get updates on CONNECT status!
         if status.connected:
             if self.sequence.roi is None:
@@ -200,10 +226,37 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             self.camera_manager.release_lock()
             return
 
+        # setup camera
         settings = CameraSettings()
         settings.binning = self.sequence.binning
         settings.roi = self.sequence.roi
         self.device_manager.camera.set_settings(settings)
+
+        # move filter wheel
+        if not self.device_manager.filterwheel.set_position_name(self.sequence.filter):
+            logging.error('start_sequence: unable to move filter wheel!')
+            QtWidgets.QMessageBox.critical(None, 'Error', 'Filter wheel not responding',
+                                           QtWidgets.QMessageBox.Ok)
+            self.device_manager.camera.release_lock()
+            self.device_manager.filterwheel.release_lock()
+            return
+
+        # wait on filter wheel
+        # FIXME Fix hardcoded timeout!
+        wait_start = time.time()
+        filter_ok = False
+        while time.time() - wait_start < 15:
+            if not self.device_manager.filterwheel.is_moving():
+                filter_ok = True
+                break
+
+        if not filter_ok:
+            logging.error('start_sequence: unable to move filter wheel!')
+            QtWidgets.QMessageBox.critical(None, 'Error', 'Filter wheel not responding - kept moving',
+                                           QtWidgets.QMessageBox.Ok)
+            self.device_manager.camera.release_lock()
+            self.device_manager.filterwheel.release_lock()
+            return
 
         self.device_manager.camera.start_exposure(self.sequence.exposure)
         self.exposure_ongoing = True
@@ -250,6 +303,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             self.sequence.frame_type = self.ui.sequence_frametype.itemText(self.ui.sequence_frametype.currentIndex())
         elif self.sender() == self.ui.sequence_targetdir:
             self.sequence.target_dir = self.ui.sequence_targetdir.toPlainText()
+        elif self.sender() == self.ui.sequence_filter:
+            self.sequence.filter = self.ui.sequence_filter.currentText()
         else:
             logging.error('Unknown sender is update_sequence!')
 

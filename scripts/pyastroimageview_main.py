@@ -121,6 +121,28 @@ class MainWindow(QtGui.QMainWindow):
         self.sequence_control_ui = ImageSequnceControlUI(self.device_manager, self.settings)
         self.sequence_control_ui.new_sequence_image.connect(self.new_sequence_image)
 
+        # FIXME YUCK Trying to get all windows to raise if any clicked on
+        QtGui.QApplication.instance().focusWindowChanged.connect(self.focus_window_changed)
+
+        self.last_win_focus = None
+
+    def focus_window_changed(self, win):
+        logging.info(f'focus win changed {win}')
+
+        # is it one of ours?
+        if win:
+            if not self.last_win_focus:
+                logging.info('IT WAS US!')
+                if not self.isActiveWindow():
+                    self.activateWindow()
+                if not self.device_control_ui.isActiveWindow():
+                    self.device_control_ui.activateWindow()
+                if not self.sequence_control_ui.isActiveWindow():
+                    self.sequence_control_ui.activateWindow()
+        self.last_win_focus = win
+
+
+
     def create_menu_and_toolbars(self):
         file_toolbar = QtGui.QToolBar("File")
         file_toolbar.setIconSize(QtCore.QSize(16, 16))
