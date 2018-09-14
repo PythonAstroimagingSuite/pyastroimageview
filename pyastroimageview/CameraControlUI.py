@@ -5,18 +5,21 @@ from PyQt5 import QtCore, QtWidgets
 from pyastroimageview.CameraManager import CameraState, CameraSettings
 
 from pyastroimageview.uic.camera_settings_uic import Ui_camera_settings_widget
-from pyastroimageview.uic.camera_roidialog_uic import Ui_camera_set_roi_dialog
+#from pyastroimageview.uic.camera_roidialog_uic import Ui_camera_set_roi_dialog
+
+from pyastroimageview.CameraSetROIControlUI import CameraSetROIDialog
+
 
 class CameraControlUI(QtWidgets.QWidget):
     new_camera_image = QtCore.pyqtSignal(object)
 
-    # FIXME not sure why I need this...
-    class CameraSetROIDialog(QtWidgets.QDialog):
-        def __init__(self):
-            super().__init__()
-
-            self.ui = Ui_camera_set_roi_dialog()
-            self.ui.setupUi(self)
+#    # FIXME not sure why I need this...
+#    class CameraSetROIDialog(QtWidgets.QDialog):
+#        def __init__(self):
+#            super().__init__()
+#
+#            self.ui = Ui_camera_set_roi_dialog()
+#            self.ui.setupUi(self)
 
     def __init__(self, camera_manager, settings):
         super().__init__()
@@ -149,98 +152,105 @@ class CameraControlUI(QtWidgets.QWidget):
             self.ui.camera_driver_label.setText(camera_choice)
 
     def set_roi(self):
-
-        def reset_roi_fields():
-            diag.ui.left_spinbox.setValue(self.roi[0])
-            diag.ui.top_spinbox.setValue(self.roi[1])
-            diag.ui.width_spinbox.setValue(self.roi[2])
-            diag.ui.height_spinbox.setValue(self.roi[3])
-
-        def update_roi(left=None, top=None, width=None, height=None):
-            """Validate roi values.
-
-            Width and height have precedence over left and top.
-
-            Should only pass one value in at a time but it should work in theory.
-            """
-            if left:
-                width = diag.ui.width_spinbox.value()
-                left = min(left, maxx-width)
-                diag.ui.left_spinbox.setValue(left)
-
-            if top:
-                height = diag.ui.height_spinbox.value()
-                top = min(top, maxy-height)
-                diag.ui.top_spinbox.setValue(top)
-
-            if width:
-                left = diag.ui.left_spinbox.value()
-                left = min(left, maxx-width)
-                diag.ui.left_spinbox.setValue(left)
-
-            if height:
-                top = diag.ui.top_spinbox.value()
-                top = min(top, maxy-height)
-                diag.ui.top_spinbox.setValue(top)
-
-        def left_changed(new_left):
-            update_roi(left=new_left)
-
-        def top_changed(new_top):
-            update_roi(top=new_top)
-
-        def width_changed(new_width):
-            update_roi(width=new_width)
-
-        def height_changed(new_height):
-            update_roi(height=new_height)
-
-        def center_roi():
-            width = diag.ui.width_spinbox.value()
-            height = diag.ui.height_spinbox.value()
-
-            top = int((maxy-height)/2)
-            left = int((maxx-width)/2)
-
-            diag.ui.top_spinbox.setValue(top)
-            diag.ui.left_spinbox.setValue(left)
-
-
         settings = self.camera_manager.get_settings()
-
-        maxx = int(settings.frame_width/settings.binning)
-        maxy = int(settings.frame_height/settings.binning)
-
-        diag = self.CameraSetROIDialog()
-
-        diag.ui.left_spinbox.setValue(self.roi[0])
-        diag.ui.top_spinbox.setValue(self.roi[1])
-        diag.ui.width_spinbox.setValue(self.roi[2])
-        diag.ui.height_spinbox.setValue(self.roi[3])
-
-        diag.ui.width_spinbox.setMaximum(maxx)
-        diag.ui.height_spinbox.setMaximum(maxy)
-        diag.ui.left_spinbox.setMaximum(maxx)
-        diag.ui.top_spinbox.setMaximum(maxy)
-
-        diag.ui.left_spinbox.valueChanged.connect(left_changed)
-        diag.ui.top_spinbox.valueChanged.connect(top_changed)
-        diag.ui.width_spinbox.valueChanged.connect(width_changed)
-        diag.ui.height_spinbox.valueChanged.connect(height_changed)
-
-        diag.ui.reset.pressed.connect(reset_roi_fields)
-        diag.ui.center.pressed.connect(center_roi)
-
-        result = diag.exec()
-
-
-        logging.info(f'diag result = {result}')
-
-        if result == QtWidgets.QDialog.Accepted:
-            self.roi = (diag.ui.left_spinbox.value(), diag.ui.top_spinbox.value(),
-                        diag.ui.width_spinbox.value(), diag.ui.height_spinbox.value())
+        result = CameraSetROIDialog().run(self.roi, settings)
+        if result:
+            self.roi = result
             self.update_roi_display()
 
+#    def set_roi(self):
+#
+#        def reset_roi_fields():
+#            diag.ui.left_spinbox.setValue(self.roi[0])
+#            diag.ui.top_spinbox.setValue(self.roi[1])
+#            diag.ui.width_spinbox.setValue(self.roi[2])
+#            diag.ui.height_spinbox.setValue(self.roi[3])
+#
+#        def update_roi(left=None, top=None, width=None, height=None):
+#            """Validate roi values.
+#
+#            Width and height have precedence over left and top.
+#
+#            Should only pass one value in at a time but it should work in theory.
+#            """
+#            if left:
+#                width = diag.ui.width_spinbox.value()
+#                left = min(left, maxx-width)
+#                diag.ui.left_spinbox.setValue(left)
+#
+#            if top:
+#                height = diag.ui.height_spinbox.value()
+#                top = min(top, maxy-height)
+#                diag.ui.top_spinbox.setValue(top)
+#
+#            if width:
+#                left = diag.ui.left_spinbox.value()
+#                left = min(left, maxx-width)
+#                diag.ui.left_spinbox.setValue(left)
+#
+#            if height:
+#                top = diag.ui.top_spinbox.value()
+#                top = min(top, maxy-height)
+#                diag.ui.top_spinbox.setValue(top)
+#
+#        def left_changed(new_left):
+#            update_roi(left=new_left)
+#
+#        def top_changed(new_top):
+#            update_roi(top=new_top)
+#
+#        def width_changed(new_width):
+#            update_roi(width=new_width)
+#
+#        def height_changed(new_height):
+#            update_roi(height=new_height)
+#
+#        def center_roi():
+#            width = diag.ui.width_spinbox.value()
+#            height = diag.ui.height_spinbox.value()
+#
+#            top = int((maxy-height)/2)
+#            left = int((maxx-width)/2)
+#
+#            diag.ui.top_spinbox.setValue(top)
+#            diag.ui.left_spinbox.setValue(left)
+#
+#
+#        settings = self.camera_manager.get_settings()
+#
+#        maxx = int(settings.frame_width/settings.binning)
+#        maxy = int(settings.frame_height/settings.binning)
+#
+#        diag = self.CameraSetROIDialog()
+#
+#        diag.ui.left_spinbox.setValue(self.roi[0])
+#        diag.ui.top_spinbox.setValue(self.roi[1])
+#        diag.ui.width_spinbox.setValue(self.roi[2])
+#        diag.ui.height_spinbox.setValue(self.roi[3])
+#
+#        diag.ui.width_spinbox.setMaximum(maxx)
+#        diag.ui.height_spinbox.setMaximum(maxy)
+#        diag.ui.left_spinbox.setMaximum(maxx)
+#        diag.ui.top_spinbox.setMaximum(maxy)
+#
+#        diag.ui.left_spinbox.valueChanged.connect(left_changed)
+#        diag.ui.top_spinbox.valueChanged.connect(top_changed)
+#        diag.ui.width_spinbox.valueChanged.connect(width_changed)
+#        diag.ui.height_spinbox.valueChanged.connect(height_changed)
+#
+#        diag.ui.reset.pressed.connect(reset_roi_fields)
+#        diag.ui.center.pressed.connect(center_roi)
+#
+#        result = diag.exec()
+#
+#
+#        logging.info(f'diag result = {result}')
+#
+#        if result == QtWidgets.QDialog.Accepted:
+#            self.roi = (diag.ui.left_spinbox.value(), diag.ui.top_spinbox.value(),
+#                        diag.ui.width_spinbox.value(), diag.ui.height_spinbox.value())
+#            self.update_roi_display()
+#
     def update_roi_display(self):
         if self.roi:
             self.ui.camera_setting_roi_width.setText(f'{self.roi[2]}')
@@ -260,6 +270,7 @@ class CameraControlUI(QtWidgets.QWidget):
             self.update_roi_display()
 
     def binning_changed(self, newbin):
+        self.camera_manager.set_binning(newbin, newbin)
         self.reset_roi()
 
     def camera_connect(self):
@@ -299,10 +310,10 @@ class CameraControlUI(QtWidgets.QWidget):
 #        self.ui.camera_setting_setup.setEnabled(True)
 #        self.ui.camera_setting_expose.setEnabled(False)
 
-        self.ui.camera_setting_roi_width.setPlainText('')
-        self.ui.camera_setting_roi_height.setPlainText('')
-        self.ui.camera_setting_roi_xleft.setPlainText('')
-        self.ui.camera_setting_roi_ytop.setPlainText('')
+        self.ui.camera_setting_roi_width.setText('')
+        self.ui.camera_setting_roi_height.setText('')
+        self.ui.camera_setting_roi_left.setText('')
+        self.ui.camera_setting_roi_top.setText('')
 
         self.xsize = None
         self.ysize = None
@@ -310,13 +321,19 @@ class CameraControlUI(QtWidgets.QWidget):
         self.camera_manager.release_lock()
 
     def camera_expose(self):
-        if not self.camera_manager.get_lock():
-            logging.error('CameraControlUI: camera_expose : could not get lock!')
-            return
 
+        # make sure camera connected
         if not self.camera_manager.is_connected():
             logging.error('CameraControlUI: camera_expose : camera not connected')
-            self.camera_manager.release_lock()
+            QtWidgets.QMessageBox.critical(None, 'Error', 'Please connect camera first',
+                                           QtWidgets.QMessageBox.Ok)
+            return
+
+        # try to lock camera
+        if not self.camera_manager.get_lock():
+            logging.error('CameraControlUI: camera_expose : could not get lock!')
+            QtWidgets.QMessageBox.critical(None, 'Error', 'Camera is busy',
+                                           QtWidgets.QMessageBox.Ok)
             return
 
         status = self.camera_manager.get_status()

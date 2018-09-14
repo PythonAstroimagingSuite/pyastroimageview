@@ -22,6 +22,7 @@ class ProgramSettings:
         self.telescope_description = ''
         self.telescope_aperture = 200
         self.telescope_obstruction = 33
+        self.telescope_focallen = 800
 
         # device settings
         self.camera_driver = ''

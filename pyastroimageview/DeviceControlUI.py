@@ -32,8 +32,8 @@ class DeviceControlUI(QtWidgets.QMainWindow):
         self.setWindowTitle('Device Control')
 
         self.activateWindow()
-        window_flags = self.windowFlags()
-        self.setWindowFlags(window_flags | QtCore.Qt.WindowStaysOnTopHint)
+#       window_flags = self.windowFlags()
+#        self.setWindowFlags(window_flags | QtCore.Qt.WindowStaysOnTopHint)
         self.showNormal()
 
     # FIXME would be nice if this was inside the function that created all this

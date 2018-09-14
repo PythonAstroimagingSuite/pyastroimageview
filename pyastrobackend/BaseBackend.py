@@ -34,6 +34,22 @@ class BaseCamera(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def get_camera_name(self):
+        pass
+
+    @abstractmethod
+    def get_camera_description(self):
+        pass
+
+    @abstractmethod
+    def get_driver_info(self):
+        pass
+
+    @abstractmethod
+    def get_driver_version(self):
+        pass
+
+    @abstractmethod
     def get_state(self):
         pass
 
@@ -56,14 +72,6 @@ class BaseCamera(metaclass=ABCMeta):
     @abstractmethod
     def get_image_data(self):
         pass
-
-#    @abstractmethod
-#    def saveimageCamera(self, path):
-#        pass
-
-#    @abstractmethod
-#    def closeimageCamera(self):
-#        pass
 
     @abstractmethod
     def get_pixelsize(self):

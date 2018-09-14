@@ -114,11 +114,12 @@ class CameraManager(Backend.Camera):
                     self.exposure_start_time = time.time()
 
             if status.image_ready:
+                logging.info('cameramanager: image_ready!')
                 self.watch_for_exposure_end = False
 
                 # FIXME this doesnt seem to detect aborted exposures reliably
                 complete = super().get_exposure_progress() >= 100
-                logging.info(f'{super().get_exposure_progress()} {complete}')
+#                logging.info(f'{super().get_exposure_progress()} {complete}')
 
                 # FIXME Assumes exposure length was equal to requested - should
                 # check backend to see if actual exposure length is available
@@ -143,11 +144,16 @@ class CameraManager(Backend.Camera):
                 if egain is not None:
                     fits_image.set_electronic_gain(egain)
 
-                self.signals.exposure_complete.emit((complete, fits_image))
-
+                logging.info('cameramanager: image ready about to clean state vars')
                 self.exposure_start_time = None
                 self.current_exposure_length = None
                 self.exposure_camera_settings = None
+
+                # HAVE to do this last - if signal handler is something like the
+                # sequence controller it might start up a new exposure as
+                # soon as it gets this signal so we have to be done handling
+                # the new image on this side first.
+                self.signals.exposure_complete.emit((complete, fits_image))
 
     def get_lock(self):
         logging.info(f'get_lock: {self.lock.available()}')
@@ -214,11 +220,13 @@ class CameraManager(Backend.Camera):
     @checklock
     def start_exposure(self, expose):
         if super().is_connected():
+            logging.info('cameramanager: starting exposure')
             super().start_exposure(expose)
             self.watch_for_exposure_end = True
             self.exposure_start_time = None
             self.current_exposure_length = expose
             self.exposure_camera_settings = self.get_settings()
+            logging.info(f'exposure_camera_settings = {self.exposure_camera_settings}')
 
     @checklock
     def stop_exposure(self):

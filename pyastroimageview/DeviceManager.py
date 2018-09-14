@@ -5,7 +5,7 @@ from pyastroimageview.FocuserManager import FocuserManager
 
 class DeviceManager:
     def __init__(self):
-        self.camera_manager = CameraManager()
-        self.focuser_manager = FocuserManager()
-        self.filterwheel_manager = FilterWheelManager()
-        self.mount_manager = MountManager()
+        self.camera = CameraManager()
+        self.focuser = FocuserManager()
+        self.filterwheel = FilterWheelManager()
+        self.mount = MountManager()

@@ -1,13 +1,17 @@
 import logging
 
-from PyQt5 import QtWidgets, QtGui
+from PyQt5 import QtWidgets, QtGui, QtCore
+
+from pyastroimageview.CameraManager import CameraState, CameraSettings
 
 from pyastroimageview.uic.sequence_settings_uic import Ui_SequenceSettingsUI
 from pyastroimageview.uic.sequence_title_help_uic import Ui_SequenceTitleHelpWindow
 
 from pyastroimageview.ImageSequence import ImageSequence
+from pyastroimageview.CameraSetROIControlUI import CameraSetROIDialog
 
 class ImageSequnceControlUI(QtWidgets.QWidget):
+    new_sequence_image = QtCore.pyqtSignal(object)
 
     class HelpWindow(QtWidgets.QMainWindow):
         def __init__(self):
@@ -24,7 +28,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         def show_help(self):
             self.show()
 
-    def __init__(self, device_manager):
+    def __init__(self, device_manager, settings):
         super().__init__()
 
         self.ui = Ui_SequenceSettingsUI()
@@ -37,20 +41,175 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
         self.sequence = ImageSequence(self.device_manager)
 
+        # initialize sequence settings from general settings
+        # FIXME do we need a centralized config object/singleton?
+        self.sequence.name_elements = settings.sequence_elements
+        self.sequence.target_dir = settings.sequence_targetdir
+        self.reset_roi()
         self.update_ui()
 
         self.ui.sequence_name.textChanged.connect(self.values_changed)
         self.ui.sequence_elements.textChanged.connect(self.values_changed)
         self.ui.sequence_exposure.valueChanged.connect(self.values_changed)
+        self.ui.sequence_number.valueChanged.connect(self.values_changed)
         self.ui.sequence_frametype.currentIndexChanged.connect(self.values_changed)
         self.ui.sequence_exposure.valueChanged.connect(self.values_changed)
         self.ui.sequence_start.valueChanged.connect(self.values_changed)
+        self.ui.sequence_start_stop.pressed.connect(self.start_sequence)
+
+        self.ui.sequence_binning.valueChanged.connect(self.binning_changed)
+        self.ui.sequence_roi_set.pressed.connect(self.set_roi)
+
+        self.device_manager.camera.signals.camera_status.connect(self.camera_status_poll)
+        self.device_manager.camera.signals.exposure_complete.connect(self.camera_exposure_complete)
 
         self.title_help = self.HelpWindow()
+
+        self.exposure_ongoing = False
 
         self.setWindowTitle('Sequence')
 
         self.show()
+
+    def binning_changed(self, newbin):
+        self.device_manager.camera.set_binning(newbin, newbin)
+        self.reset_roi()
+
+    def set_roi(self):
+        settings = self.device_manager.camera.get_settings()
+        result = CameraSetROIDialog().run(self.sequence.roi, settings)
+        if result:
+            self.sequence.roi = result
+            self.update_ui()
+
+    def reset_roi(self):
+        if self.device_manager.camera.is_connected():
+            settings = self.device_manager.camera.get_settings()
+
+            maxx = int(settings.frame_width/settings.binning)
+            maxy = int(settings.frame_height/settings.binning)
+
+            self.sequence.roi = (0, 0, maxx, maxy)
+
+            logging.info(f'imgseqcntrl: reset_roi set to {self.sequence.roi}')
+
+            self.update_ui()
+
+    # ripped from cameracontrolUI
+    def camera_status_poll(self, status):
+
+        logging.info(f'imagesequencecontrol poll={status}')
+        # FIXME Need a better way to get updates on CONNECT status!
+        if status.connected:
+            if self.sequence.roi is None:
+                self.reset_roi()
+
+        return
+
+        status_string = ''
+        if status.connected:
+            status_string += 'CONNECTED'
+        else:
+            status_string += 'DISCONNECTED'
+#        status_string += f' {status.state}'
+        if status.connected:
+            # FIXME should probably use camera exposure status from 'status' var?
+            if status.image_ready:
+                status_string += ' READY'
+            else:
+                status_string += ' NOT READY'
+            if self.exposure_ongoing:
+                if status.state is CameraState.EXPOSING:
+                    perc = min(100, status.exposure_progress)
+                    perc_string = f'EXPOSING {perc} % {perc/100.0 * self.current_exposure:.2f} of {self.current_exposure}'
+                else:
+                    perc_string = f'{status.state.pretty_name()}'
+            else:
+                perc_string = f'{status.state.pretty_name()}'
+
+#            self.ui.camera_setting_progress.setText(perc_string)
+
+#        self.ui.camera_setting_status.setText(status_string)
+#        logging.info('Camera Status:  ' + status_string)
+
+    # ripped from cameracontrolUI
+    def camera_exposure_complete(self, result):
+        # result will contain (bool, FITSImage)
+        # bool will be True if image successful
+        logging.info(f'camera_exposure_complete: result={result}')
+        if self.exposure_ongoing:
+
+            flag, fitsimage = result
+            # FIXME need better object to send with signal for end of sequence exposure?
+            self.new_sequence_image.emit((fitsimage, self.sequence.target_dir, self.sequence.get_filename()))
+
+            stop_idx = self.sequence.start_index + self.sequence.number_frames
+            self.sequence.current_index += 1
+            logging.warning(f'new cur idx={self.sequence.current_index} stop at {stop_idx}')
+            if self.sequence.current_index >= stop_idx:
+                self.exposure_ongoing = False
+                self.device_manager.camera.release_lock()
+                logging.info('sequence complete')
+                self.set_startstop_state(True)
+
+                # leave start at where this sequence finished off
+                self.ui.sequence_start.setValue(self.sequence.current_index)
+                return
+            else:
+                # start next exposure
+                self.device_manager.camera.start_exposure(self.sequence.exposure)
+        else:
+            logging.warning('camera_exposure_complete: no exposure was ongoing!')
+
+    def start_sequence(self):
+        # make sure camera connected
+        if not self.device_manager.camera.is_connected():
+            logging.error('start_sequence: camera is not connected!')
+            QtWidgets.QMessageBox.critical(None, 'Error', 'Please connect camera first',
+                                           QtWidgets.QMessageBox.Ok)
+            return
+
+        # try to lock camera
+        if not self.device_manager.camera.get_lock():
+            logging.error('start_sequence: unable to get camera lock!')
+            QtWidgets.QMessageBox.critical(None, 'Error', 'Camera is busy',
+                                           QtWidgets.QMessageBox.Ok)
+            return
+
+        self.set_startstop_state(False)
+
+        status = self.device_manager.camera.get_status()
+        if CameraState(status.state) != CameraState.IDLE:
+            logging.error('CameraControlUI: camera_expose : camera not IDLE')
+            self.camera_manager.release_lock()
+            return
+
+        settings = CameraSettings()
+        settings.binning = self.sequence.binning
+        settings.roi = self.sequence.roi
+        self.device_manager.camera.set_settings(settings)
+
+        self.device_manager.camera.start_exposure(self.sequence.exposure)
+        self.exposure_ongoing = True
+
+    def stop_sequence(self):
+        # release camera
+        if self.exposure_ongoing:
+            self.device_manager.camera.stop_exposure()
+
+        self.device_manager.camera.release_lock()
+        self.set_startstop_state(True)
+
+    def set_startstop_state(self, state):
+        """Controls start/stop button state"""
+        if state:
+            self.ui.sequence_start_stop.setText('Start')
+            self.ui.sequence_start_stop.pressed.disconnect(self.stop_sequence)
+            self.ui.sequence_start_stop.pressed.connect(self.start_sequence)
+        else:
+            self.ui.sequence_start_stop.setText('Stop')
+            self.ui.sequence_start_stop.pressed.disconnect(self.start_sequence)
+            self.ui.sequence_start_stop.pressed.connect(self.stop_sequence)
 
     def values_changed(self, *obj):
         self.update_sequence()
@@ -65,7 +224,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             self.sequence.exposure = self.ui.sequence_exposure.value()
         elif self.sender() == self.ui.sequence_start:
             self.sequence.start_index = self.ui.sequence_start.value()
-        elif self.sender == self.ui.sequence_number:
+        elif self.sender()== self.ui.sequence_number:
             self.sequence.number_frames = self.ui.sequence_number.value()
         elif self.sender() == self.ui.sequence_frametype:
             self.sequence.frame_type = self.ui.sequence_frametype.itemText(self.ui.sequence_frametype.currentIndex())
@@ -73,6 +232,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             self.sequence.target_dir = self.ui.sequence_targetdir.toPlainText()
         else:
             logging.error('Unknown sender is update_sequence!')
+
 
     def update_ui(self):
         logging.info(f'settings target dir plaintext to {self.sequence.target_dir}')
@@ -85,6 +245,12 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.ui.sequence_start.setValue(self.sequence.start_index)
         logging.info(f'settings target dir plaintext to {self.sequence.target_dir}')
         self.ui.sequence_targetdir.setPlainText(self.sequence.target_dir)
+
+        if self.sequence.roi:
+            self.ui.sequence_roi_width.setText(f'{self.sequence.roi[2]}')
+            self.ui.sequence_roi_height.setText(f'{self.sequence.roi[3]}')
+            self.ui.sequence_roi_left.setText(f'{self.sequence.roi[0]}')
+            self.ui.sequence_roi_top.setText(f'{self.sequence.roi[1]}')
 
         # move cursor to end of target_dir
         cursor = self.ui.sequence_targetdir.textCursor()

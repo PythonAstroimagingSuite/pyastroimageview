@@ -9,6 +9,8 @@ class ImageSequence:
         self.current_index = 1
         self.frame_type = 'Light'
         self.exposure = 5
+        self.binning = 1
+        self.roi = None
         self.device_manager = device_manager
         self.target_dir = ''
 
@@ -24,9 +26,9 @@ class ImageSequence:
         tmp_name = re.sub('\{exp\}', f'{self.exposure}s', tmp_name)
         tmp_name = re.sub('\{ftype\}', self.frame_type, tmp_name)
         tmp_name = re.sub('\{idx\}', f'{self.current_index:03d}', tmp_name)
-        if self.device_manager.camera_manager.is_connected():
-            tempC = self.device_manager.camera_manager.get_current_temperature()
-            binx, _ = self.device_manager.camera_manager.get_binning()
+        if self.device_manager.camera.is_connected():
+            tempC = self.device_manager.camera.get_current_temperature()
+            binx, _ = self.device_manager.camera.get_binning()
         else:
             tempC = -15
             binx = 1
@@ -41,8 +43,8 @@ class ImageSequence:
         # put in filter only if type  'Light'
         # also only put on base name too
         if self.frame_type == 'Light':
-            if self.device_manager.filterwheel_manager.is_connected():
-                filter_name = self.device_manager.filterwheel_manager.get_position_name()
+            if self.device_manager.filterwheel.is_connected():
+                filter_name = self.device_manager.filterwheel.get_position_name()
             else:
                 filter_name = 'Lum'
 
@@ -55,3 +57,19 @@ class ImageSequence:
             tmp_name = re.sub('\{name\}-', '', tmp_name)
 
         return tmp_name
+
+    def __str__(self):
+        s = f'base name = {self.name}\n' + \
+            f'name elements = {self.name_elements}\n' + \
+            f'start index = {self.start_index}\n' + \
+            f'number frames = {self.number_frames}\n' + \
+            f'current index = {self.current_index}\n' + \
+            f'frame type = {self.frame_type}\n' + \
+            f'exposure = {self.exposure}\n' + \
+            f'binning = {self.binning}\n' + \
+            f'roi = {self.roi}\n' + \
+            f'device manager = {self.device_manager}\n' + \
+            f'target dir = {self.target_dir}\n'
+
+        return s
+

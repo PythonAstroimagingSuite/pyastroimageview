@@ -55,6 +55,22 @@ class Camera(BaseCamera):
         else:
             return False
 
+    def get_camera_name(self):
+        if self.cam:
+            return self.cam.Name
+
+    def get_camera_description(self):
+        if self.cam:
+            return self.cam.Description
+
+    def get_driver_info(self):
+        if self.cam:
+            return self.cam.DriverInfo
+
+    def get_driver_version(self):
+        if self.cam:
+            return self.cam.DriverVersion
+
     def get_state(self):
         if self.cam:
             return self.cam.CameraState
