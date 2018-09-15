@@ -247,7 +247,7 @@ class CameraManager(Backend.Camera):
     def stop_exposure(self):
         if super().is_connected():
             super().stop_exposure()
-            self.signals.exposure_complete.emit(False)
+            self.signals.exposure_complete.emit((False, None))
 
     @checklock
     def get_image_data(self):

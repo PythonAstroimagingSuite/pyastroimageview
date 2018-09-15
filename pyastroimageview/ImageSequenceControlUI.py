@@ -182,8 +182,6 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             if self.sequence.roi is None:
                 self.reset_roi()
 
-        return
-
         status_string = ''
         if status.connected:
             status_string += 'CONNECTED'
@@ -192,20 +190,22 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 #        status_string += f' {status.state}'
         if status.connected:
             # FIXME should probably use camera exposure status from 'status' var?
-            if status.image_ready:
-                status_string += ' READY'
-            else:
-                status_string += ' NOT READY'
+#            if status.image_ready:
+#                status_string += ' READY'
+#            else:
+#                status_string += ' NOT READY'
             if self.exposure_ongoing:
                 if status.state is CameraState.EXPOSING:
                     perc = min(100, status.exposure_progress)
-                    perc_string = f'EXPOSING {perc} % {perc/100.0 * self.current_exposure:.2f} of {self.current_exposure}'
+                    perc_string = f'EXPOSING {perc}% {perc/100.0 * self.sequence.exposure:.2f}s of {self.sequence.exposure}s'
                 else:
                     perc_string = f'{status.state.pretty_name()}'
             else:
                 perc_string = f'{status.state.pretty_name()}'
 
-#            self.ui.camera_setting_progress.setText(perc_string)
+            status_string += ' ' + perc_string
+
+        self.ui.sequence_status_label.setText(status_string)
 
 #        self.ui.camera_setting_status.setText(status_string)
 #        logging.info('Camera Status:  ' + status_string)
@@ -215,9 +215,15 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         # result will contain (bool, FITSImage)
         # bool will be True if image successful
         logging.info(f'camera_exposure_complete: result={result}')
+
         if self.exposure_ongoing:
 
             flag, fitsimage = result
+
+            if not flag:
+                logging.warning('ImageSequenceControlUI:camera_exposure_complete - result was False!')
+                return
+
             # FIXME need better object to send with signal for end of sequence exposure?
             self.new_sequence_image.emit((fitsimage, self.sequence.target_dir, self.sequence.get_filename()))
 

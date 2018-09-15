@@ -195,13 +195,14 @@ class MainWindow(QtGui.QMainWindow):
 
     def current_view_changed(self, index):
         self.image_area_ui.clear_info()
+        current_widget = self.image_area_ui.get_current_view_widget()
         if self.image_documents:
-            self.image_area_ui.update_info(self.image_documents[index])
-            self.view_stars_action.setChecked(self.image_documents[index].image_widget.get_stars_visibility())
+            self.image_area_ui.update_info(self.image_documents[current_widget])
+            self.view_stars_action.setChecked(self.image_documents[current_widget].image_widget.get_stars_visibility())
 
     def view_toggle_stars(self, state):
-        curtab = self.image_area_ui.get_current_view_index()
-        self.image_documents[curtab].image_widget.set_stars_visibility(state)
+        current_widget = self.image_area_ui.get_current_view_widget()
+        self.image_documents[current_widget].image_widget.set_stars_visibility(state)
 
     def edit_settings(self):
         dlg = GeneralSettingsDialog()
@@ -238,11 +239,10 @@ class MainWindow(QtGui.QMainWindow):
         self.image_area_ui.clear_info()
         self.image_area_ui.update_info(imgdoc)
 
-
     def handle_new_image(self, tab_name, fits_doc):
-        tab_index = self.image_area_ui.find_view_index(tab_name)
+        tab_widget = self.image_area_ui.find_view_widget(tab_name)
 
-        if tab_index is None:
+        if tab_widget is None:
             # create new image widget and put it in a tab
             image_widget = ImageWindowSTF()
             image_widget.image_mouse_move.connect(self.image_mouse_move)
@@ -254,10 +254,14 @@ class MainWindow(QtGui.QMainWindow):
             #imgdoc.filename = 'Camera'
             imgdoc.image_widget = image_widget
 
-            self.image_documents[tab_index] = imgdoc
+            self.image_documents[image_widget] = imgdoc
         else:
             # reuse old
-            imgdoc = self.image_documents[tab_index]
+            imgdoc = self.image_documents[tab_widget]
+
+            tab_index = self.image_area_ui.find_index_widget(tab_widget)
+
+            logging.info(f'reuse tab_index = {tab_index}')
 
             # FIXME REALLY need a way to refresh/reset attributes!!
             # this attr is added in ImageAreaInfo class in update_info()

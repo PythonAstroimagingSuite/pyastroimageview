@@ -134,6 +134,12 @@ class ImageAreaInfo(QtWidgets.QWidget):
         """
         self.ui.image_tabs.setCurrentIndex(idx)
 
+    def get_current_view_widget(self):
+        return self.ui.image_tabs.currentWidget()
+
+    def set_current_view_widget(self, widget):
+        self.ui.image_tabs.setCurrentWidget(widget)
+
     def find_view_index(self, name):
         """Find view with matching name
         """
@@ -141,6 +147,28 @@ class ImageAreaInfo(QtWidgets.QWidget):
         tab_index = None
         for tidx in range(0, ntabs):
             if self.ui.image_tabs.tabText(tidx) == name:
+                tab_index = tidx
+                break
+
+        return tab_index
+
+    def find_view_widget(self, name):
+        """Find view with matching name
+        """
+        ntabs = self.ui.image_tabs.count()
+        tab_widget = None
+        for tidx in range(0, ntabs):
+            if self.ui.image_tabs.tabText(tidx) == name:
+                tab_widget = self.ui.image_tabs.widget(tidx)
+                break
+
+        return tab_widget
+
+    def find_index_widget(self, widget):
+        ntabs = self.ui.image_tabs.count()
+        tab_index = None
+        for tidx in range(0, ntabs):
+            if self.ui.image_tabs.widget(tidx) == widget:
                 tab_index = tidx
                 break
 

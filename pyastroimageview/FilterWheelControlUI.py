@@ -104,6 +104,12 @@ class FilterWheelControlUI(QtWidgets.QWidget):
             self.ui.filterwheel_setting_filter_combobox.setCurrentIndex(curpos)
 
     def filterwheel_disconnect(self):
+        if not self.filterwheel_manager.get_lock():
+            logging.error('FilterWheelControlUI: filterwheel_disconnect : could not get lock!')
+            QtWidgets.QMessageBox.critical(None, 'Error', 'Filterwheel is busy',
+                                           QtWidgets.QMessageBox.Ok)
+            return
+
         self.filterwheel_manager.disconnect()
         self.set_widget_states()
         self.names = None
