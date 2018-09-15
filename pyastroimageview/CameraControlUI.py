@@ -5,15 +5,15 @@ from PyQt5 import QtCore, QtWidgets
 from pyastroimageview.CameraManager import CameraState, CameraSettings
 
 from pyastroimageview.uic.camera_settings_uic import Ui_camera_settings_widget
-#from pyastroimageview.uic.camera_roidialog_uic import Ui_camera_set_roi_dialog
 
 from pyastroimageview.CameraSetROIControlUI import CameraSetROIDialog
 
+from pyastroimageview.ApplicationContainer import AppContainer
 
 class CameraControlUI(QtWidgets.QWidget):
     new_camera_image = QtCore.pyqtSignal(object)
 
-    def __init__(self, camera_manager, settings):
+    def __init__(self): #, camera_manager, settings):
         super().__init__()
 
         self.ui = Ui_camera_settings_widget()
@@ -27,16 +27,17 @@ class CameraControlUI(QtWidgets.QWidget):
         self.ui.camera_setting_binning_spinbox.valueChanged.connect(self.binning_changed)
         self.ui.camera_setting_roi_set.pressed.connect(self.set_roi)
 
-        self.camera_manager = camera_manager
+        #self.camera_manager = camera_manager
+        self.camera_manager = AppContainer.find('/dev/camera')
 
-        self.camera_manager.signals.camera_status.connect(self.camera_status_poll)
+        self.camera_manager.signals.status.connect(self.camera_status_poll)
         self.camera_manager.signals.exposure_complete.connect(self.camera_exposure_complete)
 
         # for DEBUG - should be None normally
         #self.camera_driver = 'ASCOM.Simulator.Camera'
         #self.camera_driver = None
 
-        self.settings = settings
+        self.settings = AppContainer.find('/program_settings')
 
         if self.settings.camera_driver:
             self.ui.camera_driver_label.setText(self.settings.camera_driver)
@@ -175,11 +176,6 @@ class CameraControlUI(QtWidgets.QWidget):
 
             self.set_widget_states()
 
-#            self.ui.camera_setting_disconnect.setEnabled(True)
-#            self.ui.camera_setting_expose.setEnabled(True)
-#            self.ui.camera_setting_connect.setEnabled(False)
-#            self.ui.camera_setting_setup.setEnabled(False)
-
             # setup UI based on camera settings
             settings = self.camera_manager.get_settings()
             self.ui.camera_setting_binning_spinbox.setValue(settings.binning)
@@ -191,16 +187,13 @@ class CameraControlUI(QtWidgets.QWidget):
         # get lock
         if not self.camera_manager.get_lock():
             logging.error('CameraControlUI: camera_disconnect : could not get lock!')
+            QtWidgets.QMessageBox.critical(None, 'Error', 'Camera is busy',
+                                           QtWidgets.QMessageBox.Ok)
             return
 
         self.camera_manager.disconnect()
 
         self.set_widget_states()
-
-#        self.ui.camera_setting_disconnect.setEnabled(False)
-#        self.ui.camera_setting_connect.setEnabled(True)
-#        self.ui.camera_setting_setup.setEnabled(True)
-#        self.ui.camera_setting_expose.setEnabled(False)
 
         self.ui.camera_setting_roi_width.setText('')
         self.ui.camera_setting_roi_height.setText('')

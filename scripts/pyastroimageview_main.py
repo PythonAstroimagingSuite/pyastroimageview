@@ -33,6 +33,7 @@ from pyastroimageview.ProgramSettings import ProgramSettings
 from pyastroimageview.ImageSequenceControlUI import ImageSequnceControlUI
 from pyastroimageview.GeneralSettingsUI import GeneralSettingsDialog
 
+from pyastroimageview.ApplicationContainer import AppContainer
 
 class MainWindow(QtGui.QMainWindow):
     class ImageDocument:
@@ -93,9 +94,13 @@ class MainWindow(QtGui.QMainWindow):
         self.resize(960, 740)
         self.show()
 
+        # container (or global variable in uglier terms) for stuff we want to reference all over
+
         # program settings
         self.settings = ProgramSettings()
         self.settings.read()
+
+        AppContainer.register('/program_settings', self.settings)
 
         # FIXME I don't like how this is working out:
         #  - I have to pass settings into everything that accesses it (some ppl would consider this good design though)
@@ -106,11 +111,17 @@ class MainWindow(QtGui.QMainWindow):
 
         self.device_manager = DeviceManager()
 
-        self.camera_control_ui = CameraControlUI(self.device_manager.camera, self.settings)
+#        self.camera_control_ui = CameraControlUI(self.device_manager.camera, self.settings)
+#        self.camera_control_ui.new_camera_image.connect(self.new_camera_image)
+#        self.focuser_control_ui = FocuserControlUI(self.device_manager.focuser, self.settings)
+#        self.filterwheel_control_ui = FilterWheelControlUI(self.device_manager.filterwheel, self.settings)
+#        self.mount_control_ui = MountControlUI(self.device_manager.mount, self.settings)
+
+        self.camera_control_ui = CameraControlUI()
         self.camera_control_ui.new_camera_image.connect(self.new_camera_image)
-        self.focuser_control_ui = FocuserControlUI(self.device_manager.focuser, self.settings)
-        self.filterwheel_control_ui = FilterWheelControlUI(self.device_manager.filterwheel, self.settings)
-        self.mount_control_ui = MountControlUI(self.device_manager.mount, self.settings)
+        self.focuser_control_ui = FocuserControlUI()
+        self.filterwheel_control_ui = FilterWheelControlUI()
+        self.mount_control_ui = MountControlUI()
 
         self.device_control_ui = DeviceControlUI()
         self.device_control_ui.add_ui_element(self.camera_control_ui, 'Camera Control')
@@ -118,7 +129,7 @@ class MainWindow(QtGui.QMainWindow):
         self.device_control_ui.add_ui_element(self.focuser_control_ui, 'Focuser Control')
         self.device_control_ui.add_ui_element(self.mount_control_ui, 'Mount Control')
 
-        self.sequence_control_ui = ImageSequnceControlUI(self.device_manager, self.settings)
+        self.sequence_control_ui = ImageSequnceControlUI()
         self.sequence_control_ui.new_sequence_image.connect(self.new_sequence_image)
 
         # FIXME YUCK Trying to get all windows to raise if any clicked on
@@ -127,21 +138,19 @@ class MainWindow(QtGui.QMainWindow):
         self.last_win_focus = None
 
     def focus_window_changed(self, win):
-        logging.info(f'focus win changed {win}')
+#        logging.info(f'focus win changed {win}')
 
         # is it one of ours?
         if win:
             if not self.last_win_focus:
-                logging.info('IT WAS US!')
-                if not self.isActiveWindow():
-                    self.activateWindow()
+#                logging.info('IT WAS US!')
+#                if not self.isActiveWindow():
+#                    self.activateWindow()
                 if not self.device_control_ui.isActiveWindow():
                     self.device_control_ui.activateWindow()
                 if not self.sequence_control_ui.isActiveWindow():
                     self.sequence_control_ui.activateWindow()
         self.last_win_focus = win
-
-
 
     def create_menu_and_toolbars(self):
         file_toolbar = QtGui.QToolBar("File")

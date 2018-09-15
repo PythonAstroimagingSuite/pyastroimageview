@@ -6,9 +6,11 @@ from PyQt5 import QtCore, QtWidgets
 
 from pyastroimageview.uic.mount_settings_uic import Ui_mount_settings_widget
 
+from pyastroimageview.ApplicationContainer import AppContainer
+
 class MountControlUI(QtWidgets.QWidget):
 
-    def __init__(self, mount_manager, settings):
+    def __init__(self): #, mount_manager, settings):
         super().__init__()
 
         self.ui = Ui_mount_settings_widget()
@@ -18,9 +20,9 @@ class MountControlUI(QtWidgets.QWidget):
         self.ui.mount_setting_connect.pressed.connect(self.mount_connect)
         self.ui.mount_setting_disconnect.pressed.connect(self.mount_disconnect)
 
-        self.mount_manager = mount_manager
+        self.mount_manager = AppContainer.find('/dev/mount')
 
-        self.settings = settings
+        self.settings = AppContainer.find('/program_settings')
 
         # for DEBUG - should be None normally
         #self.mount_driver = 'ASCOM.Simulator.Telescope'

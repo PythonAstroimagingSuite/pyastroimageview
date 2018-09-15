@@ -11,6 +11,8 @@ from pyastroimageview.uic.sequence_title_help_uic import Ui_SequenceTitleHelpWin
 from pyastroimageview.ImageSequence import ImageSequence
 from pyastroimageview.CameraSetROIControlUI import CameraSetROIDialog
 
+from pyastroimageview.ApplicationContainer import AppContainer
+
 class ImageSequnceControlUI(QtWidgets.QWidget):
     new_sequence_image = QtCore.pyqtSignal(object)
 
@@ -29,7 +31,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         def show_help(self):
             self.show()
 
-    def __init__(self, device_manager, settings):
+    def __init__(self): #, device_manager, settings):
         super().__init__()
 
         self.ui = Ui_SequenceSettingsUI()
@@ -38,12 +40,13 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.ui.sequence_elements_help.toggled.connect(self.help_toggle)
         self.ui.sequence_select_targetdir.pressed.connect(self.select_targetdir)
 
-        self.device_manager = device_manager
+        self.device_manager = AppContainer.find('/dev') #device_manager
 
         self.sequence = ImageSequence(self.device_manager)
 
         # initialize sequence settings from general settings
         # FIXME do we need a centralized config object/singleton?
+        settings = AppContainer.find('/program_settings')
         self.sequence.name_elements = settings.sequence_elements
         self.sequence.target_dir = settings.sequence_targetdir
         self.reset_roi()
@@ -62,8 +65,14 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.ui.sequence_binning.valueChanged.connect(self.binning_changed)
         self.ui.sequence_roi_set.pressed.connect(self.set_roi)
 
-        self.device_manager.camera.signals.camera_status.connect(self.camera_status_poll)
+        self.device_manager.camera.signals.status.connect(self.camera_status_poll)
         self.device_manager.camera.signals.exposure_complete.connect(self.camera_exposure_complete)
+        self.device_manager.camera.signals.lock.connect(self.camera_lock_handler)
+        self.device_manager.camera.signals.connect.connect(self.camera_connect_handler)
+        self.device_manager.filterwheel.signals.lock.connect(self.filterwheel_lock_handler)
+        self.device_manager.filterwheel.signals.connect.connect(self.filterwheel_connect_handler)
+
+        self.set_widget_states()
 
         self.title_help = self.HelpWindow()
 
@@ -75,10 +84,53 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
         self.show()
 
-        # polling camera status
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.filterwheel_status_poll)
-        self.timer.start(1000)
+        # polling filterwheel status
+#        self.timer = QtCore.QTimer()
+#        self.timer.timeout.connect(self.filterwheel_status_poll)
+#        self.timer.start(1000)
+
+    def set_widget_states(self):
+        camok = self.device_manager.camera.is_connected()
+        filtok = self.device_manager.filterwheel.is_connected()
+
+        val = camok and filtok
+
+        logging.info(f'imgcontrolUI: set_widget_states: {camok} {filtok}')
+
+        self.ui.sequence_name.setEnabled(val)
+        self.ui.sequence_elements.setEnabled(val)
+        self.ui.sequence_exposure.setEnabled(val)
+        self.ui.sequence_number.setEnabled(val)
+        self.ui.sequence_frametype.setEnabled(val)
+        self.ui.sequence_exposure.setEnabled(val)
+        self.ui.sequence_start.setEnabled(val)
+        self.ui.sequence_start_stop.setEnabled(val)
+        self.ui.sequence_binning.setEnabled(val)
+        self.ui.sequence_roi_set.setEnabled(val)
+        self.ui.sequence_filter.setEnabled(val)
+
+    def camera_lock_handler(self, val):
+        logging.info('camera_lock_handler')
+
+    def camera_connect_handler(self, val):
+        self.set_widget_states()
+
+    def filterwheel_lock_handler(self, val):
+        logging.info('filterwheel_lock_handler')
+
+    def filterwheel_connect_handler(self, val):
+        self.set_widget_states()
+
+        if val:
+            # fill in filter wheel
+            filter_names = self.device_manager.filterwheel.get_names()
+
+            self.ui.sequence_filter.clear()
+            for idx, n in enumerate(filter_names, start=0):
+                self.ui.sequence_filter.insertItem(idx, n)
+
+            curpos = self.device_manager.filterwheel.get_position()
+            self.ui.sequence_filter.setCurrentIndex(curpos)
 
     def binning_changed(self, newbin):
         self.device_manager.camera.set_binning(newbin, newbin)
@@ -107,19 +159,19 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
     # FIXME we have to poll filterwheel and camera because we don't have a
     # dbus like mechanism to notify application-wide of connect/disconnect
     # and other device events
-    def filterwheel_status_poll(self):
-        if self.device_manager.filterwheel.is_connected():
-            if not self.filterwheel_ui_initialized:
-                # fill in filter wheel
-                filter_names = self.device_manager.filterwheel.get_names()
-
-                self.ui.sequence_filter.clear()
-                for idx, n in enumerate(filter_names, start=0):
-                    self.ui.sequence_filter.insertItem(idx, n)
-
-                curpos = self.device_manager.filterwheel.get_position()
-                self.ui.sequence_filter.setCurrentIndex(curpos)
-                self.filterwheel_ui_initialized = True
+#    def filterwheel_status_poll(self):
+#        if self.device_manager.filterwheel.is_connected():
+#            if not self.filterwheel_ui_initialized:
+#                # fill in filter wheel
+#                filter_names = self.device_manager.filterwheel.get_names()
+#
+#                self.ui.sequence_filter.clear()
+#                for idx, n in enumerate(filter_names, start=0):
+#                    self.ui.sequence_filter.insertItem(idx, n)
+#
+#                curpos = self.device_manager.filterwheel.get_position()
+#                self.ui.sequence_filter.setCurrentIndex(curpos)
+#                self.filterwheel_ui_initialized = True
 
     # ripped from cameracontrolUI
     def camera_status_poll(self, status):

@@ -54,9 +54,20 @@ class CameraSettings:
                f'roi = {self.roi}\n'
 
 class CameraManagerSignals(QtCore.QObject):
+    """ Signals for camera state.
+
+    connect - Emitted when camera is connected or disconnected
+    status - Periodically emitted with camera status
+    exposure_start - Emitted when an exposure starts
+    exposure_complete - Emitted when an exposure ends
+    lock - Emitted when camera is locked or released
+    """
+    connect = QtCore.pyqtSignal(bool)
+    lock = QtCore.pyqtSignal(bool)
+    exposure_start = QtCore.pyqtSignal(object)
     exposure_complete = QtCore.pyqtSignal(object)
     exposure_status = QtCore.pyqtSignal(int)
-    camera_status = QtCore.pyqtSignal(CameraStatus)
+    status = QtCore.pyqtSignal(CameraStatus)
 
 class CameraManager(Backend.Camera):
     """The CameraManager class acts as an arbiter of requests to the camera device.
@@ -102,7 +113,7 @@ class CameraManager(Backend.Camera):
 
     def camera_status_poll(self):
         status = self.get_status()
-        self.signals.camera_status.emit(status)
+        self.signals.status.emit(status)
 
         if self.watch_for_exposure_end:
             # FIXME how best to determine when an exposure actually started
@@ -155,24 +166,29 @@ class CameraManager(Backend.Camera):
 
     def get_lock(self):
         logging.info(f'camera get_lock: {self.lock.available()}')
-        return self.lock.tryAcquire(1)
+        rc = self.lock.tryAcquire(1)
+        if rc:
+            self.signals.lock.emit(True)
+        return rc
 
     def release_lock(self):
         logging.info(f'camera release lock: {self.lock.available()}')
-        return self.lock.release(1)
-
-#    def show_chooser(self, last_choice):
-#        return self.show_chooser(last_choice)
+        rc  = self.lock.release(1)
+        if rc:
+            self.signals.lock.emit(False)
+        return rc
 
     @checklock
     def disconnect(self):
         if super().is_connected():
             super().disconnect()
+            self.signals.connect.emit(False)
 
     @checklock
     def connect(self, driver):
         if not super().is_connected():
             super().connect(driver)
+            self.signals.connect.emit(True)
 
     def get_status(self):
         status = CameraStatus()
@@ -225,11 +241,13 @@ class CameraManager(Backend.Camera):
             self.current_exposure_length = expose
             self.exposure_camera_settings = self.get_settings()
             logging.info(f'exposure_camera_settings = {self.exposure_camera_settings}')
+            self.signals.exposure_start.emit(False)
 
     @checklock
     def stop_exposure(self):
         if super().is_connected():
             super().stop_exposure()
+            self.signals.exposure_complete.emit(False)
 
     @checklock
     def get_image_data(self):

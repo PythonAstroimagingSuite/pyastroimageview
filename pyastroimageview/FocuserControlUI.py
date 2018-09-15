@@ -4,9 +4,12 @@ from PyQt5 import QtCore, QtWidgets
 
 from pyastroimageview.uic.focuser_settings_uic import Ui_focuser_settings_widget
 
+from pyastroimageview.ApplicationContainer import AppContainer
+
 class FocuserControlUI(QtWidgets.QWidget):
 
-    def __init__(self, focuser_manager, settings):
+    #def __init__(self, focuser_manager, settings):
+    def __init__(self):
         super().__init__()
 
         self.ui = Ui_focuser_settings_widget()
@@ -23,12 +26,13 @@ class FocuserControlUI(QtWidgets.QWidget):
         self.ui.focuser_setting_moveabs_move.pressed.connect(self.focuser_move_absolute)
         self.ui.focuser_setting_moveabs_stop.pressed.connect(self.focuser_move_stop)
 
-        self.focuser_manager = focuser_manager
+        self.focuser_manager = AppContainer.find('/dev/focuser')
 
         # for DEBUG - should be None normally
         #self.focuser_driver = 'ASCOM.Simulator.Focuser'
 
-        self.settings = settings
+        #self.settings = settings
+        self.settings = AppContainer.find('/program_settings')
 
         if self.settings.focuser_driver:
             self.ui.focuser_driver_label.setText(self.settings.focuser_driver)

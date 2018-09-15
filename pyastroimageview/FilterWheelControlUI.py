@@ -4,9 +4,12 @@ from PyQt5 import QtCore, QtWidgets
 
 from pyastroimageview.uic.filterwheel_settings_uic import Ui_filterwheel_settings_widget
 
+from pyastroimageview.ApplicationContainer import AppContainer
+
+
 class FilterWheelControlUI(QtWidgets.QWidget):
 
-    def __init__(self, filterwheel_manager, settings):
+    def __init__(self): #, filterwheel_manager, settings):
         super().__init__()
 
         self.ui = Ui_filterwheel_settings_widget()
@@ -18,12 +21,12 @@ class FilterWheelControlUI(QtWidgets.QWidget):
         self.ui.filterwheel_setting_disconnect.pressed.connect(self.filterwheel_disconnect)
         self.ui.filterwheel_setting_move.pressed.connect(self.filterwheel_move)
 
-        self.filterwheel_manager = filterwheel_manager
+        self.filterwheel_manager = AppContainer.find('/dev/filterwheel')
 
         # for DEBUG - should be None normally
         #self.filterwheel_driver = 'ASCOM.Simulator.FilterWheel'
 
-        self.settings = settings
+        self.settings = AppContainer.find('/program_settings')
 
         if self.settings.filterwheel_driver:
             self.ui.filterwheel_driver_label.setText(self.settings.filterwheel_driver)

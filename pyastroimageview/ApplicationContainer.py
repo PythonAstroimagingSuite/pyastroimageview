@@ -14,8 +14,12 @@
 # than passing variables up and down code paths which doesn't seem any better.
 #
 # So we'll give this a try...
+import sys
+import logging
+import traceback
 
 class ApplicationContainer(object):
+    __debug = True
 
     def __init__(self):
         super().__setattr__('_values', {})
@@ -23,9 +27,19 @@ class ApplicationContainer(object):
     def register(self, key, value):
         self._values[key] = value
 
+        if self.__debug:
+            stack = sys._getframe(1)
+            f = traceback.extract_stack(stack)[-1]
+            logging.info(f'AppContainer: key \'{key}\' registered to {value} from {f}')
+
     def find(self, key):
         if key not in self._values:
-            raise AttributeError(f"'{key}' is not registered.")
+            raise AttributeError(f'\'{key}\' is not registered.')
+
+        if self.__debug:
+            stack = sys._getframe(1)
+            f = traceback.extract_stack(stack)[-1]
+            logging.info(f'AppContainer: key \'{key}\' referenced from {f}')
 
         attribute = self._values[key]
 
