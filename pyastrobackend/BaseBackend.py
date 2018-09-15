@@ -110,6 +110,10 @@ class BaseCamera(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def get_max_binning(self):
+        pass
+
+    @abstractmethod
     def get_size(self):
         pass
 

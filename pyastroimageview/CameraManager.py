@@ -128,7 +128,7 @@ class CameraManager(Backend.Camera):
 
                 # FIXME this doesnt seem to detect aborted exposures reliably
                 complete = super().get_exposure_progress() >= 100
-#                logging.info(f'{super().get_exposure_progress()} {complete}')
+                logging.info(f'{super().get_exposure_progress()} {complete}')
 
                 # FIXME Assumes exposure length was equal to requested - should
                 # check backend to see if actual exposure length is available

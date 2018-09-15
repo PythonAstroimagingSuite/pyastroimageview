@@ -45,7 +45,8 @@
        <string>Title Elements Help
 
 {name}  	Base Name
-{tempC}	Camera temperature
+{tempc}	Camera current temperature
+{temps}	Camera setpoint temperature
 {bin}             	Camera Binning
 {exp}	Length of exposure
 {filter}	Name of filter

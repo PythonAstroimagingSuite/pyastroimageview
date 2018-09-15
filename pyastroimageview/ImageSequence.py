@@ -3,7 +3,7 @@ import re
 class ImageSequence:
     def __init__(self, device_manager):
         self.name = 'Object'
-        self.name_elements = '{name}-{ftype}-{bin}-{filter}-{exp}-{tempC}-{idx}.fits'
+        self.name_elements = '{name}-{ftype}-{bin}-{filter}-{exp}-{temps}-{idx}.fits'
         self.start_index = 1
         self.number_frames = 1
         self.current_index = 1
@@ -28,17 +28,25 @@ class ImageSequence:
         tmp_name = re.sub('\{ftype\}', self.frame_type, tmp_name)
         tmp_name = re.sub('\{idx\}', f'{self.current_index:03d}', tmp_name)
         if self.device_manager.camera.is_connected():
-            tempC = self.device_manager.camera.get_current_temperature()
+            tempc = self.device_manager.camera.get_current_temperature()
+            temps = self.device_manager.camera.get_target_temperature()
             binx, _ = self.device_manager.camera.get_binning()
         else:
-            tempC = -15
+            tempc = -15
+            temps = -15
             binx = 1
 
-        if tempC < 0:
-            tempC_prefix = 'm'
+        if tempc < 0:
+            tempc_prefix = 'm'
         else:
-            tempC_prefix = ''
-        tmp_name = re.sub('\{tempC\}', f'{tempC_prefix}{abs(tempC)}C', tmp_name)
+            tempc_prefix = ''
+        if temps < 0:
+            temps_prefix = 'm'
+        else:
+            temps_prefix = ''
+
+        tmp_name = re.sub('\{tempc\}', f'{tempc_prefix}{abs(tempc):.1f}C', tmp_name)
+        tmp_name = re.sub('\{temps\}', f'{temps_prefix}{abs(temps):.0f}C', tmp_name)
         tmp_name = re.sub('\{bin\}', f'bin_{binx}', tmp_name)
 
         # put in filter only if type  'Light'

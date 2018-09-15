@@ -99,7 +99,11 @@ class Camera(BaseCamera):
         if not self.cam:
             return 0
 
-        return self.cam.PercentCompleted
+        try:
+            return self.cam.PercentCompleted
+        except:
+            logging.warning('camera.get_exposure_progress() failed!')
+            return 100
 
     def get_image_data(self):
         """ Get image data from camera
@@ -112,7 +116,7 @@ class Camera(BaseCamera):
         # FIXME Is this best way to determine data type from camera??
         maxadu =  self.cam.MaxADU
         if maxadu == 65535:
-            out_dtype = np.dtype(np.int16)
+            out_dtype = np.dtype(np.uint16)
         else:
             logging.error(f'Unknown MAXADU {maxadu} in getImageData!!')
             return None
@@ -137,10 +141,16 @@ class Camera(BaseCamera):
         return self.cam.SetCCDTemperature
 
     def set_target_temperature(self, temp_c):
-        self.cam.SetCCDTemperature(temp_c)
+        try:
+            self.cam.SetCCDTemperature = temp_c
+        except:
+            logging.warning('camera.set_target_temperature() failed!')
 
     def set_cooler_state(self, onoff):
-        self.cam.CoolerOn = onoff
+        try:
+            self.cam.CoolerOn = onoff
+        except:
+            logging.warning('camera.set_cooler_state() failed!')
 
     def get_cooler_state(self):
         return self.cam.CoolerOn
@@ -151,8 +161,10 @@ class Camera(BaseCamera):
     def set_binning(self, binx, biny):
         self.cam.BinX = binx
         self.cam.BinY = biny
-
         return True
+
+    def get_max_binning(self):
+        return self.cam.MaxBinX
 
     def get_size(self):
         return (self.cam.CameraXSize, self.cam.CameraYSize)

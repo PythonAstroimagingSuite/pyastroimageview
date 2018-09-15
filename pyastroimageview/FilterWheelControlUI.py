@@ -89,9 +89,6 @@ class FilterWheelControlUI(QtWidgets.QWidget):
             self.filterwheel_manager.connect(self.settings.filterwheel_driver)
             self.set_widget_states()
 
-#            maxpos = self.filterwheel_manager.get_num_positions()
-#            self.ui.filterwheel_setting_position_spinbox.setMaximum(maxpos-1)
-
             self.names = self.filterwheel_manager.get_names()
 
             self.ui.filterwheel_setting_filter_combobox.clear()
@@ -113,6 +110,7 @@ class FilterWheelControlUI(QtWidgets.QWidget):
         self.filterwheel_manager.disconnect()
         self.set_widget_states()
         self.names = None
+        self.filterwheel_manager.release_lock()
 
     def filterwheel_move(self):
         # try to lock filter wheel

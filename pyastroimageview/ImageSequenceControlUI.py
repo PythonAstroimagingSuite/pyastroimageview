@@ -52,6 +52,9 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.reset_roi()
         self.update_ui()
 
+        # until camera connects assume no binning allowed
+        self.ui.sequence_binning.setMaximum(1)
+
         self.ui.sequence_name.textChanged.connect(self.values_changed)
         self.ui.sequence_elements.textChanged.connect(self.values_changed)
         self.ui.sequence_exposure.valueChanged.connect(self.values_changed)
@@ -114,6 +117,9 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
     def camera_connect_handler(self, val):
         self.set_widget_states()
+
+        maxbin = self.device_manager.camera.get_max_binning()
+        self.ui.sequence_binning.setMaximum(maxbin)
 
     def filterwheel_lock_handler(self, val):
         logging.info('filterwheel_lock_handler')
@@ -214,7 +220,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
     def camera_exposure_complete(self, result):
         # result will contain (bool, FITSImage)
         # bool will be True if image successful
-        logging.info(f'camera_exposure_complete: result={result}')
+        logging.info(f'sequence:camera_exposure_complete: result={result}')
 
         if self.exposure_ongoing:
 
@@ -244,7 +250,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                 # start next exposure
                 self.device_manager.camera.start_exposure(self.sequence.exposure)
         else:
-            logging.warning('camera_exposure_complete: no exposure was ongoing!')
+            logging.warning('sequence:camera_exposure_complete: no exposure was ongoing!')
 
     def start_sequence(self):
         # make sure camera connected

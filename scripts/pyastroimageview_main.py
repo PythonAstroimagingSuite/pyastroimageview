@@ -138,18 +138,19 @@ class MainWindow(QtGui.QMainWindow):
         self.last_win_focus = None
 
     def focus_window_changed(self, win):
-#        logging.info(f'focus win changed {win}')
+#        logging.info(f'focus win changed {win} {self.last_win_focus}')
 
         # is it one of ours?
         if win:
             if not self.last_win_focus:
-#                logging.info('IT WAS US!')
-#                if not self.isActiveWindow():
-#                    self.activateWindow()
-                if not self.device_control_ui.isActiveWindow():
-                    self.device_control_ui.activateWindow()
-                if not self.sequence_control_ui.isActiveWindow():
-                    self.sequence_control_ui.activateWindow()
+                if not self.device_control_ui.isMinimized():
+                    if not self.device_control_ui.isActiveWindow():
+#                        logging.info('activate device')
+                        self.device_control_ui.activateWindow()
+                if not self.sequence_control_ui.isMinimized():
+                    if not self.sequence_control_ui.isActiveWindow():
+#                        logging.info('activate seq')
+                        self.sequence_control_ui.activateWindow()
         self.last_win_focus = win
 
     def create_menu_and_toolbars(self):
@@ -212,6 +213,10 @@ class MainWindow(QtGui.QMainWindow):
         logging.info(f'new_camera_image: {result}')
 
         complete_status, fits_doc = result
+
+        if not complete_status:
+            logging.info('new_camera_info - cancelled image detected - returning')
+            return
 
         (imgdoc, tab_index) = self.handle_new_image('Camera', fits_doc)
 

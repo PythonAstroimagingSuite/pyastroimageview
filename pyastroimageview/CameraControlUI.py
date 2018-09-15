@@ -1,3 +1,4 @@
+import time
 import logging
 
 from PyQt5 import QtCore, QtWidgets
@@ -9,6 +10,11 @@ from pyastroimageview.uic.camera_settings_uic import Ui_camera_settings_widget
 from pyastroimageview.CameraSetROIControlUI import CameraSetROIDialog
 
 from pyastroimageview.ApplicationContainer import AppContainer
+
+# FIXME Come up with better states for camera
+EXPOSURE_STATE_IDLE=0
+EXPOSURE_STATE_ACTIVE=1
+EXPOSURE_STATE_CANCEL=2
 
 class CameraControlUI(QtWidgets.QWidget):
     new_camera_image = QtCore.pyqtSignal(object)
@@ -26,12 +32,25 @@ class CameraControlUI(QtWidgets.QWidget):
         self.ui.camera_setting_expose.pressed.connect(self.camera_expose)
         self.ui.camera_setting_binning_spinbox.valueChanged.connect(self.binning_changed)
         self.ui.camera_setting_roi_set.pressed.connect(self.set_roi)
+        self.ui.camera_setting_cooleronoff.toggled.connect(self.cooleronoff_handler)
+        self.ui.camera_setting_cooleronoff.clicked.connect(lambda x: logging.info('clicked'))
+        self.ui.camera_setting_coolersetpt.valueChanged.connect(self.cooler_setpt_changed)
 
         #self.camera_manager = camera_manager
         self.camera_manager = AppContainer.find('/dev/camera')
 
         self.camera_manager.signals.status.connect(self.camera_status_poll)
         self.camera_manager.signals.exposure_complete.connect(self.camera_exposure_complete)
+
+        if self.camera_manager.is_connected():
+            cooler_state = self.camera_manager.get_cooler_state()
+            self.ui.camera_setting_cooleronoff.setChecked(cooler_state)
+            settemp = self.camera_manager.get_target_temperature()
+            self.ui.camera_setting_coolersetpt.setValue(int(settemp))
+            maxbin = self.camera_managerget_max_binning()
+            self.ui.camera_setting_binning_spinbox.setMaximum(maxbin)
+        else:
+            self.ui.camera_setting_binning_spinbox.setMaximum(1)
 
         # for DEBUG - should be None normally
         #self.camera_driver = 'ASCOM.Simulator.Camera'
@@ -46,7 +65,7 @@ class CameraControlUI(QtWidgets.QWidget):
         self.xsize = None
         self.ysize = None
         self.roi = None
-        self.exposure_ongoing = False
+        self.state = EXPOSURE_STATE_IDLE
         self.current_exposure = None
 
         self.set_widget_states()
@@ -66,6 +85,8 @@ class CameraControlUI(QtWidgets.QWidget):
 
         # the expose button can also be stop button so only depends on connection
         self.ui.camera_setting_expose.setEnabled(connect)
+        self.ui.camera_setting_cooleronoff.setEnabled(connect)
+        self.ui.camera_setting_coolersetpt.setEnabled(connect)
 
         # these depend on if camera is connected AND if an exposure is going
         enable = connect and not exposing
@@ -77,6 +98,7 @@ class CameraControlUI(QtWidgets.QWidget):
         self.ui.camera_setting_roi_left.setEnabled(enable)
         self.ui.camera_setting_roi_top.setEnabled(enable)
         self.ui.camera_setting_roi_set.setEnabled(enable)
+        self.ui.camera_setting_continuous.setEnabled(enable)
 
     def camera_status_poll(self, status):
         status_string = ''
@@ -87,11 +109,11 @@ class CameraControlUI(QtWidgets.QWidget):
 #        status_string += f' {status.state}'
         if status.connected:
             # FIXME should probably use camera exposure status from 'status' var?
-            if status.image_ready:
-                status_string += ' READY'
-            else:
-                status_string += ' NOT READY'
-            if self.exposure_ongoing:
+#            if status.image_ready:
+#                status_string += ' READY'
+#            else:
+#                status_string += ' NOT READY'
+            if self.state != EXPOSURE_STATE_IDLE:
                 if status.state is CameraState.EXPOSING:
                     perc = min(100, status.exposure_progress)
                     perc_string = f'EXPOSING {perc} % {perc/100.0 * self.current_exposure:.2f} of {self.current_exposure}'
@@ -102,23 +124,36 @@ class CameraControlUI(QtWidgets.QWidget):
 
             self.ui.camera_setting_progress.setText(perc_string)
 
+            curtemp = self.camera_manager.get_current_temperature()
+            self.ui.camera_setting_coolercur.setText(f'{curtemp:5.1f}C')
+
+            cooler_state = self.camera_manager.get_cooler_state()
+            self.ui.camera_setting_cooleronoff.setChecked(cooler_state)
+
         self.ui.camera_setting_status.setText(status_string)
-#        logging.info('Camera Status:  ' + status_string)
 
     def camera_exposure_complete(self, result):
         logging.info(f'camera_exposure_complete: result={result}')
-        if self.exposure_ongoing:
-            self.exposure_ongoing = False
-#            self.ui.camera_setting_expose.setEnabled(True)
+        if self.state != EXPOSURE_STATE_IDLE:
+            if self.state != EXPOSURE_STATE_CANCEL:
+                # notify about current image
+                self.new_camera_image.emit(result)
+
+                if self.ui.camera_setting_continuous.isChecked():
+                  # just let things settle because just because
+                    time.sleep(1)
+
+                    # start another exposure!
+                    self.camera_manager.start_exposure(self.ui.camera_setting_exposure_spinbox.value())
+                    return
+
+             # all done
+            self.state = EXPOSURE_STATE_IDLE
             self.set_widget_states()
             self.camera_manager.release_lock()
 
-#            image_data = self.camera_manager.get_image_data()
-#            logging.info(f'camera_exposure_complete: image size {image_data.shape}')
-            self.new_camera_image.emit(result)
-
-            # set button back to 'expose'
-            # FIXME this is clucky! Also check in stop_exposure()!
+           # set button back to 'expose'
+            # FIXME this is clunky! Also check in stop_exposure()!
             self.ui.camera_setting_expose.setText('Expose')
             self.ui.camera_setting_expose.pressed.disconnect(self.stop_exposure)
             self.ui.camera_setting_expose.pressed.connect(self.camera_expose)
@@ -162,6 +197,21 @@ class CameraControlUI(QtWidgets.QWidget):
 
             self.update_roi_display()
 
+    def cooleronoff_handler(self, new_state):
+        if new_state:
+            button_text = 'Off'
+            new_setpt = self.ui.camera_setting_coolersetpt.value()
+            logging.info(f'cooleronoff_handler: setting temp to {new_setpt}')
+            self.camera_manager.set_target_temperature(new_setpt)
+        else:
+            button_text = 'On'
+
+        self.ui.camera_setting_cooleronoff.setText(button_text)
+        self.camera_manager.set_cooler_state(new_state)
+
+    def cooler_setpt_changed(self, new_setpt):
+        self.camera_manager.set_target_temperature(new_setpt)
+
     def binning_changed(self, newbin):
         self.camera_manager.set_binning(newbin, newbin)
         self.reset_roi()
@@ -180,6 +230,14 @@ class CameraControlUI(QtWidgets.QWidget):
             settings = self.camera_manager.get_settings()
             self.ui.camera_setting_binning_spinbox.setValue(settings.binning)
             self.reset_roi()
+
+            cooler_state = self.camera_manager.get_cooler_state()
+            self.ui.camera_setting_cooleronoff.setChecked(cooler_state)
+            settemp = self.camera_manager.get_target_temperature()
+            self.ui.camera_setting_coolersetpt.setValue(int(settemp))
+
+            maxbin = self.camera_manager.get_max_binning()
+            self.ui.camera_setting_binning_spinbox.setMaximum(maxbin)
 
             self.camera_manager.release_lock()
 
@@ -240,7 +298,7 @@ class CameraControlUI(QtWidgets.QWidget):
         self.camera_manager.set_settings(settings)
 
         self.camera_manager.start_exposure(self.ui.camera_setting_exposure_spinbox.value())
-        self.exposure_ongoing = True
+        self.state = EXPOSURE_STATE_ACTIVE
         self.current_exposure = self.ui.camera_setting_exposure_spinbox.value()
 
         # change expose into a stop button
@@ -253,8 +311,9 @@ class CameraControlUI(QtWidgets.QWidget):
 
     def stop_exposure(self):
         logging.info('stop exposure')
-        if not self.exposure_ongoing:
+        if self.state == EXPOSURE_STATE_IDLE:
             logging.warning('stop_exposure called but no exposure ongoing!')
             return
 
         self.camera_manager.stop_exposure()
+        self.state = EXPOSURE_STATE_CANCEL

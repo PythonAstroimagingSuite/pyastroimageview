@@ -270,6 +270,7 @@ class Ui_SequenceSettingsUI(object):
         self.label_9.setText(_translate("SequenceSettingsUI", "ROI"))
         self.label_5.setText(_translate("SequenceSettingsUI", "Starting Index"))
         self.sequence_start_stop.setText(_translate("SequenceSettingsUI", "Start"))
+        self.sequence_exposure.setSuffix(_translate("SequenceSettingsUI", "s"))
         self.label_4.setText(_translate("SequenceSettingsUI", "Number"))
         self.label_14.setText(_translate("SequenceSettingsUI", "Binning"))
         self.label_7.setText(_translate("SequenceSettingsUI", "Exposure"))
