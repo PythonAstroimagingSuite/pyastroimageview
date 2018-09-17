@@ -6,106 +6,56 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>255</width>
-    <height>173</height>
+    <width>211</width>
+    <height>46</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="1" column="0">
-    <widget class="QLabel" name="label">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <property name="horizontalSpacing">
+    <number>4</number>
+   </property>
+   <property name="verticalSpacing">
+    <number>2</number>
+   </property>
+   <item row="0" column="4">
+    <widget class="QPushButton" name="phd2_settings">
+     <property name="minimumSize">
+      <size>
+       <width>24</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>24</width>
+       <height>16777215</height>
+      </size>
+     </property>
      <property name="text">
-      <string>Dither Scale:</string>
+      <string>...</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="2">
-    <widget class="QDoubleSpinBox" name="phd2_scale">
-     <property name="decimals">
-      <number>2</number>
+   <item row="1" column="1" colspan="4">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="spacing">
+      <number>6</number>
      </property>
-     <property name="maximum">
-      <double>99.000000000000000</double>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="4">
-    <widget class="QLabel" name="label_3">
-     <property name="text">
-      <string>guide pixels</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0" colspan="2">
-    <widget class="QLabel" name="label_4">
-     <property name="text">
-      <string>Dither Settle Threshold</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="2">
-    <widget class="QDoubleSpinBox" name="phd2_threshold">
-     <property name="decimals">
-      <number>2</number>
-     </property>
-     <property name="maximum">
-      <double>9.000000000000000</double>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="4">
-    <widget class="QLabel" name="label_5">
-     <property name="text">
-      <string>guide pixels</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QLabel" name="label_6">
-     <property name="text">
-      <string>Dither Settle Start</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="4">
-    <widget class="QLabel" name="label_7">
-     <property name="text">
-      <string>seconds</string>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="0">
-    <widget class="QLabel" name="label_8">
-     <property name="text">
-      <string>Dither Settled Done</string>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="4">
-    <widget class="QLabel" name="label_9">
-     <property name="text">
-      <string>seconds</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="0" colspan="2">
-    <widget class="QLabel" name="label_10">
-     <property name="text">
-      <string>Dither Settile Timeout</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="4">
-    <widget class="QLabel" name="label_11">
-     <property name="text">
-      <string>seconds</string>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="0" colspan="5">
-    <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,1,0">
      <item>
       <widget class="QLabel" name="label_2">
        <property name="text">
@@ -124,56 +74,54 @@
        <property name="text">
         <string>TextLabel</string>
        </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="phd2_connect">
-       <property name="minimumSize">
-        <size>
-         <width>64</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>64</width>
-         <height>16777215</height>
-        </size>
-       </property>
-       <property name="text">
-        <string>Connect</string>
+       <property name="margin">
+        <number>0</number>
        </property>
       </widget>
      </item>
     </layout>
    </item>
-   <item row="3" column="2">
-    <widget class="QDoubleSpinBox" name="phd2_starttime">
-     <property name="decimals">
-      <number>0</number>
+   <item row="0" column="2">
+    <widget class="QToolButton" name="phd2_connect">
+     <property name="minimumSize">
+      <size>
+       <width>64</width>
+       <height>23</height>
+      </size>
      </property>
-     <property name="maximum">
-      <double>99.000000000000000</double>
+     <property name="maximumSize">
+      <size>
+       <width>64</width>
+       <height>23</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>Connect</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
-   <item row="4" column="2">
-    <widget class="QDoubleSpinBox" name="phd2_settledtime">
-     <property name="decimals">
-      <number>0</number>
+   <item row="0" column="3">
+    <widget class="QToolButton" name="phd2_pause">
+     <property name="minimumSize">
+      <size>
+       <width>48</width>
+       <height>23</height>
+      </size>
      </property>
-     <property name="maximum">
-      <double>99.000000000000000</double>
+     <property name="maximumSize">
+      <size>
+       <width>48</width>
+       <height>23</height>
+      </size>
      </property>
-    </widget>
-   </item>
-   <item row="5" column="2">
-    <widget class="QDoubleSpinBox" name="phd2_settletimeout">
-     <property name="decimals">
-      <number>0</number>
+     <property name="text">
+      <string>Pause</string>
      </property>
-     <property name="maximum">
-      <double>99.000000000000000</double>
+     <property name="checkable">
+      <bool>true</bool>
      </property>
     </widget>
    </item>

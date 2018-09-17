@@ -84,7 +84,7 @@ class PHD2Manager:
     def process(self):
         """See if any data has arrived and process"""
 
-        logging.info('processing')
+ #       logging.info('processing')
 
         if not self.socket:
             logging.error('PHD2Manager:process PHD2 not connected!')
@@ -157,8 +157,7 @@ class PHD2Manager:
                "params" : [dither_pix, False,
                            {"pixels" : settle_pix,
                             "time" : settle_start_time,
-                            "timeout" : settle_finish_time}],
-                "id" : 1234}
+                            "timeout" : settle_finish_time}]}
 
         self.__send_json_command(cmd)
 
@@ -168,8 +167,7 @@ class PHD2Manager:
 
     def set_pause(self, state):
         cmd = {"method" : "set_paused",
-               "params" : [state, "Full"],
-                "id" : 1234}
+               "params" : [state, "Full"]}
 
         self.__send_json_command(cmd)
 
@@ -186,8 +184,10 @@ class PHD2Manager:
     def get_connected(self):
         self.__send_json_request('get_connected')
 
-    def __send_json_request(self, req):
+    def get_paused(self):
+        self.__send_json_request('get_paused')
 
+    def __send_json_request(self, req):
         self.requests[self.request_id] = req
         reqdict = {}
         reqdict['method'] = req
@@ -195,13 +195,25 @@ class PHD2Manager:
         self.request_id += 1
 
         cmdstr = json.dumps(reqdict) + '\n'
-        logging.info(f'jsonrequest->{bytes(cmdstr, encoding="ascii")}')
-        self.socket.writeData(bytes(cmdstr, encoding='ascii'))
+        if 'app_state' not in req:
+            logging.info(f'jsonrequest->{bytes(cmdstr, encoding="ascii")}')
+        try:
+            self.socket.writeData(bytes(cmdstr, encoding='ascii'))
+        except Exception as e:
+            logging.error(f'__send_json_request - req was {req}!')
+            logging.error('Exception ->', exc_info=True)
 
     def __send_json_command(self, cmd):
+        cmd['id'] = self.request_id
+        self.request_id += 1
+
         cmdstr = json.dumps(cmd) + '\n'
         logging.info(f'jsoncmd->{bytes(cmdstr, encoding="ascii")}')
-        self.socket.writeData(bytes(cmdstr, encoding='ascii'))
+        try:
+            self.socket.writeData(bytes(cmdstr, encoding='ascii'))
+        except Exception as e:
+            logging.error(f'__send_json_command - cmd was {cmd}!')
+            logging.error('Exception ->', exc_info=True)
 
 # TESTING ONLY
 p = None

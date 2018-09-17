@@ -34,6 +34,13 @@ class ProgramSettings:
         self.sequence_targetdir = ''
         self.sequence_elements = ''
 
+        # phd2 settings
+        self.phd2_scale = 1.0
+        self.phd2_settletimeout = 60.0
+        self.phd2_settledtime = 10.0
+        self.phd2_starttime = 5
+        self.phd2_threshold = 0.5
+
     # FIXME This will break HORRIBLY unless passed an attribute already
     #       in the ConfigObj dictionary
     #
