@@ -19,8 +19,12 @@ class PHD2ManagerSignals(QtCore.QObject):
         looping_stop = QtCore.pyqtSignal()
         starlost = QtCore.pyqtSignal()
         request = QtCore.pyqtSignal(str, object)
+
+        # FIXME we should get this down to just a single signal
+        # to indicate connection is lost
         tcperror = QtCore.pyqtSignal()
-        socketstate = QtCore.pyqtSignal(int)
+        connect_close = QtCore.pyqtSignal(int)
+        disconnected = QtCore.pyqtSignal()
 
 class PHD2Manager:
 
@@ -28,6 +32,7 @@ class PHD2Manager:
         self.socket = None
         self.requests = {}
         self.request_id = 0
+        self.connected = False
         self.signals = PHD2ManagerSignals()
 
     def connect(self):
@@ -49,37 +54,59 @@ class PHD2Manager:
             self.socket = None
             return False
 
-        logging.info(f'Connected {self.socket}')
+        self.connected = True
 
         self.socket.readyRead.connect(self.process)
         self.socket.error.connect(self.error)
         self.socket.stateChanged.connect(self.state_changed)
+        self.socket.disconnected.connect(self.disconnected)
 
         return True
 
     def disconnect(self):
-        if not self.socket:
+        if not self.connected:
              logging.warning('PHD2Manager:connect() socket appears to be inactive already!')
-
-        # if we lose connection and try to close to cleanup I get a segv
-
-#        logging.info(f'{self.socket.isOpen()}')
+             return
 
         try:
             self.socket.disconnectFromHost()
         except Exception as e:
             logging.error('Exception PHD2Manager:disconnect()!', exc_info=True)
-        self.socket = None
+
+        self.connected = False
+
+    def is_connected(self):
+        return self.connected
+
+    #
+    # FOR REFERENCE - I have found setting self.socket to None causes SEGV when
+    #                 the other end has disconnected (like you close PHD2)
+    #
+    #                 All I can guess is by setting it to None it causes
+    #                 a C++ destructor(?) to do bad things in the library
+    #
+    #                 To counter this I use self.connected to indicate if
+    #                 the connection is up.
+    #
+    def disconnected(self):
+        logging.info('disconnected signal from socket!')
+
+        self.connected = False
+        self.signals.disconnected.emit()
 
     def state_changed(self, state):
         logging.info(f'socket state_changed -> {state}')
-        self.signals.socketstate.emit(state)
-#        self.socket = None
+        # FIXME is this only error we need to catch?
+        if state == QtNetwork.QAbstractSocket.ClosingState or \
+            state == QtNetwork.QAbstractSocket.UnconnectedState:
+                if self.connected:
+                    self.connected = False
+#                    self.socket = None
+                    self.signals.connect_close.emit(state)
 
     def error(self, socket_error):
         logging.error(f'PHD2Manager:error called! socket_error = {socket_error}')
         self.signals.tcperror.emit()
-#        self.socket = None
 
     def process(self):
         """See if any data has arrived and process"""
@@ -175,14 +202,16 @@ class PHD2Manager:
 #        logging.info(f'{bytes(cmdstr, encoding="ascii")}')
 #        self.socket.writeData(bytes(cmdstr, encoding='ascii'))
 
-    def is_connected(self):
-        return self.socket is not None
+
+    def get_connected(self):
+        """This tests if PHD2 is connected to hardware, not if the connection
+        to PHD2 is active!
+        """
+        self.__send_json_request('get_connected')
 
     def get_appstate(self):
         self.__send_json_request('get_app_state')
 
-    def get_connected(self):
-        self.__send_json_request('get_connected')
 
     def get_paused(self):
         self.__send_json_request('get_paused')
@@ -195,8 +224,16 @@ class PHD2Manager:
         self.request_id += 1
 
         cmdstr = json.dumps(reqdict) + '\n'
-        if 'app_state' not in req:
-            logging.info(f'jsonrequest->{bytes(cmdstr, encoding="ascii")}')
+#        if 'app_state' not in req:
+        logging.info(f'jsonrequest->{bytes(cmdstr, encoding="ascii")}')
+
+        if not self.connected:
+            logging.warning('__send_json_request: not connected!')
+            return
+
+        # FIXME this isnt good enough - could be set to None before
+        # we actually get to writing
+        # need locking?
         try:
             self.socket.writeData(bytes(cmdstr, encoding='ascii'))
         except Exception as e:
@@ -209,6 +246,14 @@ class PHD2Manager:
 
         cmdstr = json.dumps(cmd) + '\n'
         logging.info(f'jsoncmd->{bytes(cmdstr, encoding="ascii")}')
+
+        # FIXME this isnt good enough - could be set to None before
+        # we actually get to writing
+        # need locking?
+        if not self.connected:
+            logging.warning('__send_json_command: not connected!')
+            return
+
         try:
             self.socket.writeData(bytes(cmdstr, encoding='ascii'))
         except Exception as e:

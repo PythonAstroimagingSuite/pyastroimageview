@@ -53,10 +53,10 @@ class PHD2ControlUI(QtWidgets.QWidget):
 
         self.phd2_manager = PHD2Manager()
         self.phd2_manager.signals.request.connect(self.request_event)
-        self.phd2_manager.signals.tcperror.connect(self.tcperror)
-        self.phd2_manager.signals.socketstate.connect(self.socketstate)
+#        self.phd2_manager.signals.tcperror.connect(self.tcperror)
+#        self.phd2_manager.signals.connect_close.connect(self.connect_close)
+        self.phd2_manager.signals.disconnected.connect(self.disconnected)
 
-        self.connected = False
         self.disconnecting = False
 
         #self.settings = settings
@@ -93,42 +93,30 @@ class PHD2ControlUI(QtWidgets.QWidget):
             self.ui.phd2_pause.setText('Pause')
 
     def set_widget_states(self):
-        connect = self.connected
+        connect = self.phd2_manager.is_connected()
 
         self.ui.phd2_pause.setEnabled(connect)
 
-#        self.ui.phd2_scale.setEnabled(connect)
-#        self.ui.phd2_settletimeout.setEnabled(connect)
-#        self.ui.phd2_settledtime.setEnabled(connect)
-#        self.ui.phd2_starttime.setEnabled(connect)
-#        self.ui.phd2_threshold.setEnabled(connect)
+    def disconnected(self):
+        # FIXME normally set when calling self.phd2_disconnect()
+        # but we need to be extra sure nothing tries to use connection
+        # since it is gone
+        logging.info('phd2controlui: received disconnected signal')
+        if self.disconnecting:
+            logging.info('ignoring disconnected signal since user disconnected.')
+            return
 
-    def tcperror(self):
-        logging.error('phd2controlui: error communicating to PHD2')
-#        QtWidgets.QMessageBox.critical(None, 'Error', 'Lost connection with PHD2!',
-#                                       QtWidgets.QMessageBox.Ok)
-#        self.set_connectdisconnect_state(False)
-#        self.set_widget_states()
-
-    def socketstate(self, state):
-        # FIXME shouldnt hard code this Qt constant here!!
-        if state == 0 and not self.disconnecting:
-            logging.error('phd2controlui: error communicating to PHD2')
-            QtWidgets.QMessageBox.critical(None, 'Error', 'Lost connection with PHD2!',
-                                           QtWidgets.QMessageBox.Ok)
-            # FIXME normally set when calling self.phd2_disconnect()
-            # but we need to be extra sure nothing tries to use connection
-            # since it is gone
-            self.disconnecting = True
-            self.connected = False
-            self.set_connectdisconnect_state(False)
-            self.set_pauseunpause_state(False)
-            self.set_widget_states()
-            self.disconnecting = False
+        QtWidgets.QMessageBox.critical(None, 'Error', 'Lost connection with PHD2!',
+                                       QtWidgets.QMessageBox.Ok)
+        self.disconnecting = True
+        self.set_connectdisconnect_state(False)
+        self.set_pauseunpause_state(False)
+        self.set_widget_states()
+        self.disconnecting = False
 
     def phd2_status_poll(self):
         # get appstate - will send us an event when result available
-        if self.connected:
+        if self.phd2_manager.is_connected():
             self.phd2_manager.get_appstate()
         else:
             self.ui.phd2_status.setText('DISCONNECTED')
@@ -137,12 +125,6 @@ class PHD2ControlUI(QtWidgets.QWidget):
 
     def request_event(self, reqtype, answer):
         status_string = ''
-#        if self.connected:
-#            status_string += 'CONNECTED'
-#        else:
-#            status_string += 'DISCONNECTED'
-
-        #status_string += ' ' + reqtype + ' = ' + str(answer)
 
         if reqtype == 'get_paused':
             self.set_pauseunpause_state(answer)
@@ -207,9 +189,6 @@ class PHD2ControlUI(QtWidgets.QWidget):
             return False
 
         self.set_connectdisconnect_state(True)
-#        logging.info('true')
-#        self.ui.phd2_connect.setChecked(True)
-        self.connected = True
         self.set_widget_states()
         self.phd2_manager.get_paused()
 
@@ -218,9 +197,7 @@ class PHD2ControlUI(QtWidgets.QWidget):
         self.disconnecting = True
         self.phd2_manager.disconnect()
         self.set_connectdisconnect_state(False)
-#        logging.info('false')
-#        self.ui.phd2_connect.setChecked(False)
-        self.connected = False
+
         self.set_widget_states()
         self.set_pauseunpause_state(False)
         self.disconnecting = False
