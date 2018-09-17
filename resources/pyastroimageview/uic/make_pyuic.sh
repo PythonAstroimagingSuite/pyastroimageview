@@ -1,6 +1,6 @@
 #!/bin/bash
 echo "Making uic python files for pyastroimageview"
-for i in 'focuser' 'mount' 'camera' 'filterwheel' 'general' 'sequence'; do
+for i in 'focuser' 'mount' 'camera' 'filterwheel' 'general' 'sequence' 'phd2'; do
 echo $i
 /c/Users/msf/Anaconda3/Library/bin/pyuic5.bat ${i}_settings.ui > ../../../pyastroimageview/uic/${i}_settings_uic.py
 done

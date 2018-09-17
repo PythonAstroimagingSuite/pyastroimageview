@@ -32,6 +32,7 @@ from pyastroimageview.DeviceControlUI import DeviceControlUI
 from pyastroimageview.ProgramSettings import ProgramSettings
 from pyastroimageview.ImageSequenceControlUI import ImageSequnceControlUI
 from pyastroimageview.GeneralSettingsUI import GeneralSettingsDialog
+from pyastroimageview.PHD2ControlUI import PHD2ControlUI
 
 from pyastroimageview.ApplicationContainer import AppContainer
 
@@ -122,11 +123,13 @@ class MainWindow(QtGui.QMainWindow):
         self.focuser_control_ui = FocuserControlUI()
         self.filterwheel_control_ui = FilterWheelControlUI()
         self.mount_control_ui = MountControlUI()
+        self.phd2_control_ui = PHD2ControlUI()
 
         self.device_control_ui = DeviceControlUI()
         self.device_control_ui.add_ui_element(self.camera_control_ui, 'Camera Control')
         self.device_control_ui.add_ui_element(self.filterwheel_control_ui, 'Filter Wheel Control')
         self.device_control_ui.add_ui_element(self.focuser_control_ui, 'Focuser Control')
+        self.device_control_ui.add_ui_element(self.phd2_control_ui, 'PHD2 Control')
         self.device_control_ui.add_ui_element(self.mount_control_ui, 'Mount Control')
 
         self.sequence_control_ui = ImageSequnceControlUI()
