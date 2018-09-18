@@ -40,8 +40,13 @@ class Camera(BaseCamera):
     def connect(self, name):
         pythoncom.CoInitialize()
         self.cam = win32com.client.Dispatch(name)
-        self.cam.Connected = True
-        return True
+        try:
+            self.cam.Connected = True
+        except Exception as e:
+            logging.error('ASCOMBackend:camera:connect() Exception ->', exc_info=True)
+            return False
+
+        return self.cam.Connected
 
     def disconnect(self):
         if self.cam:
@@ -202,7 +207,11 @@ class Focuser(BaseFocuser):
         if self.focus.Connected:
             logging.info("	-> Focuser was already connected")
         else:
-            self.focus.Connected = True
+            try:
+                self.focus.Connected = True
+            except Exception as e:
+                logging.error('ASCOMBackend:focuser:connect() Exception ->', exc_info=True)
+                return False
 
         if self.focus.Connected:
             logging.info(f"	Connected to focuser {name} now")
@@ -265,7 +274,11 @@ class FilterWheel(BaseFilterWheel):
         if self.filterwheel.Connected:
             logging.info("	-> filterwheel was already connected")
         else:
-            self.filterwheel.Connected = True
+            try:
+                self.filterwheel.Connected = True
+            except Exception as e:
+                logging.error('ASCOMBackend:filterwheel:connect() Exception ->', exc_info=True)
+                return False
 
         if self.filterwheel.Connected:
             logging.info(f"	Connected to filter wheel {name} now")
@@ -358,7 +371,11 @@ class Mount(BaseMount):
         if self.mount.Connected:
             logging.info("	-> mount was already connected")
         else:
-            self.mount.Connected = True
+            try:
+                self.mount.Connected = True
+            except Exception as e:
+                logging.error('ASCOMBackend:mount:connect() Exception ->', exc_info=True)
+                return False
 
         if self.mount.Connected:
             logging.info(f"	Connected to mount {name} now")

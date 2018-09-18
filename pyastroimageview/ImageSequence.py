@@ -11,6 +11,7 @@ class ImageSequence:
         self.frame_type = 'Light'
         self.exposure = 5
         self.binning = 1
+        self.num_dither = 0
         self.roi = None
         self.device_manager = device_manager
         self.target_dir = ''
@@ -77,6 +78,7 @@ class ImageSequence:
             f'frame type = {self.frame_type}\n' + \
             f'exposure = {self.exposure}\n' + \
             f'binning = {self.binning}\n' + \
+            f'num_dither = {self.num_dither}\n' + \
             f'roi = {self.roi}\n' + \
             f'device manager = {self.device_manager}\n' + \
             f'target dir = {self.target_dir}\n'

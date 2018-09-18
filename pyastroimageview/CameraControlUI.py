@@ -222,7 +222,12 @@ class CameraControlUI(QtWidgets.QWidget):
                 logging.warning('CCUI: camera_connect: could not get lock!')
                 return
 
-            self.camera_manager.connect(self.settings.camera_driver)
+            result = self.camera_manager.connect(self.settings.camera_driver)
+            if not result:
+                QtWidgets.QMessageBox.critical(None, 'Error', 'Unable to connect to camera!',
+                                               QtWidgets.QMessageBox.Ok)
+                self.camera_manager.release_lock()
+                return
 
             self.set_widget_states()
 

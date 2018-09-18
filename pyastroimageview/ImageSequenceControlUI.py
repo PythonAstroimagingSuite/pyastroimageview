@@ -109,6 +109,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.ui.sequence_start.setEnabled(val)
         self.ui.sequence_start_stop.setEnabled(val)
         self.ui.sequence_binning.setEnabled(val)
+        self.ui.sequence_dither.setEnabled(val)
         self.ui.sequence_roi_set.setEnabled(val)
         self.ui.sequence_filter.setEnabled(val)
 

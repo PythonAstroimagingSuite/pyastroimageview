@@ -106,7 +106,12 @@ class FocuserControlUI(QtWidgets.QWidget):
 
     def focuser_connect(self):
         if self.settings.focuser_driver:
-            self.focuser_manager.connect(self.settings.focuser_driver)
+            rc = self.focuser_manager.connect(self.settings.focuser_driver)
+            if not rc:
+                QtWidgets.QMessageBox.critical(None, 'Error', 'Unable to connect to focuser!',
+                                               QtWidgets.QMessageBox.Ok)
+                return
+
             self.set_widget_states()
 
             maxpos = self.focuser_manager.get_max_absolute_position()

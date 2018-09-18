@@ -86,7 +86,12 @@ class FilterWheelControlUI(QtWidgets.QWidget):
 
     def filterwheel_connect(self):
         if self.settings.filterwheel_driver:
-            self.filterwheel_manager.connect(self.settings.filterwheel_driver)
+            rc = self.filterwheel_manager.connect(self.settings.filterwheel_driver)
+            if not rc:
+                QtWidgets.QMessageBox.critical(None, 'Error', 'Unable to connect to filterwheel!',
+                                               QtWidgets.QMessageBox.Ok)
+                return
+
             self.set_widget_states()
 
             self.names = self.filterwheel_manager.get_names()

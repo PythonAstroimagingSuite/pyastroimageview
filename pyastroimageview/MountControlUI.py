@@ -92,7 +92,12 @@ class MountControlUI(QtWidgets.QWidget):
 
     def mount_connect(self):
         if self.settings.mount_driver:
-            self.mount_manager.connect(self.settings.mount_driver)
+            rc = self.mount_manager.connect(self.settings.mount_driver)
+            if not rc:
+                QtWidgets.QMessageBox.critical(None, 'Error', 'Unable to connect to focuser!',
+                                               QtWidgets.QMessageBox.Ok)
+                return
+
             self.set_widget_states()
 
     def mount_disconnect(self):

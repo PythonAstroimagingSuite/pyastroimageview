@@ -187,8 +187,18 @@ class CameraManager(Backend.Camera):
     @checklock
     def connect(self, driver):
         if not super().is_connected():
-            super().connect(driver)
+            try:
+                rc = super().connect(driver)
+                if not rc:
+                    return False
+
+            except Exception as e:
+                logging.error('CameraManager:connect() Exception ->', exc_info=True)
+                return False
+
             self.signals.connect.emit(True)
+
+        return True
 
     def get_status(self):
         status = CameraStatus()

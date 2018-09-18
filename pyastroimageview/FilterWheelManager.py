@@ -55,5 +55,9 @@ class FilterWheelManager(Backend.FilterWheel):
     @checklock
     def connect(self, driver):
         if not super().is_connected():
-            super().connect(driver)
+            rc = super().connect(driver)
+            if not rc:
+                return rc
+
             self.signals.connect.emit(True)
+        return True
