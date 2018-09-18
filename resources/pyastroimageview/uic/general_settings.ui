@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>624</width>
-    <height>510</height>
+    <width>626</width>
+    <height>609</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -583,6 +583,65 @@
          </property>
          <property name="tabChangesFocus">
           <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="gridLayoutWidget_2">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>110</y>
+        <width>601</width>
+        <height>90</height>
+       </rect>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <property name="leftMargin">
+        <number>6</number>
+       </property>
+       <property name="topMargin">
+        <number>2</number>
+       </property>
+       <property name="rightMargin">
+        <number>2</number>
+       </property>
+       <property name="bottomMargin">
+        <number>2</number>
+       </property>
+       <item row="3" column="0">
+        <widget class="QCheckBox" name="sequence_phd2_stop_ditherfail">
+         <property name="text">
+          <string>Stop if dither fails</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QCheckBox" name="sequence_phd2_stop_losestar">
+         <property name="text">
+          <string>Stop if PHD2 loses star</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QCheckBox" name="sequence_phd2_warn_notconnect">
+         <property name="text">
+          <string>Warn if PHD2 not connected and guiding</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QCheckBox" name="sequence_phd2_stop_loseguiding">
+         <property name="text">
+          <string>Stop if PHD2 stops guiding</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QCheckBox" name="sequence_warn_coolertemp">
+         <property name="text">
+          <string>Warn if cooler not at target temperature</string>
          </property>
         </widget>
        </item>

@@ -50,6 +50,10 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
         self.device_manager = AppContainer.find('/dev') #device_manager
 
+        self.phd2_manager = AppContainer.find('/dev/phd2')
+        self.phd2_manager.signals.starlost.connect(self.phd2_starlost_event)
+        self.phd2_manager.signals.guiding_stop.connect(self.phd2_guiding_stop_event)
+
         self.sequence = ImageSequence(self.device_manager)
 
         # initialize sequence settings from general settings
@@ -225,19 +229,72 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 #        self.ui.camera_setting_status.setText(status_string)
 #        logging.info('Camera Status:  ' + status_string)
 
+    def phd2_starlost_event(self):
+        logging.error('phd2_starlost_event: lost star event')
+       if not self.exposure_ongoing:
+            logging.error('phd2_starlost_event: no exposure ongoing ignoring')
+            return
+
+        program_settings = AppContainer.find('/program_settings')
+        if program_settings is None:
+            logging.error('phd2_starlost_event: cannot retrieve program settings!')
+            QtWidgets.QMessageBox.critical(None, 'Error', 'Unknown error reading program settings - aborting!',
+                                           QtWidgets.QMessageBox.Ok)
+            self.end_sequence(abort=True)
+            return
+
+        if program_settings.sequence_phd2_stop_losestar:
+            logging.error('phd2_starlost_event: lost star - aborting')
+            QtWidgets.QMessageBox.critical(None,
+                                           'PHD2 Lost Star', 'PHD2 has lost the '
+                                           'guiding star - aborting sequence!',
+                                           QtWidgets.QMessageBox.Ok)
+            self.end_sequence(abort=True)
+            return
+        else:
+             logging.error('phd2_starlost_event: ignoring based on program settings')
+
+    def phd2_guiding_stop_event(self):
+        logging.error('phd2_guiding_stop_event: lost guiding event')
+        if not self.exposure_ongoing:
+            logging.error('phd2_guiding_stop_event: no exposure ongoing ignoring')
+            return
+
+        program_settings = AppContainer.find('/program_settings')
+        if program_settings is None:
+            logging.error('phd2_guiding_stop_event: cannot retrieve program settings!')
+            QtWidgets.QMessageBox.critical(None, 'Error', 'Unknown error reading program settings - aborting!',
+                                           QtWidgets.QMessageBox.Ok)
+            self.end_sequence(abort=True)
+            return
+
+        if program_settings.sequence_phd2_stop_loseguiding:
+            logging.error('phd2_guiding_stop_event: lost guiding - aborting')
+            QtWidgets.QMessageBox.critical(None,
+                                           'PHD2 Guiding Stopped', 'PHD2 has stopped '
+                                           'guiding - aborting sequence!',
+                                           QtWidgets.QMessageBox.Ok)
+            self.end_sequence(abort=True)
+            return
+        else:
+             logging.error('phd2_guiding_stop_event: ignoring based on program settings')
+
+    def end_sequence(self, abort=False):
+        logging.info(f'end_sequence: abort = {abort}')
+        self.exposure_ongoing = False
+        self.device_manager.camera.release_lock()
+        self.device_manager.filterwheel.release_lock()
+        self.set_startstop_state(True)
+
+        # leave start at where this sequence finished off
+        self.ui.sequence_start.setValue(self.sequence.current_index)
+
+        if abort:
+            logging.info('end_sequence: stopping expsoure!')
+            self.device_manager.camera.stop_exposure()
+
     # ripped from cameracontrolUI
     def camera_exposure_complete(self, result):
-
-
-        def end_sequence():
-            self.exposure_ongoing = False
-            self.device_manager.camera.release_lock()
-            self.device_manager.filterwheel.release_lock()
-            self.set_startstop_state(True)
-
-            # leave start at where this sequence finished off
-            self.ui.sequence_start.setValue(self.sequence.current_index)
-
 
         # result will contain (bool, FITSImage)
         # bool will be True if image successful
@@ -268,7 +325,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                                                'Sequence aborted!',
                                                QtWidgets.QMessageBox.Ok)
                 logging.info('Sequence ended due to error!')
-                end_sequence()
+                self.end_sequence(abort=True)
                 return
 
             self.new_sequence_image.emit((fitsimage, self.sequence.target_dir, self.sequence.get_filename()))
@@ -278,7 +335,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             logging.warning(f'new cur idx={self.sequence.current_index} stop at {stop_idx}')
             if self.sequence.current_index >= stop_idx:
                 logging.info('Sequence Complete')
-                end_sequence()
+                self.end_sequence()
                 return
             else:
                 # start next exposure
@@ -290,7 +347,6 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         # FIXME this sequence would probably be MUCH NICER using a lock/semaphore
         # which is a context manager so we wouldn't have so many cases of
         # releasing locks we'd already acquired when we fail out
-
 
         # make sure camera connected
         if not self.device_manager.camera.is_connected():
@@ -338,18 +394,55 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             self.device_manager.filterwheel.release_lock()
             return
 
-        phd2_manager = AppContainer.find('/dev/phd2')
-        if phd2_manager is None or not phd2_manager.is_connected():
-            logging.error('start_sequence: phd2 not connected')
-            choice = QtWidgets.QMessageBox.question(None, 'PHD2 Not Connected',
-                                                    'PHD2 is not connected - proceed with sequence?',
-                                                    QtWidgets.QMessageBox.Yes|QtWidgets.QMessageBox.No)
-            if choice == QtWidgets.QMessageBox.No:
+        program_settings = AppContainer.find('/program_settings')
+        if program_settings is None:
+            logging.error('start_sequence: cannot retrieve program settings!')
+            QtWidgets.QMessageBox.critical(None, 'Error', 'Unknown error reading program settings - aborting!',
+                                           QtWidgets.QMessageBox.Ok)
+            return
+
+        if program_settings.sequence_phd2_warn_notconnect:
+            if self.phd2_manager is None or not self.phd2_manager.is_connected():
+                logging.error('start_sequence: phd2 not connected')
+                choice = QtWidgets.QMessageBox.question(None, 'PHD2 Not Connected',
+                                                        'PHD2 is not connected - proceed with sequence?',
+                                                        QtWidgets.QMessageBox.Yes|QtWidgets.QMessageBox.No)
+                if choice == QtWidgets.QMessageBox.No:
+                    self.device_manager.camera.release_lock()
+                    self.device_manager.filterwheel.release_lock()
+                    return
+                else:
+                    logging.info('start_sequence: User choose to start sequence without PHD2 connected.')
+
+        # FIXME if they chose to start without PHD2 then need to ignore PHD2 for this sequence including
+        # losing guiding and star events!
+        if program_settings.sequence_phd2_stop_loseguiding:
+            if not self.phd2_manager.is_guiding():
+                logging.error('start_sequence: phd2 not guiding')
+                choice = QtWidgets.QMessageBox.critical(None, 'PHD2 Not Guiding',
+                                                        'PHD2 is not guiding - cannot start sequence.  Change '
+                                                        'settings to avoid this error.',
+                                                        QtWidgets.QMessageBox.Ok)
                 self.device_manager.camera.release_lock()
                 self.device_manager.filterwheel.release_lock()
                 return
-            else:
-                logging.info('start_sequence: User choose to start sequence without PHD2 connected.')
+
+        if program_settings.sequence_warn_coolertemp:
+            set_temp = self.device_manager.camera.get_target_temperature()
+            cur_temp = self.device_manager.camera.get_current_temperature()
+            # FIXME Should delta temp be hard coded
+            if abs(set_temp-cur_temp) > 2:
+                logging.info(f'start_sequence: target T = {set_temp} current T = {cur_temp}')
+                choice = QtWidgets.QMessageBox.question(None, 'Cooler Temperature',
+                                                        f'The current camera temperature is {cur_temp} but the ' + \
+                                                        f'target temperature is {set_temp}.\n\nProceed with sequence?',
+                                                        QtWidgets.QMessageBox.Yes|QtWidgets.QMessageBox.No)
+                if choice == QtWidgets.QMessageBox.No:
+                    self.device_manager.camera.release_lock()
+                    self.device_manager.filterwheel.release_lock()
+                    return
+                else:
+                    logging.info('start_sequence: User choose to start sequence with cooler temperature not close to target')
 
         # we're committed now
         self.set_startstop_state(False)

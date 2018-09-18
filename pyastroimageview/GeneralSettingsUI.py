@@ -53,6 +53,11 @@ class GeneralSettingsDialog(QtWidgets.QDialog):
 
         self.ui.sequence_elements.setPlainText(settings.sequence_elements)
         self.ui.sequence_targetdir.setPlainText(settings.sequence_targetdir)
+        self.ui.sequence_phd2_warn_notconnect.setChecked(settings.sequence_phd2_warn_notconnect)
+        self.ui.sequence_phd2_stop_loseguiding.setChecked(settings.sequence_phd2_stop_loseguiding)
+        self.ui.sequence_phd2_stop_losestar.setChecked(settings.sequence_phd2_stop_losestar)
+        self.ui.sequence_phd2_stop_ditherfail.setChecked(settings.sequence_phd2_stop_ditherfail)
+        self.ui.sequence_warn_coolertemp.setChecked(settings.sequence_warn_coolertemp)
 
         result = self.exec_()
 
@@ -85,6 +90,11 @@ class GeneralSettingsDialog(QtWidgets.QDialog):
 
             settings.sequence_elements = self.ui.sequence_elements.toPlainText()
             settings.sequence_targetdir = self.ui.sequence_targetdir.toPlainText()
+            settings.sequence_phd2_warn_notconnect = self.ui.sequence_phd2_warn_notconnect.isChecked()
+            settings.sequence_phd2_stop_loseguiding = self.ui.sequence_phd2_stop_loseguiding.isChecked()
+            settings.sequence_phd2_stop_losestar = self.ui.sequence_phd2_stop_losestar.isChecked()
+            settings.sequence_phd2_stop_ditherfail = self.ui.sequence_phd2_stop_ditherfail.isChecked()
+            settings.sequence_warn_coolertemp = self.ui.sequence_warn_coolertemp.isChecked()
 
             logging.info(f'{settings._config}')
 

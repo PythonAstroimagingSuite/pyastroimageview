@@ -47,6 +47,9 @@ class PHD2Manager:
 
         logging.info('Connecting')
 
+        # FIXME Does this leak sockets?  Need to investigate why
+        # setting self.socket = None causes SEGV when disconnected
+        # (ie PHD2 closes).
         self.socket.connectToHost('127.0.0.1', 4400)
 
         logging.info('waiting')
@@ -58,6 +61,7 @@ class PHD2Manager:
             return False
 
         self.connected = True
+        self.guiding = False
 
         self.socket.readyRead.connect(self.process)
         self.socket.error.connect(self.error)
@@ -80,6 +84,9 @@ class PHD2Manager:
 
     def is_connected(self):
         return self.connected
+
+    def is_guiding(self):
+        return self.guiding
 
     #
     # FOR REFERENCE - I have found setting self.socket to None causes SEGV when
@@ -141,6 +148,15 @@ class PHD2Manager:
                     if id in self.requests:
                         reqtype = self.requests[id]
 
+                        # sniff to see if appstate affects guiding
+                        if reqtype == 'get_appstate':
+                            appstate = j['result']
+                            logging.info(f'phd2manager: detected app_state msg with state = {appstate}')
+                            if appstate != 'Guiding' or appstate != 'LostLock':
+                                self.guiding = True
+                            else:
+                                self.guiding = False
+                            logging.info(f'phd2manager: based on app_state set guiding to {self.guiding}')
                         self.signals.request.emit(reqtype, j['result'])
 
                         del self.requests[id]
@@ -172,8 +188,10 @@ class PHD2Manager:
                 elif event == 'StarLost':
                     self.signals.starlost.emit()
                 elif event == 'GuidingStopped':
+                    self.guiding = False
                     self.signals.guiding_stop.emit()
                 elif event == 'GuideStep':
+                    self.guiding = True
                     self.signals.guidestep.emit()
             except Exception as e:
                 logging.error(f'phd2_process - exception message was {resp}!')
@@ -214,7 +232,6 @@ class PHD2Manager:
 
     def get_appstate(self):
         self.__send_json_request('get_app_state')
-
 
     def get_paused(self):
         self.__send_json_request('get_paused')

@@ -33,6 +33,11 @@ class ProgramSettings:
         # sequence settings
         self.sequence_targetdir = ''
         self.sequence_elements = ''
+        self.sequence_phd2_warn_notconnect = True
+        self.sequence_phd2_stop_loseguiding = True
+        self.sequence_phd2_stop_losestar = True
+        self.sequence_phd2_stop_ditherfail = True
+        self.sequence_warn_coolertemp = True
 
         # phd2 settings
         self.phd2_scale = 1.0
