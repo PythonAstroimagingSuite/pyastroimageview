@@ -1,10 +1,11 @@
 #!/usr/bin/python
 import sys
 import json
-#import socket
-from PyQt5 import QtNetwork, QtCore
 import logging
 
+from PyQt5 import QtNetwork, QtCore
+
+from pyastroimageview.ApplicationContainer import AppContainer
 
 class PHD2ManagerSignals(QtCore.QObject):
         dither_start = QtCore.pyqtSignal()
@@ -34,6 +35,8 @@ class PHD2Manager:
         self.request_id = 0
         self.connected = False
         self.signals = PHD2ManagerSignals()
+
+        AppContainer.register('/dev/phd2', self)
 
     def connect(self):
         if self.socket:

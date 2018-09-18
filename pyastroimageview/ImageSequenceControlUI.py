@@ -1,5 +1,13 @@
 import time
+import math
+import os.path
 import logging
+
+from astropy.time import Time
+from astropy import units as u
+from astropy.coordinates import AltAz
+from astropy.coordinates import Angle
+from astropy.coordinates import SkyCoord
 
 from PyQt5 import QtWidgets, QtGui, QtCore
 
@@ -219,6 +227,18 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
     # ripped from cameracontrolUI
     def camera_exposure_complete(self, result):
+
+
+        def end_sequence():
+            self.exposure_ongoing = False
+            self.device_manager.camera.release_lock()
+            self.device_manager.filterwheel.release_lock()
+            self.set_startstop_state(True)
+
+            # leave start at where this sequence finished off
+            self.ui.sequence_start.setValue(self.sequence.current_index)
+
+
         # result will contain (bool, FITSImage)
         # bool will be True if image successful
         logging.info(f'sequence:camera_exposure_complete: result={result}')
@@ -232,20 +252,33 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                 return
 
             # FIXME need better object to send with signal for end of sequence exposure?
+            self.handle_new_image(fitsimage)
+
+            outname = os.path.join(self.sequence.target_dir, self.sequence.get_filename())
+            logging.info(f'writing sequence image to {outname}')
+            try:
+                fitsimage.save_to_file(outname, overwrite=True)
+            except Exception  as e:
+                # FIXME Doesnt stop current sequence on this error!
+                logging.error('CameraManager:connect() Exception ->', exc_info=True)
+                QtWidgets.QMessageBox.critical(None, 'Error',
+                                               'Unable to save sequence image:\n\n' + \
+                                               f'{outname}\n\n' + \
+                                               f'Error -> {str(e)}\n\n' + \
+                                               'Sequence aborted!',
+                                               QtWidgets.QMessageBox.Ok)
+                logging.info('Sequence ended due to error!')
+                end_sequence()
+                return
+
             self.new_sequence_image.emit((fitsimage, self.sequence.target_dir, self.sequence.get_filename()))
 
             stop_idx = self.sequence.start_index + self.sequence.number_frames
             self.sequence.current_index += 1
             logging.warning(f'new cur idx={self.sequence.current_index} stop at {stop_idx}')
             if self.sequence.current_index >= stop_idx:
-                self.exposure_ongoing = False
-                self.device_manager.camera.release_lock()
-                self.device_manager.filterwheel.release_lock()
-                logging.info('sequence complete')
-                self.set_startstop_state(True)
-
-                # leave start at where this sequence finished off
-                self.ui.sequence_start.setValue(self.sequence.current_index)
+                logging.info('Sequence Complete')
+                end_sequence()
                 return
             else:
                 # start next exposure
@@ -254,6 +287,11 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             logging.warning('sequence:camera_exposure_complete: no exposure was ongoing!')
 
     def start_sequence(self):
+        # FIXME this sequence would probably be MUCH NICER using a lock/semaphore
+        # which is a context manager so we wouldn't have so many cases of
+        # releasing locks we'd already acquired when we fail out
+
+
         # make sure camera connected
         if not self.device_manager.camera.is_connected():
             logging.error('start_sequence: camera is not connected!')
@@ -278,20 +316,45 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         # try to lock filter wheel
         if not self.device_manager.filterwheel.get_lock():
             logging.error('start_sequence: unable to get filter lock!')
-            QtWidgets.QMessageBox.critical(None, 'Error', 'Filter is busy',
+            QtWidgets.QMessageBox.critical(None, 'Error', 'Filter is busy!',
                                            QtWidgets.QMessageBox.Ok)
             self.device_manager.camera.release_lock()
             return
 
-        self.set_startstop_state(False)
-
         status = self.device_manager.camera.get_status()
         if CameraState(status.state) != CameraState.IDLE:
             logging.error('CameraControlUI: camera_expose : camera not IDLE')
-            self.camera_manager.release_lock()
+            self.device_manager.camera.release_lock()
+            self.device_manager.filterwheel.release_lock()
             return
 
-        # setup camera
+        # check if output directory exists!
+        if not os.path.isdir(self.sequence.target_dir):
+            logging.error('start_sequence: target dir doesnt exist!')
+            QtWidgets.QMessageBox.critical(None, 'Error',
+                                           f'Targer directory {self.sequence.target_dir} does not exist!',
+                                           QtWidgets.QMessageBox.Ok)
+            self.device_manager.camera.release_lock()
+            self.device_manager.filterwheel.release_lock()
+            return
+
+        phd2_manager = AppContainer.find('/dev/phd2')
+        if phd2_manager is None or not phd2_manager.is_connected():
+            logging.error('start_sequence: phd2 not connected')
+            choice = QtWidgets.QMessageBox.question(None, 'PHD2 Not Connected',
+                                                    'PHD2 is not connected - proceed with sequence?',
+                                                    QtWidgets.QMessageBox.Yes|QtWidgets.QMessageBox.No)
+            if choice == QtWidgets.QMessageBox.No:
+                self.device_manager.camera.release_lock()
+                self.device_manager.filterwheel.release_lock()
+                return
+            else:
+                logging.info('start_sequence: User choose to start sequence without PHD2 connected.')
+
+        # we're committed now
+        self.set_startstop_state(False)
+
+       # setup camera
         settings = CameraSettings()
         settings.binning = self.sequence.binning
         settings.roi = self.sequence.roi
@@ -375,7 +438,6 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
 
     def update_ui(self):
-        logging.info(f'settings target dir plaintext to {self.sequence.target_dir}')
         self.ui.sequence_name.setPlainText(self.sequence.name)
         self.ui.sequence_elements.setPlainText(self.sequence.name_elements)
         self.ui.sequence_preview.setText(self.sequence.get_filename())
@@ -383,7 +445,6 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.ui.sequence_frametype.setCurrentText(self.sequence.frame_type)
         self.ui.sequence_number.setValue(self.sequence.number_frames)
         self.ui.sequence_start.setValue(self.sequence.start_index)
-        logging.info(f'settings target dir plaintext to {self.sequence.target_dir}')
         self.ui.sequence_targetdir.setPlainText(self.sequence.target_dir)
 
         if self.sequence.roi:
@@ -394,9 +455,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
         # move cursor to end of target_dir
         cursor = self.ui.sequence_targetdir.textCursor()
-        logging.info(f'{cursor.position()}')
         cursor.movePosition(QtGui.QTextCursor.EndOfLine)
-        logging.info(f'{cursor.position()}')
         self.ui.sequence_targetdir.setTextCursor(cursor)
 
     def help_toggle(self):
@@ -411,11 +470,74 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                                                                 self.sequence.target_dir,
                                                                 QtWidgets.QFileDialog.ShowDirsOnly)
 
-        logging.info(f'select target_dir: {target_dir}')
-
         if len(target_dir) < 1:
             return
 
         self.sequence.target_dir = target_dir
-        logging.info(f'set target dir {self.sequence.target_dir}')
         self.update_ui()
+
+    def handle_new_image(self, fits_doc):
+        """Fills in FITS header data for new images"""
+
+        # FIXME maybe best handled somewhere else - it relies on lots of 'globals'
+        settings = AppContainer.find('/program_settings')
+        if settings is None:
+            logging.error('ImageSequenceControlUI:handle_new_image: unable to access program settings!')
+            return False
+
+        fits_doc.set_notes(settings.observer_notes)
+        fits_doc.set_telescope(settings.telescope_description)
+        fits_doc.set_focal_length(settings.telescope_focallen)
+        aper_diam = settings.telescope_aperture
+        aper_obst = settings.telescope_obstruction
+        aper_area = math.pi*(aper_diam/2.0*aper_diam/2.0)*(1-aper_obst*aper_obst/100.0/100.0)
+        fits_doc.set_aperture_diameter(aper_diam)
+        fits_doc.set_aperture_area(aper_area)
+
+        lat_dms = Angle(settings.location_latitude*u.degree).to_string(unit=u.degree, sep=' ', precision=0)
+        lon_dms = Angle(settings.location_longitude*u.degree).to_string(unit=u.degree, sep=' ', precision=0)
+        fits_doc.set_site_location(lat_dms, lon_dms)
+
+        # these come from camera, filter wheel and telescope drivers
+        if self.device_manager.camera.is_connected():
+            cam_name = self.device_manager.camera.get_camera_name()
+            fits_doc.set_instrument(cam_name)
+
+        if self.device_manager.filterwheel.is_connected():
+            logging.info('connected')
+            cur_name = self.device_manager.filterwheel.get_position_name()
+
+            fits_doc.set_filter(cur_name)
+
+        if self.device_manager.mount.is_connected():
+            ra, dec = self.device_manager.mount.get_position_radec()
+
+            radec = SkyCoord(ra=ra*u.hour, dec=dec*u.degree, frame='fk5')
+            rastr = radec.ra.to_string(u.hour, sep=":", pad=True)
+            decstr = radec.dec.to_string(alwayssign=True, sep=":", pad=True)
+            fits_doc.set_object_radec(rastr, decstr)
+
+            alt, az = self.device_manager.mount.get_position_altaz()
+            altaz = AltAz(alt=alt*u.degree, az=az*u.degree)
+            altstr = altaz.alt.to_string(alwayssign=True, sep=":", pad=True)
+            azstr = altaz.az.to_string(alwayssign=True, sep=":", pad=True)
+            fits_doc.set_object_altaz(altstr, azstr)
+
+            now = Time.now()
+            local_sidereal = now.sidereal_time('apparent',
+                                               longitude=settings.location_longitude*u.degree)
+            hour_angle = local_sidereal - radec.ra
+            logging.info(f'locsid = {local_sidereal} HA={hour_angle}')
+            if hour_angle.hour > 12:
+                hour_angle = (hour_angle.hour - 24.0)*u.hourangle
+
+            hastr = Angle(hour_angle).to_string(u.hour, sep=":", pad=True)
+            logging.info(f'HA={hour_angle} HASTR={hastr} {type(hour_angle)}')
+            fits_doc.set_object_hourangle(hastr)
+
+        # controlled by user selection in camera or sequence config
+        fits_doc.set_image_type('Light frame')
+        fits_doc.set_object('TEST-OBJECT')
+
+        # set by application version
+        fits_doc.set_software_info('pyastroview TEST')

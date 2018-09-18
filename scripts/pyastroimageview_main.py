@@ -233,19 +233,67 @@ class MainWindow(QtGui.QMainWindow):
     def new_sequence_image(self, result):
         logging.info(f'new_sequence_image: {result}')
 
-        fits_doc, target_dir, filename = result
+        fits_doc, filename, target_dir = result
 
-        (imgdoc, tab_index) = self.handle_new_image('Sequence', fits_doc)
+        # FIXME This does alot of stuff handled in sequence manager now!
+        # need to simplify
+        (imgdoc, tab_index) = self.find_tab_for_new_image('Sequence', fits_doc)
 
         imgdoc.filename = filename
-
-        outname = os.path.join(target_dir, filename)
-        logging.info(f'writing sequence image to {outname}')
-        imgdoc.fits.save_to_file(outname, overwrite=True)
 
         self.image_area_ui.set_current_view_index(tab_index)
         self.image_area_ui.clear_info()
         self.image_area_ui.update_info(imgdoc)
+
+
+    # this is truncated version of handle_new_image() that DOES NOT
+    # add all the FITS headers - it just finds the proper tab
+    # and loads the image there
+    def find_tab_for_new_image(self, tab_name, fits_doc):
+        tab_widget = self.image_area_ui.find_view_widget(tab_name)
+
+        if tab_widget is None:
+            # create new image widget and put it in a tab
+            image_widget = ImageWindowSTF()
+            image_widget.image_mouse_move.connect(self.image_mouse_move)
+            image_widget.image_mouse_click.connect(self.image_mouse_click)
+
+            tab_index = self.image_area_ui.add_view(image_widget, tab_name)
+
+            imgdoc = self.ImageDocument()
+            #imgdoc.filename = 'Camera'
+            imgdoc.image_widget = image_widget
+
+            self.image_documents[image_widget] = imgdoc
+        else:
+            # reuse old
+            imgdoc = self.image_documents[tab_widget]
+
+            tab_index = self.image_area_ui.find_index_widget(tab_widget)
+
+            logging.info(f'reuse tab_index = {tab_index}')
+
+            # FIXME REALLY need a way to refresh/reset attributes!!
+            # this attr is added in ImageAreaInfo class in update_info()
+            # need a better way to associate statistics with an image
+            if hasattr(imgdoc, 'perc01'):
+                delattr(imgdoc, 'perc01')
+            if hasattr(imgdoc, 'perc99'):
+                delattr(imgdoc, 'perc99')
+
+        # FIXME repurposing fits image data this way doesn't seem like a good idea
+        # but the hope is we don't store it twice
+        # might be better to just make fits_image the expected image format
+        # and have method to expose raw image data than using an attribute
+        imgdoc.fits = fits_doc
+        imgdoc.image_data = fits_doc.image_data()
+        imgdoc.median = np.median(imgdoc.image_data)
+
+        logging.info(f'{imgdoc.image_data.shape}  {fits_doc.image_data().shape}')
+
+        imgdoc.image_widget.show_data(imgdoc.image_data)
+
+        return (imgdoc, tab_index)
 
     def handle_new_image(self, tab_name, fits_doc):
         tab_widget = self.image_area_ui.find_view_widget(tab_name)

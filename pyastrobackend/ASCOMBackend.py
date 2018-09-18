@@ -327,9 +327,6 @@ class FilterWheel(BaseFilterWheel):
         Use is_moving() method to check if its done.
         """
         names = self.filterwheel.Names
-        print(name)
-        print(names)
-        print(type(names))
         try:
             newpos = names.index(name)
         except ValueError as e:
