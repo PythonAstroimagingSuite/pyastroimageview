@@ -90,7 +90,7 @@ class MainWindow(QtGui.QMainWindow):
         # start HFR Server
         self.hfr_server = MeasureHFRServer()
         self.hfr_server.start()
-        self.hfr_cur_tab = None # when doing a calc set to where result should go
+        self.hfr_cur_widget = None # when doing a calc set to where result should go
 
         self.resize(960, 740)
         self.show()
@@ -437,7 +437,7 @@ class MainWindow(QtGui.QMainWindow):
         self.image_area_ui.update_info(newdoc)
 
     def measure_hfr(self):
-        if self.hfr_cur_tab is not None:
+        if self.hfr_cur_widget is not None:
             logging.error('Already computing HFR cannot do so on another tab!')
             return
 
@@ -446,8 +446,8 @@ class MainWindow(QtGui.QMainWindow):
             return
 
         # use a thread
-        self.hfr_cur_tab = self.image_area_ui.get_current_view_index()
-        filename = self.image_documents[self.hfr_cur_tab].filename
+        self.hfr_cur_widget = self.image_area_ui.get_current_view_widget()
+        filename = self.image_documents[self.hfr_cur_widget].filename
 
         worker = self.hfr_server.setup_measure_file_thread(filename, maxstars=400)
         worker.signals.result.connect(self._measure_hfr_result)
@@ -458,11 +458,11 @@ class MainWindow(QtGui.QMainWindow):
 #        if result:
 #            logging.info(f'measure_hfr result RESULT0:{result[0]}\nRESULT1:{result[1]}')
 
-        image_widget = self.image_documents[self.hfr_cur_tab].image_widget
+        image_widget = self.image_documents[self.hfr_cur_widget].image_widget
         image_widget.overlay_stars(result[1])
-        self.image_documents[self.hfr_cur_tab].hfr_result = result[1]
-        self.image_area_ui.update_info(self.image_documents[self.hfr_cur_tab])
-        self.hfr_cur_tab = None
+        self.image_documents[self.hfr_cur_widget].hfr_result = result[1]
+        self.image_area_ui.update_info(self.image_documents[self.hfr_cur_widget])
+        self.hfr_cur_widget = None
 
     def _measure_hfr_complete(self, result):
         logging.info('measure_hfr complete')
