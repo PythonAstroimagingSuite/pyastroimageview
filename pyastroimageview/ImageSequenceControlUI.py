@@ -53,6 +53,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.phd2_manager = AppContainer.find('/dev/phd2')
         self.phd2_manager.signals.starlost.connect(self.phd2_starlost_event)
         self.phd2_manager.signals.guiding_stop.connect(self.phd2_guiding_stop_event)
+        self.phd2_manager.signals.dither_settledone.connect(self.phd2_dither_settledone_event)
+        self.phd2_manager.signals.dither_timeout.connect(self.phd2_dither_timeout_event)
 
         self.sequence = ImageSequence(self.device_manager)
 
@@ -73,6 +75,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.ui.sequence_number.valueChanged.connect(self.values_changed)
         self.ui.sequence_frametype.currentIndexChanged.connect(self.values_changed)
         self.ui.sequence_exposure.valueChanged.connect(self.values_changed)
+        self.ui.sequence_dither.valueChanged.connect(self.values_changed)
         self.ui.sequence_start.valueChanged.connect(self.values_changed)
         self.ui.sequence_filter.currentIndexChanged.connect(self.values_changed)
         self.ui.sequence_start_stop.pressed.connect(self.start_sequence)
@@ -224,6 +227,10 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
             status_string += ' ' + perc_string
 
+            if self.exposure_ongoing:
+                stop_idx = self.sequence.start_index + self.sequence.number_frames - 1
+                status_string += f' RUNNING Frame {self.sequence.current_index}/{stop_idx}'
+
         self.ui.sequence_status_label.setText(status_string)
 
 #        self.ui.camera_setting_status.setText(status_string)
@@ -231,7 +238,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
     def phd2_starlost_event(self):
         logging.error('phd2_starlost_event: lost star event')
-       if not self.exposure_ongoing:
+        if not self.exposure_ongoing:
             logging.error('phd2_starlost_event: no exposure ongoing ignoring')
             return
 
@@ -278,6 +285,41 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             return
         else:
              logging.error('phd2_guiding_stop_event: ignoring based on program settings')
+
+    def phd2_dither_settledone_event(self):
+        logging.info('phd2_dither_settledone event received')
+
+        if not self.exposure_ongoing:
+            logging.error('phd2_dither_settledone_event: no exposure ongoing ignoring')
+            return
+
+        # start next exposure
+        self.device_manager.camera.start_exposure(self.sequence.exposure)
+
+    def phd2_dither_timeout_event(self):
+        logging.info('phd2_dither_timeout event received')
+
+        if not self.exposure_ongoing:
+            logging.error('phd2_dither_timeout_event: no exposure ongoing ignoring')
+            return
+
+        program_settings = AppContainer.find('/program_settings')
+        if program_settings is None:
+            logging.error('phd2_dither_timeout_event: cannot retrieve program settings!')
+            QtWidgets.QMessageBox.critical(None, 'Error', 'Unknown error reading program settings in phd2_dither_timeout_event - aborting!',
+                                           QtWidgets.QMessageBox.Ok)
+            self.end_sequence(abort=True)
+            return
+
+        if program_settings.sequence_phd2_stop_ditherfail:
+            logging.error('phd2_dither_timeout_event: dither timed out - aborting')
+            QtWidgets.QMessageBox.critical(None,
+                                           'PHD2 Dither Failed', 'PHD2 dither operation did not settle in time - aborting sequence!',
+                                           QtWidgets.QMessageBox.Ok)
+            self.end_sequence(abort=True)
+            return
+        else:
+             logging.error('phd2_dither_timeout_event: ignoring based on program settings')
 
     def end_sequence(self, abort=False):
         logging.info(f'end_sequence: abort = {abort}')
@@ -336,12 +378,75 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             if self.sequence.current_index >= stop_idx:
                 logging.info('Sequence Complete')
                 self.end_sequence()
+                QtWidgets.QMessageBox.information(None, 'Sequence Complete!',
+                                               'The requested sequence is complete.',
+                                               QtWidgets.QMessageBox.Ok)
                 return
-            else:
-                # start next exposure
-                self.device_manager.camera.start_exposure(self.sequence.exposure)
+
+            # see if we need to dither
+            # FIXME currently we just use a modulus of the 'n frames' dither param
+            # If the user somehow messes with image indexes to skip frame numbers, etc
+            # then the dithering may not work out correctly but for a sequenentially
+            # numbered sequence of frames it will do what we want and that is almost
+            # always the use case!
+            logging.info(f'camera_exposure_complete -> num_dither = {self.sequence.num_dither}')
+            if self.sequence.num_dither > 0:
+                num_frames = self.sequence.current_index - self.sequence.start_index
+                num_left = self.sequence.start_index + self.sequence.number_frames - self.sequence.current_index
+                logging.info(f'num_frames={num_frames} num_left={num_left} ' + \
+                             f'curidx={self.sequence.current_index} num_dither={self.sequence.num_dither}')
+                if self.sequence.num_dither == 1:
+                    dither_now = True
+                elif num_frames > 1 and num_left >= self.sequence.num_dither:
+                    dither_now = (self.sequence.current_index % self.sequence.num_dither) == 0
+                else:
+                    dither_now = False
+
+                if dither_now:
+                    logging.info('sequence: time to dither!')
+
+                    program_settings = AppContainer.find('/program_settings')
+                    if program_settings is None:
+                        logging.error('camera_exposure_complete: cannot retrieve program settings!')
+                        QtWidgets.QMessageBox.critical(None,
+                                                       'Error',
+                                                       'Unknown error reading program settings when about to dither - skipping dither!',
+                                                       QtWidgets.QMessageBox.Ok)
+                    else:
+                        logging.info(f'camera_exposure_complete: dither: {program_settings.phd2_scale} ' + \
+                                     f'{program_settings.phd2_threshold}' + \
+                                     f'{program_settings.phd2_starttime} ' + \
+                                     f'{program_settings.phd2_settledtime} ' + \
+                                     f'{program_settings.phd2_settletimeout} ')
+
+                        rc = self.phd2_manager.dither(program_settings.phd2_scale,
+                                                 program_settings.phd2_threshold,
+                                                 program_settings.phd2_starttime,
+                                                 program_settings.phd2_settledtime,
+                                                 program_settings.phd2_settletimeout)
+
+                        if not rc:
+                            # failed to get PHD2 to dither - just fall through and start next frame after notifying user
+                            # FIXME what is best case here?  Use the dither fail checkbox from general settings to guide
+                            # how to handle?
+                            logging.error('camera_exposure_complete: Could not communicate with PHD2 to start a dither op')
+                            QtWidgets.QMessageBox.critical(None,
+                                                       'Error',
+                                                       'PHD2 failed to respond to dither request - dither aborted!',
+                                                       QtWidgets.QMessageBox.Ok)
+                        else:
+                            logging.error('camera_exposure_complete: Dither command sent to PHD2 successfully')
+
+                            # now the 'SettleDone' event should come in from PHD2 and it will be handled
+                            # and next frame started unless we get a settle timeout event instead
+
+                            return
+
+            # dither wasnt required or failed(?) and we just start next frame
+            # start next exposure
+            self.device_manager.camera.start_exposure(self.sequence.exposure)
         else:
-            logging.warning('sequence:camera_exposure_complete: no exposure was ongoing!')
+            logging.warning('camera_exposure_complete:camera_exposure_complete: no exposure was ongoing!')
 
     def start_sequence(self):
         # FIXME this sequence would probably be MUCH NICER using a lock/semaphore
@@ -479,6 +584,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             self.device_manager.filterwheel.release_lock()
             return
 
+        self.sequence.current_index = self.sequence.start_index
         self.device_manager.camera.start_exposure(self.sequence.exposure)
         self.exposure_ongoing = True
 
@@ -518,6 +624,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             self.sequence.exposure = self.ui.sequence_exposure.value()
         elif self.sender() == self.ui.sequence_start:
             self.sequence.start_index = self.ui.sequence_start.value()
+            logging.info(f'start indx set to {self.sequence.start_index}')
         elif self.sender()== self.ui.sequence_number:
             self.sequence.number_frames = self.ui.sequence_number.value()
         elif self.sender() == self.ui.sequence_frametype:
@@ -526,6 +633,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             self.sequence.target_dir = self.ui.sequence_targetdir.toPlainText()
         elif self.sender() == self.ui.sequence_filter:
             self.sequence.filter = self.ui.sequence_filter.currentText()
+        elif self.sender() == self.ui.sequence_dither:
+            self.sequence.num_dither = self.ui.sequence_dither.value()
         else:
             logging.error('Unknown sender is update_sequence!')
 

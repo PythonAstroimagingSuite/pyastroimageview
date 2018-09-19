@@ -2,16 +2,42 @@
 import sys
 import json
 import logging
+from enum import Enum
 
 from PyQt5 import QtNetwork, QtCore
 
 from pyastroimageview.ApplicationContainer import AppContainer
 
+class DitherState(Enum):
+    """Represents state of a dither
+
+    IDLE state just indicates on dither operations have occurred.
+
+    FIXME - should state return to IDLE after some period of time?
+
+    When dither command is received the suquence of states is:
+        WAITONDITHER - waiting for PHD2 to modified lock position
+        DITHERED - the lock position has been dithered
+        SETTLEBEGUN - settle process has started
+        SETTLING - settling in progress
+        SETTLED - settling is complete and back to guiding
+        TIMEOUT - not an event from PHD2 - detected by PHD2Manager() when
+                  settling did not complete in specified time
+    """
+    IDLE = 0
+    WAITONDITHER = 1
+    DITHERED = 2
+    SETTLEBEGUN = 3
+    SETTLING = 4
+    SETTLED = 5
+    TIMEOUT = 6
+
 class PHD2ManagerSignals(QtCore.QObject):
         dither_start = QtCore.pyqtSignal()
-        dither_settlingbeing = QtCore.pyqtSignal()
-        dither_settling = QtCore.pyqtSignal((float, float, float))
+        dither_settlebegin = QtCore.pyqtSignal()
+        dither_settling = QtCore.pyqtSignal(float, float, float)
         dither_settledone = QtCore.pyqtSignal(bool)
+        dither_timeout = QtCore.pyqtSignal()
         guidestep = QtCore.pyqtSignal()
         guiding_stop = QtCore.pyqtSignal()
         paused = QtCore.pyqtSignal()
@@ -34,6 +60,9 @@ class PHD2Manager:
         self.requests = {}
         self.request_id = 0
         self.connected = False
+        self.guiding = False
+        self.dither_state = DitherState.IDLE
+        self.dither_timeout_timer = None
         self.signals = PHD2ManagerSignals()
 
         AppContainer.register('/dev/phd2', self)
@@ -84,6 +113,9 @@ class PHD2Manager:
 
     def is_connected(self):
         return self.connected
+
+    def get_dither_state(self):
+        return self.dither_state
 
     def is_guiding(self):
         return self.guiding
@@ -166,16 +198,26 @@ class PHD2Manager:
                 # otherwise must be an event?
                 event = j['Event']
 
-#                if event != 'GuideStep':
-#                    logging.info(f'{j}')
+                if event != 'GuideStep':
+                    logging.info(f'{j}')
 
                 if event == 'GuidingDithered':
+                    self.dither_state = DitherState.DITHERED
                     self.signals.dither_start.emit()
                 elif event == 'SettleBegin':
+                    self.dither_state = DitherState.SETTLEBEGUN
                     self.signals.dither_settlebegin.emit()
                 elif event == 'Settling':
-                    self.signals.dither_settling.emit((j['Distance'], j['Time'], j['SettleTime']))
+                    self.dither_state = DitherState.SETTLING
+                    self.signals.dither_settling.emit(j['Distance'], j['Time'], j['SettleTime'])
                 elif event == 'SettleDone':
+                    self.dither_state = DitherState.SETTLED
+                    # first stop the dither timeout countdown!
+                    if self.dither_timeout_timer is not None:
+                        self.dither_timeout_timer.stop()
+                        self.dither_timeout_timer = None
+
+                    # send signal indicating the dither settled
                     self.signals.dither_settledone.emit(j['Status'] == 0)
                 elif event == 'LoopingExposures':
                     self.signals.looping_start.emit()
@@ -200,24 +242,61 @@ class PHD2Manager:
 
         return True
 
-    def dither(self, dither_pix, settle_pix, settle_start_time, settle_finish_time):
+    def dither(self, dither_pix, settle_pix, settle_start_time,
+               settle_finish_time, settle_timeout):
+        """Sends dither command to PHD2 to initiate a dither operation.
+
+        Parameters
+        ----------
+        dither_pix - float
+            Number of GUIDE pixels to dither on average (actual dither is random)
+        settle_pix - float
+            Guiding must recover to less than this many GUIDE pixels to start settle process
+        settle_start_time - float
+            Guiding must be within settle_pix GUIDE pixels for this amount of time to start settled timer
+        settle_finish_time - float
+            Guiding must stay within settle_pix GUIDE pixels for this time to be considered 'settled'
+        settle_timeout - float
+            If guiding is not 'settled' in this time then abort waiting on dither to settle
+
+        Returns
+        -------
+        success - bool
+            A True return value means the command was sent successfully, otherwise there was
+            a problem communicating with PHD2 and False is returned.
+        """
+
         cmd = {"method" : "dither",
                "params" : [dither_pix, False,
                            {"pixels" : settle_pix,
                             "time" : settle_start_time,
                             "timeout" : settle_finish_time}]}
 
-        self.__send_json_command(cmd)
+        rc = self.__send_json_command(cmd)
+        if not rc:
+            logging.error('phd2manager:dither - sending json command failed!')
+            return False
 
-#        cmdstr = json.dumps(cmd) + '\n'
-#        logging.info(f'{bytes(cmdstr, encoding="ascii")}')
-#        self.socket.writeData(bytes(cmdstr, encoding='ascii'))
+        # start a timer for dither timeout (meaning phd2 did not settle in time)
+        self.dither_timeout_timer = QtCore.QTimer()
+        self.dither_timeout_timer.setSingleShot(True)
+        self.dither_timeout_timer.timeout.connect(self.dither_timed_out)
+        self.dither_timeout_timer.start(settle_timeout*1000)
+        logging.info(f'dither_timeout_timer started for {settle_timeout} seconds!')
+
+        return True
+
+    def dither_timed_out(self):
+        logging.error('phd2manager: dither_timed_out(): Dither timed out!')
+        self.dither_state = DitherState.SETTLED
+        self.signals.dither_timeout.emit()
+        self.dither_timeout_timer = None # we'll make new one if needed
 
     def set_pause(self, state):
         cmd = {"method" : "set_paused",
                "params" : [state, "Full"]}
 
-        self.__send_json_command(cmd)
+        return self.__send_json_command(cmd)
 
 #        cmdstr = json.dumps(cmd) + '\n'
 #        logging.info(f'{bytes(cmdstr, encoding="ascii")}')
@@ -244,11 +323,12 @@ class PHD2Manager:
         self.request_id += 1
 
         cmdstr = json.dumps(reqdict) + '\n'
-#        if 'app_state' not in req:
-        logging.info(f'jsonrequest->{bytes(cmdstr, encoding="ascii")}')
+        if 'app_state' not in req:
+            logging.info(f'jsonrequest->{bytes(cmdstr, encoding="ascii")}')
 
         if not self.connected:
             logging.warning('__send_json_request: not connected!')
+            return False
             return
 
         # FIXME this isnt good enough - could be set to None before
@@ -259,6 +339,9 @@ class PHD2Manager:
         except Exception as e:
             logging.error(f'__send_json_request - req was {req}!')
             logging.error('Exception ->', exc_info=True)
+            return False
+
+        return True
 
     def __send_json_command(self, cmd):
         cmd['id'] = self.request_id
@@ -272,13 +355,16 @@ class PHD2Manager:
         # need locking?
         if not self.connected:
             logging.warning('__send_json_command: not connected!')
-            return
+            return False
 
         try:
             self.socket.writeData(bytes(cmdstr, encoding='ascii'))
         except Exception as e:
             logging.error(f'__send_json_command - cmd was {cmd}!')
             logging.error('Exception ->', exc_info=True)
+            return False
+
+        return True
 
 # TESTING ONLY
 p = None

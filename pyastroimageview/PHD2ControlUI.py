@@ -118,10 +118,21 @@ class PHD2ControlUI(QtWidgets.QWidget):
         # get appstate - will send us an event when result available
         if self.phd2_manager.is_connected():
             self.phd2_manager.get_appstate()
+
+            # status text is a bit complicated as we are overloading its use!
+            # composes of two strings separated by a '|' at the moment
+            # the first half is appstate and second half is dither state
+            dither_str = str(self.phd2_manager.get_dither_state())
+            curstr = self.ui.phd2_status.text()
+            fields = curstr.split('|')
+            if len(fields) > 1:
+                fields[1] = dither_str
+            else:
+                fields.append(dither_str)
+            newstr = '|'.join(fields)
+            self.ui.phd2_status.setText(newstr)
         else:
             self.ui.phd2_status.setText('DISCONNECTED')
-
-#        logging.info(f'connect check = {self.ui.phd2_connect.isChecked()}')
 
     def request_event(self, reqtype, answer):
         status_string = ''
@@ -130,7 +141,15 @@ class PHD2ControlUI(QtWidgets.QWidget):
             self.set_pauseunpause_state(answer)
 
         status_string += str(answer)
-        self.ui.phd2_status.setText(status_string)
+
+        # status text is a bit complicated as we are overloading its use!
+        # composes of two strings separated by a '|' at the moment
+        # the first half is appstate and second half is dither state
+        curstr = self.ui.phd2_status.text()
+        fields = curstr.split('|')
+        fields[0] = status_string
+        newstr = '|'.join(fields)
+        self.ui.phd2_status.setText(newstr)
 
     def phd2_settings(self):
         diag = PHD2SettingsDialog()
