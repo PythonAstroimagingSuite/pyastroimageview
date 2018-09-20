@@ -38,6 +38,7 @@ class ProgramSettings:
         self.sequence_phd2_stop_losestar = True
         self.sequence_phd2_stop_ditherfail = True
         self.sequence_warn_coolertemp = True
+        self.sequence_overwritefiles = False
 
         # phd2 settings
         self.phd2_scale = 1.0

@@ -51,6 +51,9 @@ class GeneralSettingsDialog(QtWidgets.QDialog):
 
         self.ui.location_altitude.setValue(settings.location_altitude)
 
+
+        # FIXME seems like we ought to be able to automate alot of this broilerplate
+        # code like Kconfig does
         self.ui.sequence_elements.setPlainText(settings.sequence_elements)
         self.ui.sequence_targetdir.setPlainText(settings.sequence_targetdir)
         self.ui.sequence_phd2_warn_notconnect.setChecked(settings.sequence_phd2_warn_notconnect)
@@ -58,6 +61,7 @@ class GeneralSettingsDialog(QtWidgets.QDialog):
         self.ui.sequence_phd2_stop_losestar.setChecked(settings.sequence_phd2_stop_losestar)
         self.ui.sequence_phd2_stop_ditherfail.setChecked(settings.sequence_phd2_stop_ditherfail)
         self.ui.sequence_warn_coolertemp.setChecked(settings.sequence_warn_coolertemp)
+        self.ui.sequence_overwritefiles.setChecked(settings.sequence_overwritefiles)
 
         result = self.exec_()
 
@@ -95,6 +99,7 @@ class GeneralSettingsDialog(QtWidgets.QDialog):
             settings.sequence_phd2_stop_losestar = self.ui.sequence_phd2_stop_losestar.isChecked()
             settings.sequence_phd2_stop_ditherfail = self.ui.sequence_phd2_stop_ditherfail.isChecked()
             settings.sequence_warn_coolertemp = self.ui.sequence_warn_coolertemp.isChecked()
+            settings.sequence_overwritefiles = self.ui.sequence_overwritefiles.isChecked()
 
             logging.info(f'{settings._config}')
 

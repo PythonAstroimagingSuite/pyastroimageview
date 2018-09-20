@@ -1,25 +1,24 @@
-import time
+import sys
+import logging
 import math
 import os.path
-import logging
+import time
 
-from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import AltAz
 from astropy.coordinates import Angle
 from astropy.coordinates import SkyCoord
+from astropy.time import Time
 
 from PyQt5 import QtWidgets, QtGui, QtCore
 
+from pyastroimageview.ApplicationContainer import AppContainer
 from pyastroimageview.CameraManager import CameraState, CameraSettings
-
+from pyastroimageview.CameraSetROIControlUI import CameraSetROIDialog
+from pyastroimageview.ImageSequence import ImageSequence, FrameType
 from pyastroimageview.uic.sequence_settings_uic import Ui_SequenceSettingsUI
 from pyastroimageview.uic.sequence_title_help_uic import Ui_SequenceTitleHelpWindow
 
-from pyastroimageview.ImageSequence import ImageSequence, FrameType
-from pyastroimageview.CameraSetROIControlUI import CameraSetROIDialog
-
-from pyastroimageview.ApplicationContainer import AppContainer
 
 class ImageSequnceControlUI(QtWidgets.QWidget):
     new_sequence_image = QtCore.pyqtSignal(object)
@@ -355,13 +354,24 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                 logging.warning('ImageSequenceControlUI:camera_exposure_complete - result was False!')
                 return
 
+            program_settings = AppContainer.find('/program_settings')
+            if program_settings is None:
+                logging.error('ImageSequenceControlUI:camera_exposure_complete: cannot retrieve program settings!')
+                QtWidgets.QMessageBox.critical(None,
+                                               'Error',
+                                               'Unknown error reading program settings in camera_exposure_complete - exiting!',
+                                               QtWidgets.QMessageBox.Ok)
+                sys.exit(-1)
+
+
             # FIXME need better object to send with signal for end of sequence exposure?
             self.handle_new_image(fitsimage)
 
             outname = os.path.join(self.sequence.target_dir, self.sequence.get_filename())
+            overwrite_flag = program_settings.sequence_overwritefiles
             logging.info(f'writing sequence image to {outname}')
             try:
-                fitsimage.save_to_file(outname, overwrite=True)
+                fitsimage.save_to_file(outname, overwrite=overwrite_flag)
             except Exception  as e:
                 # FIXME Doesnt stop current sequence on this error!
                 logging.error('CameraManager:connect() Exception ->', exc_info=True)
@@ -369,6 +379,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                                                'Unable to save sequence image:\n\n' + \
                                                f'{outname}\n\n' + \
                                                f'Error -> {str(e)}\n\n' + \
+                                               'Check if file already exists and overwrite set to False\n\n' + \
                                                'Sequence aborted!',
                                                QtWidgets.QMessageBox.Ok)
                 logging.info('Sequence ended due to error!')
@@ -410,42 +421,35 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                 if dither_now:
                     logging.info('sequence: time to dither!')
 
-                    program_settings = AppContainer.find('/program_settings')
-                    if program_settings is None:
-                        logging.error('ImageSequenceControlUI:camera_exposure_complete: cannot retrieve program settings!')
+
+                    logging.info(f'ImageSequenceControlUI:camera_exposure_complete: dither: {program_settings.phd2_scale} ' + \
+                                 f'{program_settings.phd2_threshold}' + \
+                                 f'{program_settings.phd2_starttime} ' + \
+                                 f'{program_settings.phd2_settledtime} ' + \
+                                 f'{program_settings.phd2_settletimeout} ')
+
+                    rc = self.phd2_manager.dither(program_settings.phd2_scale,
+                                             program_settings.phd2_threshold,
+                                             program_settings.phd2_starttime,
+                                             program_settings.phd2_settledtime,
+                                             program_settings.phd2_settletimeout)
+
+                    if not rc:
+                        # failed to get PHD2 to dither - just fall through and start next frame after notifying user
+                        # FIXME what is best case here?  Use the dither fail checkbox from general settings to guide
+                        # how to handle?
+                        logging.error('ImageSequenceControlUI:camera_exposure_complete: Could not communicate with PHD2 to start a dither op')
                         QtWidgets.QMessageBox.critical(None,
-                                                       'Error',
-                                                       'Unknown error reading program settings when about to dither - skipping dither!',
-                                                       QtWidgets.QMessageBox.Ok)
+                                                   'Error',
+                                                   'PHD2 failed to respond to dither request - dither aborted!',
+                                                   QtWidgets.QMessageBox.Ok)
                     else:
-                        logging.info(f'ImageSequenceControlUI:camera_exposure_complete: dither: {program_settings.phd2_scale} ' + \
-                                     f'{program_settings.phd2_threshold}' + \
-                                     f'{program_settings.phd2_starttime} ' + \
-                                     f'{program_settings.phd2_settledtime} ' + \
-                                     f'{program_settings.phd2_settletimeout} ')
+                        logging.error('ImageSequenceControlUI:camera_exposure_complete: Dither command sent to PHD2 successfully')
 
-                        rc = self.phd2_manager.dither(program_settings.phd2_scale,
-                                                 program_settings.phd2_threshold,
-                                                 program_settings.phd2_starttime,
-                                                 program_settings.phd2_settledtime,
-                                                 program_settings.phd2_settletimeout)
+                        # now the 'SettleDone' event should come in from PHD2 and it will be handled
+                        # and next frame started unless we get a settle timeout event instead
 
-                        if not rc:
-                            # failed to get PHD2 to dither - just fall through and start next frame after notifying user
-                            # FIXME what is best case here?  Use the dither fail checkbox from general settings to guide
-                            # how to handle?
-                            logging.error('ImageSequenceControlUI:camera_exposure_complete: Could not communicate with PHD2 to start a dither op')
-                            QtWidgets.QMessageBox.critical(None,
-                                                       'Error',
-                                                       'PHD2 failed to respond to dither request - dither aborted!',
-                                                       QtWidgets.QMessageBox.Ok)
-                        else:
-                            logging.error('ImageSequenceControlUI:camera_exposure_complete: Dither command sent to PHD2 successfully')
-
-                            # now the 'SettleDone' event should come in from PHD2 and it will be handled
-                            # and next frame started unless we get a settle timeout event instead
-
-                            return
+                        return
 
             # dither wasnt required or failed(?) and we just start next frame
             # start next exposure
