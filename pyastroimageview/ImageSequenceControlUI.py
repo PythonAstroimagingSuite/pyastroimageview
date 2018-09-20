@@ -135,10 +135,12 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         logging.info('camera_lock_handler')
 
     def camera_connect_handler(self, val):
+        logging.info(f'ImageSequenceControlUI:camera_connect_handler: val={val}')
         self.set_widget_states()
 
-        maxbin = self.device_manager.camera.get_max_binning()
-        self.ui.sequence_binning.setMaximum(maxbin)
+        if val:
+            maxbin = self.device_manager.camera.get_max_binning()
+            self.ui.sequence_binning.setMaximum(maxbin)
 
     def filterwheel_lock_handler(self, val):
         logging.info('filterwheel_lock_handler')
