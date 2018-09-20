@@ -167,6 +167,10 @@ class CameraManager(Backend.Camera):
                 # sequence controller it might start up a new exposure as
                 # soon as it gets this signal so we have to be done handling
                 # the new image on this side first.
+
+                logging.warning('sequence image complete forcing complete to TRUE!!!')
+                complete = True
+
                 self.signals.exposure_complete.emit((complete, fits_image))
 
     def get_lock(self):
