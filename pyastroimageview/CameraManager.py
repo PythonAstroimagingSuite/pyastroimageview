@@ -133,7 +133,7 @@ class CameraManager(Backend.Camera):
                 progress = self.get_exposure_progress()
                 remaining = (self.current_exposure_length*progress)/100.0
                 complete = progress >= 98 or remaining < 1
-#                logging.info(f'{self.get_exposure_progress()} {progress} {self.current_exposure_length} { remaining} {complete}')
+                logging.info(f'{self.get_exposure_progress()} {progress} {self.current_exposure_length} { remaining} {complete}')
 
                 # FIXME Assumes exposure length was equal to requested - should
                 # check backend to see if actual exposure length is available
