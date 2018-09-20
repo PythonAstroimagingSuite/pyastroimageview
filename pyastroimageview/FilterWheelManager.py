@@ -59,5 +59,15 @@ class FilterWheelManager(Backend.FilterWheel):
             if not rc:
                 return rc
 
+            # FIXME need a UI for user to set these!
+            self.user_names = ['L', 'R', 'G', 'B', 'Ha', 'OIII', 'SII', 'Dark']
+
             self.signals.connect.emit(True)
         return True
+
+    # override filter names so we can support user names vs name from driver
+    def get_names(self):
+        return self.user_names
+
+
+

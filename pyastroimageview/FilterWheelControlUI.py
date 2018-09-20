@@ -33,6 +33,7 @@ class FilterWheelControlUI(QtWidgets.QWidget):
 
         self.set_widget_states()
 
+        # we store the names from the manager for filters
         self.names = None
 
         # polling camera status
@@ -70,7 +71,6 @@ class FilterWheelControlUI(QtWidgets.QWidget):
 #                logging.info(f'pos = {pos}')
                 posstr += f' {self.names[pos]}'
             self.ui.filterwheel_setting_position.setText(posstr)
-            #self.ui.filterwheel_setting_filter_combobox.setCurrentIndex(pos)
 
     def filterwheel_setup(self):
         if self.settings.filterwheel_driver:

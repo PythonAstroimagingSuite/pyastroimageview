@@ -91,7 +91,7 @@ class CameraControlUI(QtWidgets.QWidget):
         # these depend on if camera is connected AND if an exposure is going
         enable = connect and not exposing
 
-        logging.info(f'set_widget_states: {connect} {exposing} {enable}')
+#        logging.info(f'set_widget_states: {connect} {exposing} {enable}')
 
         self.ui.camera_setting_roi_width.setEnabled(enable)
         self.ui.camera_setting_roi_height.setEnabled(enable)
@@ -116,7 +116,7 @@ class CameraControlUI(QtWidgets.QWidget):
             if self.state != EXPOSURE_STATE_IDLE:
                 if status.state is CameraState.EXPOSING:
                     perc = min(100, status.exposure_progress)
-                    perc_string = f'EXPOSING {perc} % {perc/100.0 * self.current_exposure:.2f} of {self.current_exposure}'
+                    perc_string = f'EXPOSING {perc:.0f}% {perc/100.0 * self.current_exposure:.2f} of {self.current_exposure}'
                 else:
                     perc_string = f'{status.state.pretty_name()}'
             else:
@@ -125,7 +125,8 @@ class CameraControlUI(QtWidgets.QWidget):
             self.ui.camera_setting_progress.setText(perc_string)
 
             curtemp = self.camera_manager.get_current_temperature()
-            self.ui.camera_setting_coolercur.setText(f'{curtemp:5.1f}C')
+            curpower =self.camera_manager.get_cooler_power()
+            self.ui.camera_setting_coolercur.setText(f'{curtemp:5.1f}C @ {curpower:.0f}%')
 
             cooler_state = self.camera_manager.get_cooler_state()
             self.ui.camera_setting_cooleronoff.setChecked(cooler_state)

@@ -58,6 +58,9 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
         self.sequence = ImageSequence(self.device_manager)
 
+        # use an exposure timer if the camera driver doesn't report progress
+        self.exposure_timer = None
+
         # initialize sequence settings from general settings
         # FIXME do we need a centralized config object/singleton?
         settings = AppContainer.find('/program_settings')
@@ -113,7 +116,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
         val = camok and filtok
 
-        logging.info(f'imgcontrolUI: set_widget_states: {camok} {filtok}')
+#        logging.info(f'imgcontrolUI: set_widget_states: {camok} {filtok}')
 
         self.ui.sequence_name.setEnabled(val)
         self.ui.sequence_elements.setEnabled(val)
@@ -219,7 +222,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             if self.exposure_ongoing:
                 if status.state is CameraState.EXPOSING:
                     perc = min(100, status.exposure_progress)
-                    perc_string = f'EXPOSING {perc}% {perc/100.0 * self.sequence.exposure:.2f}s of {self.sequence.exposure}s'
+                    perc_string = f'EXPOSING {perc:.0f}% {perc/100.0 * self.sequence.exposure:.2f}s of {self.sequence.exposure}s'
                 else:
                     perc_string = f'{status.state.pretty_name()}'
             else:
@@ -340,7 +343,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
         # result will contain (bool, FITSImage)
         # bool will be True if image successful
-        logging.info(f'sequence:camera_exposure_complete: result={result}')
+        logging.info(f'ImageSequenceControlUI:camera_exposure_complete: result={result}')
 
         if self.exposure_ongoing:
 
@@ -389,7 +392,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             # then the dithering may not work out correctly but for a sequenentially
             # numbered sequence of frames it will do what we want and that is almost
             # always the use case!
-            logging.info(f'camera_exposure_complete -> num_dither = {self.sequence.num_dither}')
+            logging.info(f'ImageSequenceControlUI:camera_exposure_complete -> num_dither = {self.sequence.num_dither}')
             if self.sequence.num_dither > 0:
                 num_frames = self.sequence.current_index - self.sequence.start_index
                 num_left = self.sequence.start_index + self.sequence.number_frames - self.sequence.current_index
@@ -407,13 +410,13 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
                     program_settings = AppContainer.find('/program_settings')
                     if program_settings is None:
-                        logging.error('camera_exposure_complete: cannot retrieve program settings!')
+                        logging.error('ImageSequenceControlUI:camera_exposure_complete: cannot retrieve program settings!')
                         QtWidgets.QMessageBox.critical(None,
                                                        'Error',
                                                        'Unknown error reading program settings when about to dither - skipping dither!',
                                                        QtWidgets.QMessageBox.Ok)
                     else:
-                        logging.info(f'camera_exposure_complete: dither: {program_settings.phd2_scale} ' + \
+                        logging.info(f'ImageSequenceControlUI:camera_exposure_complete: dither: {program_settings.phd2_scale} ' + \
                                      f'{program_settings.phd2_threshold}' + \
                                      f'{program_settings.phd2_starttime} ' + \
                                      f'{program_settings.phd2_settledtime} ' + \
@@ -429,13 +432,13 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                             # failed to get PHD2 to dither - just fall through and start next frame after notifying user
                             # FIXME what is best case here?  Use the dither fail checkbox from general settings to guide
                             # how to handle?
-                            logging.error('camera_exposure_complete: Could not communicate with PHD2 to start a dither op')
+                            logging.error('ImageSequenceControlUI:camera_exposure_complete: Could not communicate with PHD2 to start a dither op')
                             QtWidgets.QMessageBox.critical(None,
                                                        'Error',
                                                        'PHD2 failed to respond to dither request - dither aborted!',
                                                        QtWidgets.QMessageBox.Ok)
                         else:
-                            logging.error('camera_exposure_complete: Dither command sent to PHD2 successfully')
+                            logging.error('ImageSequenceControlUI:camera_exposure_complete: Dither command sent to PHD2 successfully')
 
                             # now the 'SettleDone' event should come in from PHD2 and it will be handled
                             # and next frame started unless we get a settle timeout event instead
@@ -446,7 +449,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             # start next exposure
             self.device_manager.camera.start_exposure(self.sequence.exposure)
         else:
-            logging.warning('camera_exposure_complete:camera_exposure_complete: no exposure was ongoing!')
+            logging.warning('ImageSequenceControlUI:camera_exposure_complete: no exposure was ongoing!')
 
     def start_sequence(self):
         # FIXME this sequence would probably be MUCH NICER using a lock/semaphore
@@ -499,6 +502,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             self.device_manager.filterwheel.release_lock()
             return
 
+        is_light_frame = self.sequence.frame_type == 'Light'
+
         program_settings = AppContainer.find('/program_settings')
         if program_settings is None:
             logging.error('start_sequence: cannot retrieve program settings!')
@@ -506,7 +511,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                                            QtWidgets.QMessageBox.Ok)
             return
 
-        if program_settings.sequence_phd2_warn_notconnect:
+        if is_light_frame and program_settings.sequence_phd2_warn_notconnect:
             if self.phd2_manager is None or not self.phd2_manager.is_connected():
                 logging.error('start_sequence: phd2 not connected')
                 choice = QtWidgets.QMessageBox.question(None, 'PHD2 Not Connected',
@@ -521,7 +526,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
         # FIXME if they chose to start without PHD2 then need to ignore PHD2 for this sequence including
         # losing guiding and star events!
-        if program_settings.sequence_phd2_stop_loseguiding:
+        if is_light_frame and program_settings.sequence_phd2_stop_loseguiding:
             if not self.phd2_manager.is_guiding():
                 logging.error('start_sequence: phd2 not guiding')
                 choice = QtWidgets.QMessageBox.critical(None, 'PHD2 Not Guiding',
@@ -586,6 +591,12 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
         self.sequence.current_index = self.sequence.start_index
         self.device_manager.camera.start_exposure(self.sequence.exposure)
+
+        # SIMULATE PROGRESS IN CAMERA MANAGER INSTEAD!
+        if not self.device_manager.camera.supports_progress():
+            self.exposure_timer = QtCore.QTimer()
+            self.exposure_timer.start(self.sequence.exposure)
+
         self.exposure_ongoing = True
 
     def stop_sequence(self):
@@ -738,7 +749,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             fits_doc.set_object_hourangle(hastr)
 
         # controlled by user selection in camera or sequence config
-        fits_doc.set_image_type('Light frame')
+        fits_doc.set_image_type(self.sequence.frame_type)
         fits_doc.set_object('TEST-OBJECT')
 
         # set by application version

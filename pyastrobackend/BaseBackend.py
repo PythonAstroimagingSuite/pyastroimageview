@@ -49,6 +49,11 @@ class BaseCamera(metaclass=ABCMeta):
     def get_driver_version(self):
         pass
 
+# this is ASCOM specific!
+#    @abstractmethod
+#    def get_driver_interface_version(self):
+#        pass
+
     @abstractmethod
     def get_state(self):
         pass
@@ -67,6 +72,10 @@ class BaseCamera(metaclass=ABCMeta):
 
     @abstractmethod
     def get_exposure_progress(self):
+        pass
+
+    @abstractmethod
+    def supports_progress(self):
         pass
 
     @abstractmethod
@@ -99,6 +108,10 @@ class BaseCamera(metaclass=ABCMeta):
 
     @abstractmethod
     def get_cooler_state(self):
+        pass
+
+    @abstractmethod
+    def get_cooler_power(self):
         pass
 
     @abstractmethod

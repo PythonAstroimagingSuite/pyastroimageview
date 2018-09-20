@@ -28,6 +28,7 @@ class DeviceBackend(BaseDeviceBackend):
 class Camera(BaseCamera):
     def __init__(self):
         self.cam = None
+        self.camera_has_progress = None
 
     def show_chooser(self, last_choice):
         pythoncom.CoInitialize()
@@ -46,6 +47,13 @@ class Camera(BaseCamera):
             logging.error('ASCOMBackend:camera:connect() Exception ->', exc_info=True)
             return False
 
+        # see if camera supports progress
+        # supports_progess() can throw tracebacks so don't want to
+        # have it continually doing this so we cache result
+        if self.cam.Connected:
+            self.camera_has_progress = self.supports_progress()
+            logging.info(f'camera:connect camera_has_progress={self.camera_has_progress}')
+
         return self.cam.Connected
 
     def disconnect(self):
@@ -53,6 +61,7 @@ class Camera(BaseCamera):
             if self.cam.Connected:
                 self.cam.Connected = False
                 self.cam = None
+                self.camera_has_progress = None
 
     def is_connected(self):
         if self.cam:
@@ -75,6 +84,11 @@ class Camera(BaseCamera):
     def get_driver_version(self):
         if self.cam:
             return self.cam.DriverVersion
+
+# This is ASCOM specific
+#    def get_driver_interface_version(self):
+#        if self.cam:
+#            return self.cam.InterfaceVersion
 
     def get_state(self):
         if self.cam:
@@ -100,15 +114,25 @@ class Camera(BaseCamera):
 
         return self.cam.ImageReady
 
+    def supports_progress(self):
+        logging.info(f'ascomcamera: supports_progress {self.camera_has_progress}')
+        if self.camera_has_progress is None:
+            self.camera_has_progress = self.get_exposure_progress() != -1
+        logging.info(f'ascomcamera: supports_progress return  {self.camera_has_progress}')
+        return self.camera_has_progress
+
+# FIXME returns -1 to indicate progress is not available
+# FIXME shold use cached value to know if progress is supported
     def get_exposure_progress(self):
         if not self.cam:
-            return 0
+            return -1
 
         try:
             return self.cam.PercentCompleted
-        except:
+        except Exception as e:
             logging.warning('camera.get_exposure_progress() failed!')
-            return 100
+            logging.error('Exception ->', exc_info=True)
+            return -1
 
     def get_image_data(self):
         """ Get image data from camera
@@ -162,6 +186,14 @@ class Camera(BaseCamera):
 
     def get_binning(self):
         return (self.cam.BinX, self.cam.BinY)
+
+    def get_cooler_power(self):
+        try:
+            return self.cam.CoolerPower
+        except Exception as e:
+            logging.warning('camera.get_cooler_power() failed!')
+            logging.error('Exception ->', exc_info=True)
+            return 0
 
     def set_binning(self, binx, biny):
         self.cam.BinX = binx
@@ -326,7 +358,7 @@ class FilterWheel(BaseFilterWheel):
 
         Use is_moving() method to check if its done.
         """
-        names = self.filterwheel.Names
+        names = self.get_names()
         try:
             newpos = names.index(name)
         except ValueError as e:

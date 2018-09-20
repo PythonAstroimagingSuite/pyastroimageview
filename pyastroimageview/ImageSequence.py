@@ -25,7 +25,21 @@ class ImageSequence:
         # FIXME the way we get temperature and filter, etc seems inelegant
         tmp_name = self.name_elements
         tmp_name = re.sub('\{ftype\}', self.frame_type, tmp_name)
-        tmp_name = re.sub('\{exp\}', f'{self.exposure}s', tmp_name)
+
+        # handle exposure so we don't put a '.' in filename
+        # FIXME could probably combine top two cases somehow
+        if self.exposure < 0.0009:
+            exposure_str = '0s'
+        elif self.exposure < 1.0 or (self.exposure-int(self.exposure) > 0.0009):
+            exposure_str = f'{self.exposure:.3f}s'
+        else:
+            exposure_str = f'{int(self.exposure)}s'
+
+        exposure_str = exposure_str.replace('.', 'p')
+
+        tmp_name = re.sub('\{exp\}', exposure_str, tmp_name)
+
+#        tmp_name = re.sub('\{exp\}', f'{self.exposure}s', tmp_name)
         tmp_name = re.sub('\{ftype\}', self.frame_type, tmp_name)
         tmp_name = re.sub('\{idx\}', f'{self.current_index:03d}', tmp_name)
         if self.device_manager.camera.is_connected():

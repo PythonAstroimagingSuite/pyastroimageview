@@ -106,6 +106,9 @@ class CameraManager(Backend.Camera):
         self.current_exposure_length = None
         self.exposure_camera_settings = None
 
+        # timer if we have to maintain progress
+        self.exposure_timer = None
+
         # polling camera status
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.camera_status_poll)
@@ -127,8 +130,10 @@ class CameraManager(Backend.Camera):
                 self.watch_for_exposure_end = False
 
                 # FIXME this doesnt seem to detect aborted exposures reliably
-                complete = super().get_exposure_progress() >= 100
-                logging.info(f'{super().get_exposure_progress()} {complete}')
+                progress = self.get_exposure_progress()
+                remaining = (self.current_exposure_length*progress)/100.0
+                complete = progress >= 98 or remaining < 1
+#                logging.info(f'{self.get_exposure_progress()} {progress} {self.current_exposure_length} { remaining} {complete}')
 
                 # FIXME Assumes exposure length was equal to requested - should
                 # check backend to see if actual exposure length is available
@@ -211,7 +216,7 @@ class CameraManager(Backend.Camera):
             camera_state = super().get_state()
             status.state = CameraState(camera_state)
             if status.state.exposure_in_progress():
-                status.exposure_progress = super().get_exposure_progress()
+                status.exposure_progress = self.get_exposure_progress()
             status.image_ready = super().check_exposure()
 
 #       logging.info(f'status: {status}')
@@ -246,6 +251,12 @@ class CameraManager(Backend.Camera):
         if super().is_connected():
             logging.info('cameramanager: starting exposure')
             super().start_exposure(expose)
+
+            if not super().supports_progress():
+                logging.info('camera_manager:start_exposure() started timer')
+                self.exposure_timer = QtCore.QTimer()
+                self.exposure_timer.start(expose*1000)
+
             self.watch_for_exposure_end = True
             self.exposure_start_time = None
             self.current_exposure_length = expose
@@ -258,6 +269,20 @@ class CameraManager(Backend.Camera):
         if super().is_connected():
             super().stop_exposure()
             self.signals.exposure_complete.emit((False, None))
+
+    def get_exposure_progress(self):
+        # if we setup a timer use it other rely on backend
+        logging.info(f'camera_manager:get_exposure_progress() ')
+        if self.exposure_timer:
+            interval = self.exposure_timer.interval()
+            remaining = self.exposure_timer.remainingTime()
+            logging.info(f'camera_manager:get_exposure_progress()  {interval} {remaining}')
+            if interval == 0 or remaining < 0:
+                remaining = 0
+            progress = (100.0*(interval-remaining)/interval)
+            return progress
+        else:
+            return super().get_exposure_progress()
 
     @checklock
     def get_image_data(self):
