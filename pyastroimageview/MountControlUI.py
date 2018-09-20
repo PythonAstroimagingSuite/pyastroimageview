@@ -94,7 +94,7 @@ class MountControlUI(QtWidgets.QWidget):
         if self.settings.mount_driver:
             rc = self.mount_manager.connect(self.settings.mount_driver)
             if not rc:
-                QtWidgets.QMessageBox.critical(None, 'Error', 'Unable to connect to focuser!',
+                QtWidgets.QMessageBox.critical(None, 'Error', 'Unable to connect to mount!',
                                                QtWidgets.QMessageBox.Ok)
                 return
 
