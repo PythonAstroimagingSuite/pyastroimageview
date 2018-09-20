@@ -287,7 +287,7 @@ class ImageWindowSTF(pg.GraphicsLayoutWidget):
         self.set_mtf(sc, mc, hc)
         self.stf_slider.setSTFValues(sc, mc, hc)
 
-    def overlay_stars(self, hfr_result):
+    def overlay_stars(self, hfr_result, filter=False):
         """Overlay star labels onto image.
 
         Given a MeasureHFRResult this method will label each with an index
@@ -298,20 +298,37 @@ class ImageWindowSTF(pg.GraphicsLayoutWidget):
         ----------
         hfr_result : MeasureHFRRest
             Result from star detection routine.
+        filter : bool
+            If True then restrict to values near median of HFR to reject invalid star detections.
         """
 
+        if filter:
+            min_cut = np.percentile(hfr_result.FWHM_R, 5)
+            max_cut = np.percentile(hfr_result.FWHM_R, 90)
+        else:
+            min_cut = 0.0
+            max_cut = np.inf
+
+        logging.info(f'overlay_stars min_cut={min_cut} max_cut={max_cut}')
+        logging.info(f'overlay_stars; min_hfr = {np.min(hfr_result.FWHM_R)} max_hfr={np.max(hfr_result.FWHM_R)}')
+
         idx = range(1, len(hfr_result.FWHM_X)+1)
+        ndrawn = 0
         for i, x, y, r in zip(idx, hfr_result.FWHM_X, hfr_result.FWHM_Y, hfr_result.FWHM_R):
 #            logging.info(f'Star #{i} x/r/r -> {x}, {y}, {r}')
 
 #            text = pg.TextItem(f'{r:3.2f}', anchor=(0.5,2.0), border='r')
 #            text.setZValue(100)
 #            text.setPos(x, y)
-            star_item = StarObj(r, num=i)
-            star_item.setPos(x, y)
-            star_item.setVisible(self.star_visibility)
-            self.view.addItem(star_item)
-            self.star_items.append(star_item)
+            if max_cut > r > min_cut:
+                star_item = StarObj(r, num=i)
+                star_item.setPos(x, y)
+                star_item.setVisible(self.star_visibility)
+                self.view.addItem(star_item)
+                self.star_items.append(star_item)
+                ndrawn += 1
+
+        logging.info(f'overlay_stars: drew {ndrawn} stars.')
 
         # need to force repaint?  Otherwise text doesn't seem to be displayed
         # reliably until a mouse enter event.

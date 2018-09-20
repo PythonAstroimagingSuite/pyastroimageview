@@ -431,7 +431,7 @@ class MainWindow(QtGui.QMainWindow):
         newdoc.image_data = image_widget.image_data
         newdoc.median = np.median(newdoc.image_data)
 
-        self.image_documents[tab_index] = newdoc
+        self.image_documents[image_widget] = newdoc
         self.image_area_ui.set_current_view_index(tab_index)
         self.image_area_ui.clear_info()
         self.image_area_ui.update_info(newdoc)
@@ -449,7 +449,8 @@ class MainWindow(QtGui.QMainWindow):
         self.hfr_cur_widget = self.image_area_ui.get_current_view_widget()
         filename = self.image_documents[self.hfr_cur_widget].filename
 
-        worker = self.hfr_server.setup_measure_file_thread(filename, maxstars=400)
+        # FIXME make measure hfr params configurable
+        worker = self.hfr_server.setup_measure_file_thread(filename, maxstars=200)
         worker.signals.result.connect(self._measure_hfr_result)
         worker.signals.finished.connect(self._measure_hfr_complete)
         self.hfr_server.run_measure_file_thread(worker)
@@ -459,7 +460,7 @@ class MainWindow(QtGui.QMainWindow):
 #            logging.info(f'measure_hfr result RESULT0:{result[0]}\nRESULT1:{result[1]}')
 
         image_widget = self.image_documents[self.hfr_cur_widget].image_widget
-        image_widget.overlay_stars(result[1])
+        image_widget.overlay_stars(result[1], filter=True)
         self.image_documents[self.hfr_cur_widget].hfr_result = result[1]
         self.image_area_ui.update_info(self.image_documents[self.hfr_cur_widget])
         self.hfr_cur_widget = None
