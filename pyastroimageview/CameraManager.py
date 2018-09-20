@@ -276,7 +276,7 @@ class CameraManager(Backend.Camera):
 
     def get_exposure_progress(self):
         # if we setup a timer use it other rely on backend
-        logging.info(f'camera_manager:get_exposure_progress() ')
+#        logging.info(f'camera_manager:get_exposure_progress() ')
         if self.exposure_timer:
             interval = self.exposure_timer.interval()
             remaining = self.exposure_timer.remainingTime()
