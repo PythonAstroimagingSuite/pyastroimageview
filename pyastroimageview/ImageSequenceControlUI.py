@@ -16,7 +16,7 @@ from pyastroimageview.CameraManager import CameraState, CameraSettings
 from pyastroimageview.uic.sequence_settings_uic import Ui_SequenceSettingsUI
 from pyastroimageview.uic.sequence_title_help_uic import Ui_SequenceTitleHelpWindow
 
-from pyastroimageview.ImageSequence import ImageSequence
+from pyastroimageview.ImageSequence import ImageSequence, FrameType
 from pyastroimageview.CameraSetROIControlUI import CameraSetROIDialog
 
 from pyastroimageview.ApplicationContainer import AppContainer
@@ -395,7 +395,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             # numbered sequence of frames it will do what we want and that is almost
             # always the use case!
             logging.info(f'ImageSequenceControlUI:camera_exposure_complete -> num_dither = {self.sequence.num_dither}')
-            if self.sequence.num_dither > 0:
+            if self.sequence.is_light_frames() and self.sequence.num_dither > 0:
                 num_frames = self.sequence.current_index - self.sequence.start_index
                 num_left = self.sequence.start_index + self.sequence.number_frames - self.sequence.current_index
                 logging.info(f'num_frames={num_frames} num_left={num_left} ' + \
@@ -504,7 +504,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             self.device_manager.filterwheel.release_lock()
             return
 
-        is_light_frame = self.sequence.frame_type == 'Light'
+        is_light_frame = self.sequence.is_light_frames()
 
         program_settings = AppContainer.find('/program_settings')
         if program_settings is None:
@@ -641,7 +641,11 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         elif self.sender()== self.ui.sequence_number:
             self.sequence.number_frames = self.ui.sequence_number.value()
         elif self.sender() == self.ui.sequence_frametype:
-            self.sequence.frame_type = self.ui.sequence_frametype.itemText(self.ui.sequence_frametype.currentIndex())
+            req_ftype = self.ui.sequence_frametype.itemText(self.ui.sequence_frametype.currentIndex())
+            for ftype in FrameType:
+                if req_ftype == ftype.pretty_name():
+                    self.sequence.frame_type = ftype
+                    break
         elif self.sender() == self.ui.sequence_targetdir:
             self.sequence.target_dir = self.ui.sequence_targetdir.toPlainText()
         elif self.sender() == self.ui.sequence_filter:
@@ -657,7 +661,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.ui.sequence_elements.setPlainText(self.sequence.name_elements)
         self.ui.sequence_preview.setText(self.sequence.get_filename())
         self.ui.sequence_exposure.setValue(self.sequence.exposure)
-        self.ui.sequence_frametype.setCurrentText(self.sequence.frame_type)
+        self.ui.sequence_frametype.setCurrentText(self.sequence.frame_type.pretty_name())
         self.ui.sequence_number.setValue(self.sequence.number_frames)
         self.ui.sequence_start.setValue(self.sequence.start_index)
         self.ui.sequence_targetdir.setPlainText(self.sequence.target_dir)
@@ -751,7 +755,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             fits_doc.set_object_hourangle(hastr)
 
         # controlled by user selection in camera or sequence config
-        fits_doc.set_image_type(self.sequence.frame_type)
+        fits_doc.set_image_type(self.sequence.frame_type.pretty_name())
         fits_doc.set_object('TEST-OBJECT')
 
         # set by application version

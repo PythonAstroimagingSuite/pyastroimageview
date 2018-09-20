@@ -1,4 +1,16 @@
 import re
+from enum import Enum
+
+class FrameType(Enum):
+    """Represents type of frame"""
+    BIAS = 0
+    DARK = 1
+    FLAT = 2
+    LIGHT = 3
+
+    def pretty_name(self):
+        pretty = ['Bias', 'Dark', 'Flat', 'Light']
+        return pretty[self.value]
 
 class ImageSequence:
     def __init__(self, device_manager):
@@ -8,13 +20,17 @@ class ImageSequence:
         self.number_frames = 1
         self.current_index = 1
         self.filter = None
-        self.frame_type = 'Light'
+        self.frame_type = FrameType.LIGHT
         self.exposure = 5
         self.binning = 1
         self.num_dither = 0
         self.roi = None
         self.device_manager = device_manager
         self.target_dir = ''
+
+    def is_light_frames(self):
+        """Returns True if sequence is of 'Light' frames versus calibration frames"""
+        return self.frame_type == FrameType.LIGHT
 
     def get_filename(self):
         """Creates of a filename for files of a sequence
@@ -24,7 +40,7 @@ class ImageSequence:
 
         # FIXME the way we get temperature and filter, etc seems inelegant
         tmp_name = self.name_elements
-        tmp_name = re.sub('\{ftype\}', self.frame_type, tmp_name)
+        tmp_name = re.sub('\{ftype\}', self.frame_type.pretty_name(), tmp_name)
 
         # handle exposure so we don't put a '.' in filename
         # FIXME could probably combine top two cases somehow
@@ -40,7 +56,7 @@ class ImageSequence:
         tmp_name = re.sub('\{exp\}', exposure_str, tmp_name)
 
 #        tmp_name = re.sub('\{exp\}', f'{self.exposure}s', tmp_name)
-        tmp_name = re.sub('\{ftype\}', self.frame_type, tmp_name)
+        tmp_name = re.sub('\{ftype\}', self.frame_type.pretty_name(), tmp_name)
         tmp_name = re.sub('\{idx\}', f'{self.current_index:03d}', tmp_name)
         if self.device_manager.camera.is_connected():
             tempc = self.device_manager.camera.get_current_temperature()
@@ -66,7 +82,7 @@ class ImageSequence:
 
         # put in filter only if type  'Light'
         # also only put on base name too
-        if self.frame_type == 'Light':
+        if self.frame_type == FrameType.LIGHT:
             if self.device_manager.filterwheel.is_connected():
                 filter_name = self.device_manager.filterwheel.get_position_name()
             else:
