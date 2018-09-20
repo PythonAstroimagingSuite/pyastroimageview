@@ -276,7 +276,7 @@ class CameraManager(Backend.Camera):
         if self.exposure_timer:
             interval = self.exposure_timer.interval()
             remaining = self.exposure_timer.remainingTime()
-            logging.info(f'camera_manager:get_exposure_progress()  {interval} {remaining}')
+#            logging.info(f'camera_manager:get_exposure_progress()  {interval} {remaining}')
             if interval == 0 or remaining < 0:
                 remaining = 0
             progress = (100.0*(interval-remaining)/interval)
