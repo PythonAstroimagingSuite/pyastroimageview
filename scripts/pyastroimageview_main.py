@@ -33,6 +33,7 @@ from pyastroimageview.ProgramSettings import ProgramSettings
 from pyastroimageview.ImageSequenceControlUI import ImageSequnceControlUI
 from pyastroimageview.GeneralSettingsUI import GeneralSettingsDialog
 from pyastroimageview.PHD2ControlUI import PHD2ControlUI
+from pyastroimageview.RPCServer import RPCServer
 
 from pyastroimageview.ApplicationContainer import AppContainer
 
@@ -139,6 +140,13 @@ class MainWindow(QtGui.QMainWindow):
         QtGui.QApplication.instance().focusWindowChanged.connect(self.focus_window_changed)
 
         self.last_win_focus = None
+
+        # start RPC server
+
+        # FIXME Bad place for this???
+        self.RPC_Server_Instance = RPCServer()
+        self.RPC_Server_Instance.listen()
+        self.RPC_Server_Instance.signals.new_camera_image.connect(self.new_camera_image)
 
     def focus_window_changed(self, win):
 #        logging.info(f'focus win changed {win} {self.last_win_focus}')

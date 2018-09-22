@@ -1,16 +1,23 @@
 #!/usr/bin/python
+import os
 import sys
 import json
+import math
 import logging
+
+from astropy import units as u
+from astropy.coordinates import AltAz
+from astropy.coordinates import Angle
+from astropy.coordinates import SkyCoord
+from astropy.time import Time
 
 from PyQt5 import QtNetwork, QtCore
 
 from pyastroimageview.ApplicationContainer import AppContainer
-
+from pyastroimageview.CameraManager import CameraSettings
 
 class RPCServerSignals(QtCore.QObject):
-        new_camera_iamge = QtCore.pyqtSignal(object)
-
+        new_camera_image = QtCore.pyqtSignal(object)
 
 class RPCServer:
 
@@ -19,6 +26,10 @@ class RPCServer:
         self.port = port
         self.client_socket = None
 
+        self.exposure_ongoing = False
+        self.out_image_filename = None
+        self.exposure_ongoing_method_id = None
+
         self.requests = {}
         self.request_id = 0
 
@@ -26,7 +37,28 @@ class RPCServer:
 
         AppContainer.register('/dev/rpcserver', self)
 
-#        self.camera_manager = AppContainer.find('/dev/camera')
+        self.device_manager = AppContainer.find('/dev')
+
+        # FOR TESTING MAINLY!
+        self.ping_timer = QtCore.QTimer()
+        self.ping_timer.timeout.connect(self.ping)
+        self.ping_timer.start(5000)
+
+    def ping(self):
+        """Send ping to client"""
+        if self.client_socket is None:
+            return
+
+        msgdict = { 'Event' : 'Ping', 'Server' : 'pyastroimageview', 'Version' : '1.0' }
+        msgstr = json.dumps(msgdict) + '\n'
+
+        logging.info(f'Sending ping message {msgstr}')
+
+        try:
+            self.client_socket.write(bytes(msgstr, encoding='ascii'))
+        except Exception as e:
+            logging.error(f'send_initial_message - exception - msg was {msgstr}!')
+            logging.error('Exception ->', exc_info=True)
 
     def listen(self):
         if self.server:
@@ -38,10 +70,10 @@ class RPCServer:
         self.server.setMaxPendingConnections(1)
 
         # FIXME make port configurable!
-        if not self.server.listen(QtNetwork.QHostAddress('192.168.1.18'), self.port):
+        if not self.server.listen(QtNetwork.QHostAddress.AnyIPv4, self.port):
             logging.error(f'RPCServer:listen() unable to listen to port {self.port}')
 
-        logging.info(f'RPCServer listening on {self.server.serverAddr()}:{self.serverPort()}')
+        logging.info(f'RPCServer listening on port {self.server.serverAddress().toString()}:{self.server.serverPort()}')
         self.server.newConnection.connect(self.new_connection_event)
 
         return True
@@ -68,14 +100,206 @@ class RPCServer:
     def client_readready_event(self):
         logging.info('RPCServer:client_readready_event')
 
-        l = self.client_socket.readLine()
+        if not self.client_socket:
+            logging.error('server not connected!')
+            return False
 
-        logging.info(f'RPCServer:client_readready_event -> data = {l}')
+        while True:
+            resp = self.client_socket.readLine(2048)
+
+            if len(resp) < 1:
+                break
+
+            logging.info(f'client sent {resp}')
+
+            try:
+                j = json.loads(resp)
+
+            except Exception as e:
+                logging.error(f'RPCServer - exception message was {resp}!')
+                logging.error('Exception ->', exc_info=True)
+                continue
+
+            logging.info(f'json = {j}')
+
+            if 'method' in j:
+                method = j['method']
+                if 'id' not in j:
+                    logging.error(f'received method request of {method} but no id included - aborting!')
+                    continue
+                method_id = j['id']
+                if method == 'get_camera_info':
+                    resdict = {}
+                    resdict['jsonrpc'] = '2.0'
+                    resdict['id'] = method_id
+
+                    settings = self.device_manager.camera.get_settings()
+                    setdict = {}
+                    setdict['binning'] = settings.binning
+                    setdict['framesize'] = (settings.frame_width, settings.frame_height)
+                    setdict['roi'] = settings.roi
+
+                    resdict['result'] = setdict
+
+                    self.__send_json_response(resdict)
+                elif method == 'take_image':
+                    if 'params' not in j:
+                        logging.info('take_image - no params provided!')
+                        continue
+                    params = j['params']
+                    exposure = None
+                    filename = None
+                    newbin = None
+                    newroi = None
+                    if 'exposure' in params:
+                        exposure = params['exposure']
+                    if 'filename' in params:
+                        filename = params['filename']
+                    if 'binning' in params:
+                        newbin = params['binning']
+                    if 'roi' in params:
+                        newroi = params['roi']
+
+                    if exposure is None and filename is None:
+                        logging.error('RPCServer:take_image method request but need both exposure {exposure} and filename {filename}')
+                        continue
+
+                    if not self.device_manager.camera.get_lock():
+                        logging.error('RPCServer: take_image - unable to get camera lock!')
+
+                        continue
+
+                    logging.info(f'take_image: {filename} {exposure} {newbin} {newroi}')
+
+                    settings = CameraSettings()
+                    if newbin:
+                        settings.binning = newbin
+                    if newroi:
+                        settings.roi = newroi
+
+                    self.device_manager.camera.set_settings(settings)
+                    self.device_manager.camera.start_exposure(exposure)
+                    self.device_manager.camera.signals.exposure_complete.connect(self.camera_exposure_complete)
+                    self.exposure_ongoing = True
+                    self.out_image_filename = filename
+                    self.exposure_ongoing_method_id = method_id
+        return
+
+    def camera_exposure_complete(self, result):
+
+        # result will contain (bool, FITSImage)
+        # bool will be True if image successful
+        logging.info(f'RPCServer():camera_exposure_complete: result={result}')
+
+        self.device_manager.camera.release_lock()
+
+        if not self.exposure_ongoing:
+            logging.warning('RPCServer():camera_exposure_complete - no exposure was ongoing! Ignoring...')
+            return
+
+        self.exposure_ongoing = False
+
+        program_settings = AppContainer.find('/program_settings')
+        if program_settings is None:
+            logging.error('RPCServer():camera_exposure_complete: unable to access program settings!')
+            return False
+
+        complete_status, fitsimage = result
+
+        self.handle_new_image(fitsimage)
+
+        #outname = os.path.join(self.sequence.target_dir, self.sequence.get_filename())
+        outname = self.out_image_filename
+        overwrite_flag = program_settings.sequence_overwritefiles
+        logging.info(f'writing image to {outname}')
+        try:
+            fitsimage.save_to_file(outname, overwrite=overwrite_flag)
+        except Exception  as e:
+            logging.error('RPCServer: Exception ->', exc_info=True)
+            return
+
+        self.send_exposure_complete_message(self.exposure_ongoing_method_id)
+
+        self.out_image_filename = None
+        self.exposure_ongoing_method_id = None
+
+        self.signals.new_camera_image.emit((True, fitsimage))
+
+    # FIXME this is copied from ImageSequenceControlUI which was a copy
+    # from pyastroimageview_main.py!!!!!
+    def handle_new_image(self, fits_doc):
+        """Fills in FITS header data for new images"""
+
+        # FIXME maybe best handled somewhere else - it relies on lots of 'globals'
+        settings = AppContainer.find('/program_settings')
+        if settings is None:
+            logging.error('RPCServer:handle_new_image: unable to access program settings!')
+            return False
+
+        fits_doc.set_notes(settings.observer_notes)
+        fits_doc.set_telescope(settings.telescope_description)
+        fits_doc.set_focal_length(settings.telescope_focallen)
+        aper_diam = settings.telescope_aperture
+        aper_obst = settings.telescope_obstruction
+        aper_area = math.pi*(aper_diam/2.0*aper_diam/2.0)*(1-aper_obst*aper_obst/100.0/100.0)
+        fits_doc.set_aperture_diameter(aper_diam)
+        fits_doc.set_aperture_area(aper_area)
+
+        lat_dms = Angle(settings.location_latitude*u.degree).to_string(unit=u.degree, sep=' ', precision=0)
+        lon_dms = Angle(settings.location_longitude*u.degree).to_string(unit=u.degree, sep=' ', precision=0)
+        fits_doc.set_site_location(lat_dms, lon_dms)
+
+        # these come from camera, filter wheel and telescope drivers
+        if self.device_manager.camera.is_connected():
+            cam_name = self.device_manager.camera.get_camera_name()
+            fits_doc.set_instrument(cam_name)
+
+        if self.device_manager.filterwheel.is_connected():
+            logging.info('connected')
+            cur_name = self.device_manager.filterwheel.get_position_name()
+
+            fits_doc.set_filter(cur_name)
+
+        if self.device_manager.mount.is_connected():
+            ra, dec = self.device_manager.mount.get_position_radec()
+
+            radec = SkyCoord(ra=ra*u.hour, dec=dec*u.degree, frame='fk5')
+            rastr = radec.ra.to_string(u.hour, sep=":", pad=True)
+            decstr = radec.dec.to_string(alwayssign=True, sep=":", pad=True)
+            fits_doc.set_object_radec(rastr, decstr)
+
+            alt, az = self.device_manager.mount.get_position_altaz()
+            altaz = AltAz(alt=alt*u.degree, az=az*u.degree)
+            altstr = altaz.alt.to_string(alwayssign=True, sep=":", pad=True)
+            azstr = altaz.az.to_string(alwayssign=True, sep=":", pad=True)
+            fits_doc.set_object_altaz(altstr, azstr)
+
+            now = Time.now()
+            local_sidereal = now.sidereal_time('apparent',
+                                               longitude=settings.location_longitude*u.degree)
+            hour_angle = local_sidereal - radec.ra
+            logging.info(f'locsid = {local_sidereal} HA={hour_angle}')
+            if hour_angle.hour > 12:
+                hour_angle = (hour_angle.hour - 24.0)*u.hourangle
+
+            hastr = Angle(hour_angle).to_string(u.hour, sep=":", pad=True)
+            logging.info(f'HA={hour_angle} HASTR={hastr} {type(hour_angle)}')
+            fits_doc.set_object_hourangle(hastr)
+
+        # controlled by user selection in camera or sequence config
+        # FIXME allow client to control frame type
+        fits_doc.set_image_type('Light') #self.sequence.frame_type.pretty_name())
+        fits_doc.set_object('TEST-OBJECT')
+
+        # set by application version
+        fits_doc.set_software_info('pyastroview TEST')
 
     def send_initial_message(self):
         """Send message to new client"""
         msgdict = { 'Event' : 'Connection', 'Server' : 'pyastroimageview', 'Version' : '1.0' }
         msgstr = json.dumps(msgdict) + '\n'
+
+        logging.info(f'Sending initial message {msgstr}')
 
         try:
             self.client_socket.write(bytes(msgstr, encoding='ascii'))
@@ -86,28 +310,38 @@ class RPCServer:
 
         return True
 
-    def __send_json_response(self, cmd):
-        cmd['id'] = self.request_id
-        self.request_id += 1
+    def send_exposure_complete_message(self, method_id):
+        resdict = {}
+        resdict['jsonrpc'] = '2.0'
+        resdict['id'] = method_id
 
+        setdict = {}
+        setdict['complete'] = True
+
+        resdict['result'] = setdict
+
+        self.__send_json_response(resdict)
+
+    def __send_json_response(self, cmd):
         cmdstr = json.dumps(cmd) + '\n'
         logging.info(f'jsoncmd->{bytes(cmdstr, encoding="ascii")}')
 
         # FIXME this isnt good enough - could be set to None before
         # we actually get to writing
         # need locking?
-        if not self.connected:
-            logging.warning('__send_json_command: not connected!')
-            return False
+#        if not self.connected:
+#            logging.warning('__send_json_command: not connected!')
+#            return False
 
         try:
-            self.socket.writeData(bytes(cmdstr, encoding='ascii'))
+            self.client_socket.writeData(bytes(cmdstr, encoding='ascii'))
         except Exception as e:
             logging.error(f'__send_json_command - cmd was {cmd}!')
             logging.error('Exception ->', exc_info=True)
             return False
 
         return True
+
 
 # TESTING ONLY
 
@@ -129,6 +363,10 @@ if __name__ == '__main__':
     logging.info('RPCServer Test Mode starting')
 
     app = QtCore.QCoreApplication(sys.argv)
+
+    # just put something in for the camera for testing
+    AppContainer.register('/dev/camera', None)
+
 
     if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
         logging.info('starting event loop')
