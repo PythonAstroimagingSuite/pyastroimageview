@@ -16,6 +16,14 @@ from PyQt5 import QtNetwork, QtCore
 from pyastroimageview.ApplicationContainer import AppContainer
 from pyastroimageview.CameraManager import CameraSettings
 
+# FIXME are these constants somewhere else?
+JSON_PARSE_ERRCODE = -32700
+JSON_INVALID_ERRCODE = -32600
+JSON_BADMETHOD_ERRCODE = -32601
+JSON_BADPARAM_ERRCODE = -32602
+JSON_INTERROR_ERRCODE = -32603
+JSON_APP_ERRCODE = -1 # actual application error
+
 class RPCServerSignals(QtCore.QObject):
         new_camera_image = QtCore.pyqtSignal(object)
 
@@ -70,7 +78,8 @@ class RPCServer:
         self.server.setMaxPendingConnections(1)
 
         # FIXME make port configurable!
-        if not self.server.listen(QtNetwork.QHostAddress.AnyIPv4, self.port):
+        # FOR TESTING ONLY CAN USE QtNetwork.QHostAddress.AnyIPv4 to listen to all interfaces
+        if not self.server.listen(QtNetwork.QHostAddress('127.0.0.1'), self.port):
             logging.error(f'RPCServer:listen() unable to listen to port {self.port}')
 
         logging.info(f'RPCServer listening on port {self.server.serverAddress().toString()}:{self.server.serverPort()}')
@@ -115,6 +124,13 @@ class RPCServer:
             try:
                 j = json.loads(resp)
 
+            except json.JSONDecodeError as e:
+                logging.error(f'RPCServer - exception message was {resp}!')
+                logging.error('JSONDecodeError ->', exc_info=True)
+
+                # send error code back to client
+                self.send_json_error_response(JSON_PARSE_ERRCODE, 'JSON Decoder error')
+
             except Exception as e:
                 logging.error(f'RPCServer - exception message was {resp}!')
                 logging.error('Exception ->', exc_info=True)
@@ -126,7 +142,9 @@ class RPCServer:
                 method = j['method']
                 if 'id' not in j:
                     logging.error(f'received method request of {method} but no id included - aborting!')
+                    self.send_json_error_response(JSON_INVALID_ERRCODE, 'Invalid request - no ID')
                     continue
+
                 method_id = j['id']
                 if method == 'get_camera_info':
                     resdict = {}
@@ -162,11 +180,12 @@ class RPCServer:
 
                     if exposure is None and filename is None:
                         logging.error('RPCServer:take_image method request but need both exposure {exposure} and filename {filename}')
+                        self.send_json_error_response(JSON_INVALID_ERRCODE, 'Invalid request - missing exposure and filename')
                         continue
 
                     if not self.device_manager.camera.get_lock():
                         logging.error('RPCServer: take_image - unable to get camera lock!')
-
+                        self.end_json_error_response(JSON_APP_ERRCODE, 'Could not lock camera')
                         continue
 
                     logging.info(f'take_image: {filename} {exposure} {newbin} {newroi}')
@@ -183,6 +202,10 @@ class RPCServer:
                     self.exposure_ongoing = True
                     self.out_image_filename = filename
                     self.exposure_ongoing_method_id = method_id
+                else:
+                    logging.error(f'RPCServer: unknown JSONRPC method {method}')
+                    self.send_json_error_response(JSON_BADMETHOD_ERRCODE, 'Unknown method')
+
         return
 
     def camera_exposure_complete(self, result):
@@ -222,6 +245,14 @@ class RPCServer:
 
         self.out_image_filename = None
         self.exposure_ongoing_method_id = None
+
+        # TESTING ONLY!!!
+        # COPY a test file over to requested name so pyfocusstars3 works!
+        logging.warning('#########################################')
+        logging.warning('USING TEST DATA INSTEAD OF CAMERA DATA!!!')
+        logging.warning('#########################################')
+        from shutil import copyfile
+        copyfile('C:\\Users/msf/Documents/Astronomy/AutoFocus/testdata/20180828_024611/20180828_024611_FINAL_focus_08146.fits', outname)
 
         self.signals.new_camera_image.emit((True, fitsimage))
 
@@ -341,6 +372,16 @@ class RPCServer:
             return False
 
         return True
+
+    def send_json_error_response(self, errcode, errmsg):
+        errdict = {}
+        errdict['jsonrpc'] = '2.0'
+        errdict['error'] = {'code' : errcode, 'message' : errmsg}
+        errdict['id'] = 'null'
+
+        return self.__send_json_response(errdict)
+
+
 
 
 # TESTING ONLY

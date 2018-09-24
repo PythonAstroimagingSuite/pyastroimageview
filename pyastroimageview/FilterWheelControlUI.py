@@ -97,10 +97,15 @@ class FilterWheelControlUI(QtWidgets.QWidget):
             self.names = self.filterwheel_manager.get_names()
 
             self.ui.filterwheel_setting_filter_combobox.clear()
-            idx=0
-            for n in self.names:
-                self.ui.filterwheel_setting_filter_combobox.insertItem(idx, n)
-                idx += 1
+
+# old un-pythonic!
+#            idx=0
+#            for n in self.names:
+#                self.ui.filterwheel_setting_filter_combobox.insertItem(idx, n)
+#                idx += 1
+
+            for pos, name in enumerate(self.names):
+                self.ui.filterwheel_setting_filter_combobox.insertItem(pos, name)
 
             curpos = self.filterwheel_manager.get_position()
             self.ui.filterwheel_setting_filter_combobox.setCurrentIndex(curpos)

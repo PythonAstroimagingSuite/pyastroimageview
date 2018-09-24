@@ -144,11 +144,13 @@ class ImageAreaInfo(QtWidgets.QWidget):
         """Find view with matching name
         """
         ntabs = self.ui.image_tabs.count()
-        tab_index = None
         for tidx in range(0, ntabs):
             if self.ui.image_tabs.tabText(tidx) == name:
                 tab_index = tidx
                 break
+        else:
+            tab_index = None
+
 
         return tab_index
 
@@ -156,20 +158,23 @@ class ImageAreaInfo(QtWidgets.QWidget):
         """Find view with matching name
         """
         ntabs = self.ui.image_tabs.count()
-        tab_widget = None
         for tidx in range(0, ntabs):
             if self.ui.image_tabs.tabText(tidx) == name:
                 tab_widget = self.ui.image_tabs.widget(tidx)
                 break
+        else:
+            tab_widget = None
 
         return tab_widget
 
     def find_index_widget(self, widget):
         ntabs = self.ui.image_tabs.count()
-        tab_index = None
         for tidx in range(0, ntabs):
             if self.ui.image_tabs.widget(tidx) == widget:
                 tab_index = tidx
                 break
+        else:
+            tab_index = None
+
 
         return tab_index

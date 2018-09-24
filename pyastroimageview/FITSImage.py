@@ -103,6 +103,7 @@ class FITSImage:
     def __str__(self):
         r=''
         r += 'FITS HEADER:\n'
+        # FIXME this is unpythonic!
         for k in self.hdulist[0].header.keys():
             r += f'    {k}: {self.hdulist[0].header[k]}\n'
         return r
