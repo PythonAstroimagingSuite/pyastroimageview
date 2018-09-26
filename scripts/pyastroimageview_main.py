@@ -41,7 +41,7 @@ from pyastroimageview.ApplicationContainer import AppContainer
 
 # FIXME Need better VERSION system
 # this has to match yaml
-VERSION=0.6
+VERSION=0.7
 
 
 class MainWindow(QtGui.QMainWindow):
