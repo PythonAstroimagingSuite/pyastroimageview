@@ -41,8 +41,13 @@ from pyastroimageview.ApplicationContainer import AppContainer
 
 # FIXME Need better VERSION system
 # this has to match yaml
-VERSION=0.7
+import importlib
 
+# see if we injected a version at conda build time
+if importlib.util.find_spec('pyastroimageview.build_version'):
+    from pyastroimageview.build_version import VERSION
+else:
+    VERSION='UNKNOWN'
 
 class MainWindow(QtGui.QMainWindow):
     class ImageDocument:
@@ -69,6 +74,8 @@ class MainWindow(QtGui.QMainWindow):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.setWindowTitle('pyastroimageview v' + VERSION)
 
         vlayout = QtGui.QVBoxLayout()
         vlayout.setSpacing(0)
