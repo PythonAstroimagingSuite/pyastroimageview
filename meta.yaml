@@ -1,6 +1,6 @@
 package:
   name: pyastroimageview
-  version: "0.4"
+  version: "0.6"
 
 source:
   git_rev:
@@ -12,12 +12,12 @@ requirements:
    - setuptools
   run:
    - python==3.6
-   - numpy >= 1.15
-   - astropy >= 3.0.4
-   - configobj >= 5.0.6
-   - pystarutils >= 0.5
-   - pyqt >= 5.9.2
-   - pyqtgraph >= 0.10.0
+   - numpy >=1.15
+   - astropy >=3.0.4
+   - configobj >=5.0.6
+   - pystarutils >=0.5
+   - pyqt >=5.9.2
+   - pyqtgraph >=0.10.0
 
 build:
 

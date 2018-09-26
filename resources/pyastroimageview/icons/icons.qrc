@@ -1,0 +1,9 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+  <file alias="gear.png">gear.png</file>
+  <file alias="measurehfr.png">measurehfr.png</file>
+  <file alias="viewstars.png">viewstars.png</file>
+</qresource>
+</RCC>
+
+

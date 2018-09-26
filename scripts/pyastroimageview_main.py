@@ -35,6 +35,8 @@ from pyastroimageview.GeneralSettingsUI import GeneralSettingsDialog
 from pyastroimageview.PHD2ControlUI import PHD2ControlUI
 from pyastroimageview.RPCServer import RPCServer
 
+import pyastroimageview.uic.icons
+
 from pyastroimageview.ApplicationContainer import AppContainer
 
 class MainWindow(QtGui.QMainWindow):
@@ -178,18 +180,21 @@ class MainWindow(QtGui.QMainWindow):
         file_toolbar.addAction(open_file_action)
 
         tool_menu = self.menuBar().addMenu("&Tools")
-        measure_hfr_action = QtGui.QAction(QtGui.QIcon('../resources/pyastroimageview/icons/measurehfr.png'), "Measure HFR", self)
+#        measure_hfr_action = QtGui.QAction(QtGui.QIcon('../resources/pyastroimageview/icons/measurehfr.png'), "Measure HFR", self)
+        measure_hfr_action = QtGui.QAction(QtGui.QIcon(':/measurehfr.png'), "Measure HFR", self)
         measure_hfr_action.triggered.connect(self.measure_hfr)
         tool_menu.addAction(measure_hfr_action)
         file_toolbar.addAction(measure_hfr_action)
 
-        settings_action = QtGui.QAction(QtGui.QIcon('../resources/pyastroimageview/icons/gear.png'), "Settings", self)
+#        settings_action = QtGui.QAction(QtGui.QIcon('../resources/pyastroimageview/icons/gear.png'), "Settings", self)
+        settings_action = QtGui.QAction(QtGui.QIcon(':/gear.png'), "Settings", self)
         settings_action.triggered.connect(self.edit_settings)
         tool_menu.addAction(settings_action)
         file_toolbar.addAction(settings_action)
 
         view_menu = self.menuBar().addMenu("&View")
-        self.view_stars_action = QtGui.QAction(QtGui.QIcon('../resources/pyastroimageview/icons/viewstars.png'), "View Stars", self)
+#        self.view_stars_action = QtGui.QAction(QtGui.QIcon('../resources/pyastroimageview/icons/viewstars.png'), "View Stars", self)
+        self.view_stars_action = QtGui.QAction(QtGui.QIcon(':/viewstars.png'), "View Stars", self)
         self.view_stars_action.setCheckable(True)
         self.view_stars_action.setStatusTip("Toggle stars on and off")
         self.view_stars_action.setChecked(True)
