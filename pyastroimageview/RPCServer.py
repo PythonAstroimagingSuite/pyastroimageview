@@ -165,18 +165,20 @@ class RPCServer:
                         logging.info('take_image - no params provided!')
                         continue
                     params = j['params']
-                    exposure = None
-                    filename = None
-                    newbin = None
-                    newroi = None
-                    if 'exposure' in params:
-                        exposure = params['exposure']
-                    if 'filename' in params:
-                        filename = params['filename']
-                    if 'binning' in params:
-                        newbin = params['binning']
-                    if 'roi' in params:
-                        newroi = params['roi']
+
+                    exposure = params.get('exposure', None)
+                    filename = params.get('filename', None)
+                    newbin = params.get('binning', None)
+                    newroi = params.get('roi', None)
+
+#                    if 'exposure' in params:
+#                        exposure = params['exposure']
+#                    if 'filename' in params:
+#                        filename = params['filename']
+#                    if 'binning' in params:
+#                        newbin = params['binning']
+#                    if 'roi' in params:
+#                        newroi = params['roi']
 
                     if exposure is None and filename is None:
                         logging.error('RPCServer:take_image method request but need both exposure {exposure} and filename {filename}')

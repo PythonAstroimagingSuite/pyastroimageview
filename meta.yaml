@@ -1,6 +1,6 @@
 package:
   name: pyastroimageview
-  version: "0.7"
+  version: {{ environ['GIT_DESCRIBE_TAG'] }}
 
 source:
   git_rev:
@@ -20,6 +20,8 @@ requirements:
    - pyqtgraph >=0.10.0
 
 build:
+  number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0) }}
+  string: {{ environ.get('GIT_BUILD_STR', '') }}
 
 about:
   home:
