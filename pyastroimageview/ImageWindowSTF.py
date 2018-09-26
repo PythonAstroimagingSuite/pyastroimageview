@@ -4,7 +4,7 @@ import numpy as np
 from PyQt5 import QtCore, QtWidgets, QtGui
 import pyqtgraph as pg
 
-from pyfocusstars3.MTFStretchItem import MTFSliderItem
+from pyastroimageview.MTFStretchItem import MTFSliderItem
 
 class StarObj(QtWidgets.QGraphicsObject):
     def __init__(self, r, num=None):
@@ -321,7 +321,7 @@ class ImageWindowSTF(pg.GraphicsLayoutWidget):
 #            text.setZValue(100)
 #            text.setPos(x, y)
             if max_cut > r > min_cut:
-                star_item = StarObj(r, num=i)
+                star_item = StarObj(r) # add this to get each star numbered for debugging! -> ", num=i)"
                 star_item.setPos(x, y)
                 star_item.setVisible(self.star_visibility)
                 self.view.addItem(star_item)

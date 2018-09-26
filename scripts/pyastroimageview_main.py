@@ -457,15 +457,29 @@ class MainWindow(QtGui.QMainWindow):
         self.hfr_cur_widget = self.image_area_ui.get_current_view_widget()
         filename = self.image_documents[self.hfr_cur_widget].filename
 
+        # FIXME Hack!
+        if filename == 'Camera':
+            # save to temp file
+            imgdoc = self.image_documents[self.hfr_cur_widget]
+
+            filename = 'camera-temp.fits'
+            imgdoc.fits.save_to_file(filename, overwrite=True)
+
+
         # FIXME make measure hfr params configurable
-        worker = self.hfr_server.setup_measure_file_thread(filename, maxstars=200)
+        worker = self.hfr_server.setup_measure_file_thread(filename, maxstars=100)
         worker.signals.result.connect(self._measure_hfr_result)
         worker.signals.finished.connect(self._measure_hfr_complete)
         self.hfr_server.run_measure_file_thread(worker)
 
     def _measure_hfr_result(self, result):
 #        if result:
-#            logging.info(f'measure_hfr result RESULT0:{result[0]}\nRESULT1:{result[1]}')
+        logging.info(f'measure_hfr result RESULT0:{result[0]}\nRESULT1:{result[1]}')
+
+        if not result or (result[1].n_in + result[1].n_out) < 1:
+            logging.error('_measure_hfr_result: no stars found!')
+            self.hfr_cur_widget = None
+            return
 
         image_widget = self.image_documents[self.hfr_cur_widget].image_widget
         image_widget.overlay_stars(result[1], filter=True)
