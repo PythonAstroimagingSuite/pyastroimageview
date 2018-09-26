@@ -39,6 +39,11 @@ import pyastroimageview.uic.icons
 
 from pyastroimageview.ApplicationContainer import AppContainer
 
+# FIXME Need better VERSION system
+# this has to match yaml
+VERSION=0.6
+
+
 class MainWindow(QtGui.QMainWindow):
     class ImageDocument:
         """Represents a loaded image and any analysis/metadata
@@ -530,7 +535,7 @@ if __name__ == '__main__':
     ch.setFormatter(formatter)
     log.addHandler(ch)
 
-    logging.info('pyastroimageview starting')
+    logging.info(f'pyastroimageview V {VERSION} starting')
 
     app = QtGui.QApplication(sys.argv)
   #  app.setStyleSheet("QWidget {background-color: #9faeaa}")
