@@ -21,4 +21,4 @@ xcopy /s pyastroimageview %PREFIX%\Lib\site-packages\pyastroimageview
 xcopy /s pyastrobackend %PREFIX%\Lib\site-packages\pyastrobackend
 
 :: put version in sources so we can report it when program is run
-echo VERSION='py%CONDA_PY%%GIT_DESCRIBE_HASH%_%GIT_DESCRIBE_NUMBER%' >> %PREFIX%\Lib\site-packages\pyastroimageview\build_version.py
+echo VERSION=%PKG_VERSION%-'py%CONDA_PY%%GIT_DESCRIBE_HASH%_%GIT_DESCRIBE_NUMBER%' >> %PREFIX%\Lib\site-packages\pyastroimageview\build_version.py
