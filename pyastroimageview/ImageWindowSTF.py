@@ -364,17 +364,6 @@ class STFSlider(MTFSliderItem):
         # keep up with midpt independently
         self.midtone = 0.5
 
-# =============================================================================
-#     def update_tick_limits(self):
-#         sc = self.tickValue(self.tick_black)
-# #        mc = self.tickValue(self.tick_mid)
-#         hc = self.tickValue(self.tick_white)
-#
-# #        self.setTickLimits(self.tick_black, 0, sc)
-# #        self.setTickLimits(self.tick_mid, sc, hc)
-# #        self.setTickLimits(self.tick_white, hc, 255)
-# =============================================================================
-
     def updateGradient(self):
         pass
 
