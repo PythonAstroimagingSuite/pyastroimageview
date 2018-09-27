@@ -4,11 +4,13 @@ echo "BUILD SCRIPT RUNNING"
 :: SET PATH=%PATH%;C:\Users\msf\AppData\Local\Programs\Git\bin
 :: bash -c "echo 'BASH RUN TEST'"
 
-echo %PKG_BUILDNUM%
-echo %PKG_NAME%
-echo %PKG_VERSION%
-echo %PKG_HASH%
-echo %CONDA_PY%
+:: echo %PKG_BUILDNUM%
+:: echo %PKG_NAME%
+:: echo %PKG_VERSION%
+:: echo %PKG_HASH%
+:: echo %CONDA_PY%
+
+set
 
 ::mkdir %PREFIX%\Scripts
 mkdir %PREFIX%\Lib\site-packages\pyastroimageview

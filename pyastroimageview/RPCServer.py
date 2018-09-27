@@ -168,7 +168,7 @@ class RPCServer:
 
                     exposure = params.get('exposure', None)
                     filename = params.get('filename', None)
-                    newbin = params.get('binning', None)
+                    newbin = params.get('binning', 1)
                     newroi = params.get('roi', None)
 
 #                    if 'exposure' in params:
@@ -184,6 +184,19 @@ class RPCServer:
                         logging.error('RPCServer:take_image method request but need both exposure {exposure} and filename {filename}')
                         self.send_json_error_response(JSON_INVALID_ERRCODE, 'Invalid request - missing exposure and filename')
                         continue
+
+                    if newroi:
+                        settings = self.device_manager.camera.get_settings()
+                        roi_minx = newroi[0]
+                        roi_miny = newroi[1]
+                        roi_maxx = roi_minx + newroi[2]
+                        roi_maxy = roi_maxx + newroi[3]
+
+                        if roi_maxx > settings.frame_width/newbin or roi_maxy > settings.frame_height/newbin:
+                            logging.error('RPCServer:take_image method request roi too large for selected binning')
+                            self.send_json_error_response(JSON_INVALID_ERRCODE, 'Invalid request - roi too large for binning')
+                            continue
+
 
                     if not self.device_manager.camera.get_lock():
                         logging.error('RPCServer: take_image - unable to get camera lock!')

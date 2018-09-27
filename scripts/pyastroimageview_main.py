@@ -530,6 +530,7 @@ class DiagnosticStyle(QtWidgets.QProxyStyle):
 if __name__ == '__main__':
 
     logging.basicConfig(filename='pyastroimageview.log',
+                        filemode='w',
                         level=logging.INFO,
                         format='%(asctime)s %(levelname)-8s %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
@@ -542,7 +543,7 @@ if __name__ == '__main__':
     ch.setFormatter(formatter)
     log.addHandler(ch)
 
-    logging.info(f'pyastroimageview V {VERSION} starting')
+    logging.info(f'pyastroimageview {VERSION} starting')
 
     app = QtGui.QApplication(sys.argv)
   #  app.setStyleSheet("QWidget {background-color: #9faeaa}")
