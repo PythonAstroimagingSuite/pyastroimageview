@@ -190,7 +190,7 @@ class RPCServer:
                         roi_minx = newroi[0]
                         roi_miny = newroi[1]
                         roi_maxx = roi_minx + newroi[2]
-                        roi_maxy = roi_maxx + newroi[3]
+                        roi_maxy = roi_miny + newroi[3]
 
                         if roi_maxx > settings.frame_width/newbin or roi_maxy > settings.frame_height/newbin:
                             logging.error('RPCServer:take_image method request roi too large for selected binning')
