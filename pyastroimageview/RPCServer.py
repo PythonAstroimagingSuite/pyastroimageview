@@ -230,7 +230,7 @@ class RPCServer:
                     if not self.current_image:
                         logging.info('save_image - no image available!')
                         self.send_json_error_response(JSON_APP_ERRCODE, 'No image available!',
-                                                      msgid=method_id))
+                                                      msgid=method_id)
                         continue
 
                     if 'params' not in j:
@@ -251,7 +251,7 @@ class RPCServer:
                     if program_settings is None:
                         logging.error('RPCServer():camera_exposure_complete: unable to access program settings!')
                         self.send_json_error_response(JSON_APP_ERRCODE, 'Error getting program settings',
-                                                      msgid=method_id))
+                                                      msgid=method_id)
                         return False
 
 #                    outname = self.out_image_filename
@@ -262,7 +262,7 @@ class RPCServer:
                     except Exception  as e:
                         logging.error('RPCServer: Exception ->', exc_info=True)
                         self.send_json_error_response(JSON_APP_ERRCODE, 'Error writing image',
-                                                      msgid=method_id))
+                                                      msgid=method_id)
                         return
 
                     # TESTING ONLY!!!
