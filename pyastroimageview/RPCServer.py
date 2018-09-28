@@ -286,6 +286,10 @@ class RPCServer:
         # bool will be True if image successful
         logging.info(f'RPCServer():camera_exposure_complete: result={result}')
 
+        if self.exposure_ongoing_method_id is None:
+            logging.warning('RPC:camera_exposure_complete: ignoring as no exposure was active!')
+            return
+
         self.device_manager.camera.release_lock()
 
         if not self.exposure_ongoing:
