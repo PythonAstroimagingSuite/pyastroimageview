@@ -31,25 +31,25 @@ class RPCServer:
     def __init__(self, port=8800):
         self.server = None
         self.port = port
-        self.client_socket = None
+        self.client_sockets = []
+        self.disconnected_signal_mapper = QtCore.QSignalMapper()
+        self.ready_read_signal_mapper = QtCore.QSignalMapper()
 
         self.exposure_ongoing = False
         self.exposure_ongoing_method_id = None
         self.current_image = None
-
-        self.requests = {}
-        self.request_id = 0
 
         self.signals = RPCServerSignals()
 
         AppContainer.register('/dev/rpcserver', self)
 
         self.device_manager = AppContainer.find('/dev')
+        self.device_manager.camera.signals.exposure_complete.connect(self.camera_exposure_complete)
 
         # FOR TESTING MAINLY!
-        self.ping_timer = QtCore.QTimer()
-        self.ping_timer.timeout.connect(self.ping)
-        self.ping_timer.start(5000)
+#        self.ping_timer = QtCore.QTimer()
+#        self.ping_timer.timeout.connect(self.ping)
+#        self.ping_timer.start(5000)
 
     def ping(self):
         """Send ping to client"""
@@ -89,31 +89,37 @@ class RPCServer:
     def new_connection_event(self):
         logging.info('RPCServer:new_connection_event')
 
-        if self.client_socket:
-            logging.error('RPCServer - already have a client - dropping!')
-            return
+        client_socket = self.server.nextPendingConnection()
+        client_socket.disconnected.connect(self.disconnected_signal_mapper.map)
+        self.disconnected_signal_mapper.setMapping(client_socket, client_socket)
+        self.disconnected_signal_mapper.mapped[QtCore.QObject].connect(self.client_disconnect_event)
 
-        self.client_socket = self.server.nextPendingConnection()
-        self.client_socket.disconnected.connect(self.client_disconnect_event)
-        self.client_socket.readyRead.connect(self.client_readready_event)
+        client_socket.readyRead.connect(self.ready_read_signal_mapper.map)
+        self.ready_read_signal_mapper.setMapping(client_socket, client_socket)
+        self.ready_read_signal_mapper.mapped[QtCore.QObject].connect(self.client_readready_event)
 
-        if not self.send_initial_message():
+        self.client_sockets.append(client_socket)
+
+        if not self.send_initial_message(client_socket):
             logging.error('new_connection_event: Error sending initial message!')
 
-    def client_disconnect_event(self):
-        logging.info('RPCServer:client_disconnect_event!')
+        logging.info('Done')
 
-        self.client_socket = None
+    def client_disconnect_event(self, socket):
+        logging.info(f'RPCServer:client_disconnect_event! socket={socket}')
 
-    def client_readready_event(self):
-        logging.info('RPCServer:client_readready_event')
+        if socket in self.client_sockets:
+            self.disconnected_signal_mapper.removeMappings(socket)
+            self.ready_read_signal_mapper.removeMappings(socket)
+            self.client_sockets.remove(socket)
+        else:
+            logging.warning('Received disconnect event for socket that wasnt in list!')
 
-        if not self.client_socket:
-            logging.error('server not connected!')
-            return False
+    def client_readready_event(self, socket):
+        logging.info(f'RPCServer:client_readready_event - socket = {socket}')
 
         while True:
-            resp = self.client_socket.readLine(2048)
+            resp = socket.readLine(2048)
 
             if len(resp) < 1:
                 break
@@ -128,7 +134,7 @@ class RPCServer:
                 logging.error('JSONDecodeError ->', exc_info=True)
 
                 # send error code back to client
-                self.send_json_error_response(JSON_PARSE_ERRCODE, 'JSON Decoder error')
+                self.send_json_error_response(socket, JSON_PARSE_ERRCODE, 'JSON Decoder error')
 
             except Exception as e:
                 logging.error(f'RPCServer - exception message was {resp}!')
@@ -141,14 +147,14 @@ class RPCServer:
                 method = j['method']
                 if 'id' not in j:
                     logging.error(f'received method request of {method} but no id included - aborting!')
-                    self.send_json_error_response(JSON_INVALID_ERRCODE, 'Invalid request - no ID')
+                    self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - no ID')
                     continue
 
                 method_id = j['id']
                 if method == 'get_camera_info':
                     if not self.device_manager.camera.is_connected():
                         logging.info('get_camera_info - camera not connected!')
-                        self.send_json_error_response(JSON_APP_ERRCODE, 'Camera not connected!',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Camera not connected!',
                                                       msgid=method_id)
                         continue
 
@@ -164,17 +170,17 @@ class RPCServer:
 
                     resdict['result'] = setdict
 
-                    self.__send_json_response(resdict)
+                    self.__send_json_response(socket, resdict)
                 elif method == 'take_image':
                     if not self.device_manager.camera.is_connected():
                         logging.info('take_image - camera not connected!')
-                        self.send_json_error_response(JSON_APP_ERRCODE, 'Camera not connected!',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Camera not connected!',
                                                       msgid=method_id)
                         continue
 
                     if 'params' not in j:
                         logging.info('take_image - no params provided!')
-                        self.send_json_error_response(JSON_INVALID_ERRCODE, 'Invalid request - missing parameters!')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - missing parameters!')
                         continue
 
                     params = j['params']
@@ -185,14 +191,8 @@ class RPCServer:
 
                     if exposure is None:
                         logging.error('RPCServer:take_image method request but need exposure')
-                        self.send_json_error_response(JSON_INVALID_ERRCODE, 'Invalid request - missing exposure')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - missing exposure')
                         continue
-
-# OLD
-#                    if exposure is None and filename is None:
-#                        logging.error('RPCServer:take_image method request but need both exposure {exposure} and filename {filename}')
-#                        self.send_json_error_response(JSON_INVALID_ERRCODE, 'Invalid request - missing exposure and filename')
-#                        continue
 
                     if newroi:
                         settings = self.device_manager.camera.get_settings()
@@ -203,12 +203,12 @@ class RPCServer:
 
                         if roi_maxx > settings.frame_width/newbin or roi_maxy > settings.frame_height/newbin:
                             logging.error('RPCServer:take_image method request roi too large for selected binning')
-                            self.send_json_error_response(JSON_INVALID_ERRCODE, 'Invalid request - roi too large for binning')
+                            self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - roi too large for binning')
                             continue
 
                     if not self.device_manager.camera.get_lock():
                         logging.error('RPCServer: take_image - unable to get camera lock!')
-                        self.end_json_error_response(JSON_APP_ERRCODE, 'Could not lock camera',
+                        self.end_json_error_response(socket, JSON_APP_ERRCODE, 'Could not lock camera',
                                                      msgid=method_id)
                         continue
 
@@ -222,20 +222,21 @@ class RPCServer:
 
                     self.device_manager.camera.set_settings(settings)
                     self.device_manager.camera.start_exposure(exposure)
-                    self.device_manager.camera.signals.exposure_complete.connect(self.camera_exposure_complete)
+
+                    # FIXME this is sloppy only works since only one exposure can be going on at a time
                     self.exposure_ongoing = True
-#                    self.out_image_filename = filename
                     self.exposure_ongoing_method_id = method_id
+                    self.exposure_ongoing_socket = socket
                 elif method == 'save_image':
                     if not self.current_image:
                         logging.info('save_image - no image available!')
-                        self.send_json_error_response(JSON_APP_ERRCODE, 'No image available!',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'No image available!',
                                                       msgid=method_id)
                         continue
 
                     if 'params' not in j:
                         logging.info('save_image - no params provided!')
-                        self.send_json_error_response(JSON_INVALID_ERRCODE, 'Invalid request - missing parameters!')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - missing parameters!')
                         continue
 
                     params = j['params']
@@ -244,24 +245,23 @@ class RPCServer:
 
                     if filename is None:
                         logging.error('RPCServer:save_image method request but need filename {filename}')
-                        self.send_json_error_response(JSON_INVALID_ERRCODE, 'Invalid request - missing filename')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - missing filename')
                         continue
 
                     program_settings = AppContainer.find('/program_settings')
                     if program_settings is None:
                         logging.error('RPCServer():camera_exposure_complete: unable to access program settings!')
-                        self.send_json_error_response(JSON_APP_ERRCODE, 'Error getting program settings',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Error getting program settings',
                                                       msgid=method_id)
                         return False
 
-#                    outname = self.out_image_filename
                     overwrite_flag = program_settings.sequence_overwritefiles
                     logging.info(f'writing image to {filename}')
                     try:
                         self.current_image.save_to_file(filename, overwrite=overwrite_flag)
                     except Exception  as e:
                         logging.error('RPCServer: Exception ->', exc_info=True)
-                        self.send_json_error_response(JSON_APP_ERRCODE, 'Error writing image',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Error writing image',
                                                       msgid=method_id)
                         return
 
@@ -272,11 +272,11 @@ class RPCServer:
                     logging.warning('#########################################')
                     from shutil import copyfile
                     copyfile('C:\\Users/msf/Documents/Astronomy/AutoFocus/testdata/20180828_024611/20180828_024611_FINAL_focus_08146.fits', filename)
-                    self.send_method_complete_message(method_id)
+                    self.send_method_complete_message(socket, method_id)
 
                 else:
                     logging.error(f'RPCServer: unknown JSONRPC method {method}')
-                    self.send_json_error_response(JSON_BADMETHOD_ERRCODE, 'Unknown method')
+                    self.send_json_error_response(socket, JSON_BADMETHOD_ERRCODE, 'Unknown method')
 
         return
 
@@ -316,30 +316,13 @@ class RPCServer:
 
         self.current_image = fitsimage
 
-        # old code that wrote image to disk
-#        outname = self.out_image_filename
-#        overwrite_flag = program_settings.sequence_overwritefiles
-#        logging.info(f'writing image to {outname}')
-#        try:
-#            fitsimage.save_to_file(outname, overwrite=overwrite_flag)
-#        except Exception  as e:
-#            logging.error('RPCServer: Exception ->', exc_info=True)
-#            return
-
-        self.send_method_complete_message(self.exposure_ongoing_method_id)
+        self.send_method_complete_message(self.exposure_ongoing_socket, self.exposure_ongoing_method_id)
 
         # used by old code that take and wrote image to disk
 #        self.out_image_filename = None
 
         self.exposure_ongoing_method_id = None
-
-        # TESTING ONLY!!!
-        # COPY a test file over to requested name so pyfocusstars3 works!
-#        logging.warning('#########################################')
-#        logging.warning('USING TEST DATA INSTEAD OF CAMERA DATA!!!')
-#        logging.warning('#########################################')
-#        from shutil import copyfile
-#        copyfile('C:\\Users/msf/Documents/Astronomy/AutoFocus/testdata/20180828_024611/20180828_024611_FINAL_focus_08146.fits', outname)
+        self.exposure_ongoing_socket = None
 
         self.signals.new_camera_image.emit((True, fitsimage))
 
@@ -415,7 +398,7 @@ class RPCServer:
         # set by application version
         fits_doc.set_software_info('pyastroimageview TEST')
 
-    def send_initial_message(self):
+    def send_initial_message(self, socket):
         """Send message to new client"""
         msgdict = { 'Event' : 'Connection', 'Server' : 'pyastroimageview', 'Version' : '1.0' }
         msgstr = json.dumps(msgdict) + '\n'
@@ -423,7 +406,7 @@ class RPCServer:
         logging.info(f'Sending initial message {msgstr}')
 
         try:
-            self.client_socket.write(bytes(msgstr, encoding='ascii'))
+            socket.write(bytes(msgstr, encoding='ascii'))
         except Exception as e:
             logging.error(f'send_initial_message - exception - msg was {msgstr}!')
             logging.error('Exception ->', exc_info=True)
@@ -431,7 +414,7 @@ class RPCServer:
 
         return True
 
-    def send_method_complete_message(self, method_id):
+    def send_method_complete_message(self, socket, method_id):
         resdict = {}
         resdict['jsonrpc'] = '2.0'
         resdict['id'] = method_id
@@ -441,9 +424,9 @@ class RPCServer:
 
         resdict['result'] = setdict
 
-        self.__send_json_response(resdict)
+        self.__send_json_response(socket, resdict)
 
-    def __send_json_response(self, cmd):
+    def __send_json_response(self, socket, cmd):
         cmdstr = json.dumps(cmd) + '\n'
         logging.info(f'jsoncmd->{bytes(cmdstr, encoding="ascii")}')
 
@@ -455,7 +438,7 @@ class RPCServer:
 #            return False
 
         try:
-            self.client_socket.writeData(bytes(cmdstr, encoding='ascii'))
+            socket.writeData(bytes(cmdstr, encoding='ascii'))
         except Exception as e:
             logging.error(f'__send_json_command - cmd was {cmd}!')
             logging.error('Exception ->', exc_info=True)
@@ -463,16 +446,17 @@ class RPCServer:
 
         return True
 
-    def send_json_error_response(self, errcode, errmsg, msgid=None):
+    def send_json_error_response(self, socket, errcode, errmsg, msgid=None):
+        logging.info(f'send_json_error_response: {errcode} {errmsg} {msgid}')
         errdict = {}
         errdict['jsonrpc'] = '2.0'
         errdict['error'] = {'code' : errcode, 'message' : errmsg}
-        if msgid:
+        if msgid is not None:
             errdict['id'] = msgid
         else:
             errdict['id'] = 'null'
 
-        return self.__send_json_response(errdict)
+        return self.__send_json_response(socket, errdict)
 
 
 # TESTING ONLY
