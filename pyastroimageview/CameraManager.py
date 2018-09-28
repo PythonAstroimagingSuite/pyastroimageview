@@ -1,3 +1,5 @@
+import sys
+import traceback
 import time
 import logging
 from functools import wraps
@@ -173,19 +175,39 @@ class CameraManager(Backend.Camera):
 
                 self.signals.exposure_complete.emit((complete, fits_image))
 
+                logging.info('poll image handling complete')
+
     def get_lock(self):
-        logging.info(f'camera get_lock: {self.lock.available()}')
+        logging.info(f'camera get_lock before: {self.lock.available()}')
+
+        stack = sys._getframe(1)
+        f = traceback.extract_stack(stack)[-1]
+        logging.info(f'get_lock: called from {f}')
+
         rc = self.lock.tryAcquire(1)
+        logging.info(f'camera get_lock after: {rc} {self.lock.available()}')
         if rc:
             self.signals.lock.emit(True)
         return rc
 
     def release_lock(self):
-        logging.info(f'camera release lock: {self.lock.available()}')
-        rc  = self.lock.release(1)
-        if rc:
-            self.signals.lock.emit(False)
-        return rc
+        logging.info(f'camera release lock before: {self.lock.available()}')
+
+        stack = sys._getframe(1)
+        f = traceback.extract_stack(stack)#[-1]
+        logging.info(f'release_lock: called from {f}')
+
+        # if we release when resources are available it ADDS more resources
+        if self.lock.available() == 0:
+            self.lock.release(1)
+        else:
+            # FIXME Shouldnt import here but its mostly for debugging...
+            logging.error('lock was already released!')
+            raise Exception
+
+        logging.info(f'camera release lock after: {self.lock.available()}')
+        self.signals.lock.emit(False)
+        return True
 
     @checklock
     def disconnect(self):
@@ -273,6 +295,7 @@ class CameraManager(Backend.Camera):
         if super().is_connected():
             super().stop_exposure()
             self.signals.exposure_complete.emit((False, None))
+            self.watch_for_exposure_end = False
 
     def get_exposure_progress(self):
         # if we setup a timer use it other rely on backend
