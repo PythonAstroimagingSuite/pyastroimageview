@@ -169,7 +169,7 @@ class RPCServer:
                     if not self.device_manager.camera.is_connected():
                         logging.info('take_image - camera not connected!')
                         self.send_json_error_response(JSON_APP_ERRCODE, 'Camera not connected!',
-                                                      msgid=method_id))
+                                                      msgid=method_id)
                         continue
 
                     if 'params' not in j:
