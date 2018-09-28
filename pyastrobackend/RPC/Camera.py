@@ -110,15 +110,19 @@ class Camera(BaseCamera):
                     result = j['result']
                     logging.info(f'result of request {reqid} was {result} {type(result)}')
                     if reqid == self.outstanding_reqid:
+                        # FIXME need better way to communicate result!
                         self.outstanding_complete = True
-                        self.outstanding_result = result
+                        self.outstanding_result_status = True
+                        self.outstanding_result_value = result
                 elif 'error' in j:
                     reqid =j['id']
 
                     # FIXME not sure how this should be handled!
                     if reqid == self.outstanding_reqid:
+                        # FIXME need better way to communicate result!
                         self.outstanding_complete = True
-                        self.outstanding_result = False
+                        self.outstanding_result_status = False
+                        self.outstanding_result_value = None
         return
 
     def send_server_request(self, req, paramsdict=None):
@@ -233,9 +237,10 @@ class Camera(BaseCamera):
             # getting cycles
             QtWidgets.QApplication.processEvents()
 
-        resp = self.outstanding_result
+        status= self.outstanding_result_status
+        resp = self.outstanding_result_value
 
-        logging.info(f'RPC saveimageCamera resp = {resp}')
+        logging.info(f'RPC saveimageCamera status/resp = {status} {resp}')
 
         #FIXME need to look at result code
         return True
@@ -263,9 +268,14 @@ class Camera(BaseCamera):
             # getting cycles
             QtWidgets.QApplication.processEvents()
 
-        resp = self.outstanding_result
+        status= self.outstanding_result_status
+        resp = self.outstanding_result_value
 
-        logging.info(f'RPC get_camera_setting resp = {resp}')
+        logging.info(f'RPC saveimageCamera status/resp = {status} {resp}')
+
+        if not status:
+            logging.warning('RPC:get_camera_settings() - error getting settings!')
+            return False
 
         if 'framesize' in resp:
             w, h = resp['framesize']
@@ -312,7 +322,9 @@ class Camera(BaseCamera):
         self.binning = binx
 
         if not self.frame_width or not self.frame_height:
-            self.get_camera_settings()
+            if not self.get_camera_settings():
+                logging.error('RPC:set_binning - unable to get camera settings!')
+                return False
 
         self.roi = (0, 0, self.frame_width/self.binning, self.frame_height/self.binning)
         return True
@@ -322,7 +334,9 @@ class Camera(BaseCamera):
 
     def get_size(self):
         if not self.frame_width or not self.frame_height:
-            self.get_camera_settings()
+            if not self.get_camera_settings():
+                logging.error('RPC:get_size - unable to get camera settings!')
+                return None
 
         return (self.frame_width, self.frame_height)
 
