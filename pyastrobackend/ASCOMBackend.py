@@ -226,6 +226,10 @@ class Camera(BaseCamera):
 
 class Focuser(BaseFocuser):
     def __init__(self):
+
+        warnings.warn('ASCOMBackend.Focuser is deprecated - use ASCOM.Focuser instead!',
+                      DeprecationWarning)
+
         self.focus = None
 
     def show_chooser(self, last_choice):
