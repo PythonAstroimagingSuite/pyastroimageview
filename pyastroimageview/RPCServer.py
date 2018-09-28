@@ -1,5 +1,4 @@
 #!/usr/bin/python
-import os
 import sys
 import json
 import math
@@ -35,8 +34,8 @@ class RPCServer:
         self.client_socket = None
 
         self.exposure_ongoing = False
-        self.out_image_filename = None
         self.exposure_ongoing_method_id = None
+        self.current_image = None
 
         self.requests = {}
         self.request_id = 0
@@ -147,6 +146,12 @@ class RPCServer:
 
                 method_id = j['id']
                 if method == 'get_camera_info':
+                    if not self.device_manager.camera.is_connected():
+                        logging.info('get_camera_info - camera not connected!')
+                        self.send_json_error_response(JSON_APP_ERRCODE, 'Camera not connected!',
+                                                      msgid=method_id)
+                        continue
+
                     resdict = {}
                     resdict['jsonrpc'] = '2.0'
                     resdict['id'] = method_id
@@ -161,20 +166,33 @@ class RPCServer:
 
                     self.__send_json_response(resdict)
                 elif method == 'take_image':
+                    if not self.device_manager.camera.is_connected():
+                        logging.info('take_image - camera not connected!')
+                        self.send_json_error_response(JSON_APP_ERRCODE, 'Camera not connected!',
+                                                      msgid=method_id))
+                        continue
+
                     if 'params' not in j:
                         logging.info('take_image - no params provided!')
+                        self.send_json_error_response(JSON_INVALID_ERRCODE, 'Invalid request - missing parameters!')
                         continue
+
                     params = j['params']
 
                     exposure = params.get('exposure', None)
-                    filename = params.get('filename', None)
                     newbin = params.get('binning', 1)
                     newroi = params.get('roi', None)
 
-                    if exposure is None and filename is None:
-                        logging.error('RPCServer:take_image method request but need both exposure {exposure} and filename {filename}')
-                        self.send_json_error_response(JSON_INVALID_ERRCODE, 'Invalid request - missing exposure and filename')
+                    if exposure is None:
+                        logging.error('RPCServer:take_image method request but need exposure')
+                        self.send_json_error_response(JSON_INVALID_ERRCODE, 'Invalid request - missing exposure')
                         continue
+
+# OLD
+#                    if exposure is None and filename is None:
+#                        logging.error('RPCServer:take_image method request but need both exposure {exposure} and filename {filename}')
+#                        self.send_json_error_response(JSON_INVALID_ERRCODE, 'Invalid request - missing exposure and filename')
+#                        continue
 
                     if newroi:
                         settings = self.device_manager.camera.get_settings()
@@ -188,13 +206,13 @@ class RPCServer:
                             self.send_json_error_response(JSON_INVALID_ERRCODE, 'Invalid request - roi too large for binning')
                             continue
 
-
                     if not self.device_manager.camera.get_lock():
                         logging.error('RPCServer: take_image - unable to get camera lock!')
-                        self.end_json_error_response(JSON_APP_ERRCODE, 'Could not lock camera')
+                        self.end_json_error_response(JSON_APP_ERRCODE, 'Could not lock camera',
+                                                     msgid=method_id)
                         continue
 
-                    logging.info(f'take_image: {filename} {exposure} {newbin} {newroi}')
+                    logging.info(f'take_image: {exposure} {newbin} {newroi}')
 
                     settings = CameraSettings()
                     if newbin:
@@ -206,8 +224,56 @@ class RPCServer:
                     self.device_manager.camera.start_exposure(exposure)
                     self.device_manager.camera.signals.exposure_complete.connect(self.camera_exposure_complete)
                     self.exposure_ongoing = True
-                    self.out_image_filename = filename
+#                    self.out_image_filename = filename
                     self.exposure_ongoing_method_id = method_id
+                elif method == 'save_image':
+                    if not self.current_image:
+                        logging.info('save_image - no image available!')
+                        self.send_json_error_response(JSON_APP_ERRCODE, 'No image available!',
+                                                      msgid=method_id))
+                        continue
+
+                    if 'params' not in j:
+                        logging.info('save_image - no params provided!')
+                        self.send_json_error_response(JSON_INVALID_ERRCODE, 'Invalid request - missing parameters!')
+                        continue
+
+                    params = j['params']
+
+                    filename = params.get('filename', None)
+
+                    if filename is None:
+                        logging.error('RPCServer:save_image method request but need filename {filename}')
+                        self.send_json_error_response(JSON_INVALID_ERRCODE, 'Invalid request - missing filename')
+                        continue
+
+                    program_settings = AppContainer.find('/program_settings')
+                    if program_settings is None:
+                        logging.error('RPCServer():camera_exposure_complete: unable to access program settings!')
+                        self.send_json_error_response(JSON_APP_ERRCODE, 'Error getting program settings',
+                                                      msgid=method_id))
+                        return False
+
+#                    outname = self.out_image_filename
+                    overwrite_flag = program_settings.sequence_overwritefiles
+                    logging.info(f'writing image to {filename}')
+                    try:
+                        self.current_image.save_to_file(filename, overwrite=overwrite_flag)
+                    except Exception  as e:
+                        logging.error('RPCServer: Exception ->', exc_info=True)
+                        self.send_json_error_response(JSON_APP_ERRCODE, 'Error writing image',
+                                                      msgid=method_id))
+                        return
+
+                    # TESTING ONLY!!!
+                    # COPY a test file over to requested name so pyfocusstars3 works!
+                    logging.warning('#########################################')
+                    logging.warning('USING TEST DATA INSTEAD OF CAMERA DATA!!!')
+                    logging.warning('#########################################')
+                    from shutil import copyfile
+                    copyfile('C:\\Users/msf/Documents/Astronomy/AutoFocus/testdata/20180828_024611/20180828_024611_FINAL_focus_08146.fits', filename)
+                    self.send_method_complete_message(method_id)
+
                 else:
                     logging.error(f'RPCServer: unknown JSONRPC method {method}')
                     self.send_json_error_response(JSON_BADMETHOD_ERRCODE, 'Unknown method')
@@ -237,33 +303,51 @@ class RPCServer:
 
         self.handle_new_image(fitsimage)
 
-        #outname = os.path.join(self.sequence.target_dir, self.sequence.get_filename())
-        outname = self.out_image_filename
-        overwrite_flag = program_settings.sequence_overwritefiles
-        logging.info(f'writing image to {outname}')
-        try:
-            fitsimage.save_to_file(outname, overwrite=overwrite_flag)
-        except Exception  as e:
-            logging.error('RPCServer: Exception ->', exc_info=True)
-            return
+        #
+        # in first incarnation the RPC request to take a frame
+        # also saved it to disk
+        #
+        # to make the RPC method more like MaximDL and ASCOM
+        # camera methods we instead save the frame and
+        # wait for a 'Save Image' RPC request
+        #
+        # Note if another frame is taken it will overwrite
+        # the in memory copy of the latest image
 
-        self.send_exposure_complete_message(self.exposure_ongoing_method_id)
+        self.current_image = fitsimage
 
-        self.out_image_filename = None
+        # old code that wrote image to disk
+#        outname = self.out_image_filename
+#        overwrite_flag = program_settings.sequence_overwritefiles
+#        logging.info(f'writing image to {outname}')
+#        try:
+#            fitsimage.save_to_file(outname, overwrite=overwrite_flag)
+#        except Exception  as e:
+#            logging.error('RPCServer: Exception ->', exc_info=True)
+#            return
+
+        self.send_method_complete_message(self.exposure_ongoing_method_id)
+
+        # used by old code that take and wrote image to disk
+#        self.out_image_filename = None
+
         self.exposure_ongoing_method_id = None
 
         # TESTING ONLY!!!
         # COPY a test file over to requested name so pyfocusstars3 works!
-        logging.warning('#########################################')
-        logging.warning('USING TEST DATA INSTEAD OF CAMERA DATA!!!')
-        logging.warning('#########################################')
-        from shutil import copyfile
-        copyfile('C:\\Users/msf/Documents/Astronomy/AutoFocus/testdata/20180828_024611/20180828_024611_FINAL_focus_08146.fits', outname)
+#        logging.warning('#########################################')
+#        logging.warning('USING TEST DATA INSTEAD OF CAMERA DATA!!!')
+#        logging.warning('#########################################')
+#        from shutil import copyfile
+#        copyfile('C:\\Users/msf/Documents/Astronomy/AutoFocus/testdata/20180828_024611/20180828_024611_FINAL_focus_08146.fits', outname)
 
         self.signals.new_camera_image.emit((True, fitsimage))
 
     # FIXME this is copied from ImageSequenceControlUI which was a copy
     # from pyastroimageview_main.py!!!!!
+    #
+    # FIXME probably dont need all the metadata associated with the image in this usage
+    # since the image is being requested by a client who doesnt care about observer notes, etc
     def handle_new_image(self, fits_doc):
         """Fills in FITS header data for new images"""
 
@@ -273,7 +357,7 @@ class RPCServer:
             logging.error('RPCServer:handle_new_image: unable to access program settings!')
             return False
 
-        fits_doc.set_notes(settings.observer_notes)
+#        fits_doc.set_notes(settings.observer_notes)
         fits_doc.set_telescope(settings.telescope_description)
         fits_doc.set_focal_length(settings.telescope_focallen)
         aper_diam = settings.telescope_aperture
@@ -329,7 +413,7 @@ class RPCServer:
         fits_doc.set_object('TEST-OBJECT')
 
         # set by application version
-        fits_doc.set_software_info('pyastroview TEST')
+        fits_doc.set_software_info('pyastroimageview TEST')
 
     def send_initial_message(self):
         """Send message to new client"""
@@ -347,7 +431,7 @@ class RPCServer:
 
         return True
 
-    def send_exposure_complete_message(self, method_id):
+    def send_method_complete_message(self, method_id):
         resdict = {}
         resdict['jsonrpc'] = '2.0'
         resdict['id'] = method_id
@@ -379,15 +463,16 @@ class RPCServer:
 
         return True
 
-    def send_json_error_response(self, errcode, errmsg):
+    def send_json_error_response(self, errcode, errmsg, msgid=None):
         errdict = {}
         errdict['jsonrpc'] = '2.0'
         errdict['error'] = {'code' : errcode, 'message' : errmsg}
-        errdict['id'] = 'null'
+        if msgid:
+            errdict['id'] = msgid
+        else:
+            errdict['id'] = 'null'
 
         return self.__send_json_response(errdict)
-
-
 
 
 # TESTING ONLY

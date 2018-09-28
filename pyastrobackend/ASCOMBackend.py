@@ -1,12 +1,16 @@
 """ Pure ASCOM solution """
-from pyastrobackend.BaseBackend import BaseDeviceBackend, BaseCamera, BaseFocuser
-from pyastrobackend.BaseBackend import BaseFilterWheel, BaseMount
 
 import logging
+import warnings
 
 import numpy as np
 import pythoncom
 import win32com.client
+
+from pyastrobackend.BaseBackend import BaseDeviceBackend, BaseCamera, BaseFocuser
+from pyastrobackend.BaseBackend import BaseFilterWheel, BaseMount
+
+warnings.filterwarnings('always', category=DeprecationWarning)
 
 class DeviceBackend(BaseDeviceBackend):
 
@@ -383,6 +387,10 @@ class FilterWheel(BaseFilterWheel):
 
 class Mount(BaseMount):
     def __init__(self):
+
+        warnings.warn('ASCOMBackend.Mount is deprecated - use ASCOM.Mount instead!',
+                      DeprecationWarning)
+
         self.mount = None
 
     def show_chooser(self, last_choice):
