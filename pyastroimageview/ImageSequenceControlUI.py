@@ -633,6 +633,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.ui.sequence_preview.setText(self.sequence.get_filename())
 
     def update_sequence(self):
+        # FIXME Consider using QSignalMapper or individual handlers
         if self.sender() == self.ui.sequence_name:
             self.sequence.name = self.ui.sequence_name.toPlainText()
         elif self.sender() == self.ui.sequence_elements:

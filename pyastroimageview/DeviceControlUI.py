@@ -42,6 +42,7 @@ class DeviceControlUI(QtWidgets.QMainWindow):
         logging.info(f'groupbox {checked} {self.sender()} {self.sender().children()}')
 
         # FIXME THIS IS VERY DEPENDENT ON HOW WIDGETS ADDED ABOVE!
+        # FIXME Consider using QSignalMapper or individual handlers
         self.sender().children()[1].setVisible(checked)
 
         # FIXME This seems to be needed so some callbacks occur to render/hide

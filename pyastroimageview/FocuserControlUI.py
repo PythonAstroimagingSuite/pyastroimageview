@@ -128,6 +128,7 @@ class FocuserControlUI(QtWidgets.QWidget):
         small_step = self.ui.focuser_setting_small_spinbox.value()
         large_step = self.ui.focuser_setting_large_spinbox.value()
 
+        # FIXME Consider using QSignalMapper or individual handlers
         if self.sender() is self.ui.focuser_setting_movein_small:
             delta = -small_step
         elif self.sender() is self.ui.focuser_setting_moveout_small:

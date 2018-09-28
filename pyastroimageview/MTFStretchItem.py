@@ -417,8 +417,7 @@ class ignorefornow:
             self.menu.popup(ev.screenPos().toQPoint())
 
         def contextMenuClicked(self, b=None):
-            #private
-            #global Gradients
+            # FIXME Consider using QSignalMapper or individual handlers
             act = self.sender()
             self.loadPreset(act.name)
 
