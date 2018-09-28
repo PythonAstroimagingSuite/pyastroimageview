@@ -29,14 +29,14 @@ class CameraControlUI(QtWidgets.QWidget):
         self.ui.camera_setting_setup.pressed.connect(self.camera_setup)
         self.ui.camera_setting_connect.pressed.connect(self.camera_connect)
         self.ui.camera_setting_disconnect.pressed.connect(self.camera_disconnect)
-        self.ui.camera_setting_expose.pressed.connect(self.camera_expose)
+        self.ui.camera_setting_expose.pressed.connect(self.expose_pressed)
+
         self.ui.camera_setting_binning_spinbox.valueChanged.connect(self.binning_changed)
         self.ui.camera_setting_roi_set.pressed.connect(self.set_roi)
         self.ui.camera_setting_cooleronoff.toggled.connect(self.cooleronoff_handler)
         self.ui.camera_setting_cooleronoff.clicked.connect(lambda x: logging.info('clicked'))
         self.ui.camera_setting_coolersetpt.valueChanged.connect(self.cooler_setpt_changed)
 
-        #self.camera_manager = camera_manager
         self.camera_manager = AppContainer.find('/dev/camera')
 
         self.camera_manager.signals.status.connect(self.camera_status_poll)
@@ -51,10 +51,6 @@ class CameraControlUI(QtWidgets.QWidget):
             self.ui.camera_setting_binning_spinbox.setMaximum(maxbin)
         else:
             self.ui.camera_setting_binning_spinbox.setMaximum(1)
-
-        # for DEBUG - should be None normally
-        #self.camera_driver = 'ASCOM.Simulator.Camera'
-        #self.camera_driver = None
 
         self.settings = AppContainer.find('/program_settings')
 
@@ -90,8 +86,6 @@ class CameraControlUI(QtWidgets.QWidget):
 
         # these depend on if camera is connected AND if an exposure is going
         enable = connect and not exposing
-
-#        logging.info(f'set_widget_states: {connect} {exposing} {enable}')
 
         self.ui.camera_setting_roi_width.setEnabled(enable)
         self.ui.camera_setting_roi_height.setEnabled(enable)
@@ -134,7 +128,7 @@ class CameraControlUI(QtWidgets.QWidget):
         self.ui.camera_setting_status.setText(status_string)
 
     def camera_exposure_complete(self, result):
-        logging.info(f'camera_exposure_complete: result={result}')
+        logging.info(f'CameraControlUI:camera_exposure_complete: result={result}')
         if self.state != EXPOSURE_STATE_IDLE:
             if self.state != EXPOSURE_STATE_CANCEL:
                 # notify about current image
@@ -154,12 +148,34 @@ class CameraControlUI(QtWidgets.QWidget):
             self.camera_manager.release_lock()
 
            # set button back to 'expose'
-            # FIXME this is clunky! Also check in stop_exposure()!
-            self.ui.camera_setting_expose.setText('Expose')
-            self.ui.camera_setting_expose.pressed.disconnect(self.stop_exposure)
-            self.ui.camera_setting_expose.pressed.connect(self.camera_expose)
+            self.set_exposestop_state(False)
+
         else:
-            logging.warning('camera_exposure_complete: no exposure was ongoing!')
+            logging.warning('CameraControLUI:camera_exposure_complete: no exposure was ongoing!')
+
+
+    def set_exposestop_state(self, state):
+        """Controls connect/disconnect button state"""
+
+        self.ui.camera_setting_expose.setChecked(state)
+
+        if state:
+            self.ui.camera_setting_expose.setText('Stop')
+        else:
+            self.ui.camera_setting_expose.setText('Expose')
+
+    def expose_pressed(self):
+        logging.info(f'expose_presseded:')
+
+        # FIXME this is not clean
+        button_text = self.ui.camera_setting_expose.text()
+        state = button_text == 'Expose'
+        logging.info(f'text = {button_text} state = {state}')
+
+        if state:
+            self.camera_expose()
+        else:
+            self.stop_exposure()
 
     def camera_setup(self):
         if self.settings.camera_driver:
@@ -308,12 +324,9 @@ class CameraControlUI(QtWidgets.QWidget):
         self.current_exposure = self.ui.camera_setting_exposure_spinbox.value()
 
         # change expose into a stop button
-        self.ui.camera_setting_expose.setText('Stop')
-        self.ui.camera_setting_expose.pressed.disconnect(self.camera_expose)
-        self.ui.camera_setting_expose.pressed.connect(self.stop_exposure)
+        self.set_exposestop_state(True)
 
         self.set_widget_states()
-#        self.ui.camera_setting_expose.setEnabled(False)
 
     def stop_exposure(self):
         logging.info('stop exposure')
