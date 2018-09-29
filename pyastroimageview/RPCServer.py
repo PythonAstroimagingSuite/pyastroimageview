@@ -24,7 +24,7 @@ JSON_INTERROR_ERRCODE = -32603
 JSON_APP_ERRCODE = -1 # actual application error
 
 class RPCServerSignals(QtCore.QObject):
-        new_camera_image = QtCore.pyqtSignal(object)
+    new_camera_image = QtCore.pyqtSignal(object)
 
 class RPCServer:
 
@@ -51,21 +51,22 @@ class RPCServer:
 #        self.ping_timer.timeout.connect(self.ping)
 #        self.ping_timer.start(5000)
 
-    def ping(self):
-        """Send ping to client"""
-        if self.client_socket is None:
-            return
-
-        msgdict = { 'Event' : 'Ping', 'Server' : 'pyastroimageview', 'Version' : '1.0' }
-        msgstr = json.dumps(msgdict) + '\n'
-
-        logging.info(f'Sending ping message {msgstr}')
-
-        try:
-            self.client_socket.write(bytes(msgstr, encoding='ascii'))
-        except Exception as e:
-            logging.error(f'send_initial_message - exception - msg was {msgstr}!')
-            logging.error('Exception ->', exc_info=True)
+# FIXME Need to rewrite for multiple client version of code
+#    def ping(self):
+#        """Send ping to client"""
+#        if self.client_socket is None:
+#            return
+#
+#        msgdict = { 'Event' : 'Ping', 'Server' : 'pyastroimageview', 'Version' : '1.0' }
+#        msgstr = json.dumps(msgdict) + '\n'
+#
+#        logging.info(f'Sending ping message {msgstr}')
+#
+#        try:
+#            self.client_socket.write(bytes(msgstr, encoding='ascii'))
+#        except Exception as e:
+#            logging.error(f'send_initial_message - exception - msg was {msgstr}!')
+#            logging.error('Exception ->', exc_info=True)
 
     def listen(self):
         if self.server:
@@ -208,8 +209,8 @@ class RPCServer:
 
                     if not self.device_manager.camera.get_lock():
                         logging.error('RPCServer: take_image - unable to get camera lock!')
-                        self.end_json_error_response(socket, JSON_APP_ERRCODE, 'Could not lock camera',
-                                                     msgid=method_id)
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Could not lock camera',
+                                                      msgid=method_id)
                         continue
 
                     logging.info(f'take_image: {exposure} {newbin} {newroi}')
@@ -404,7 +405,7 @@ class RPCServer:
 
     def send_initial_message(self, socket):
         """Send message to new client"""
-        msgdict = { 'Event' : 'Connection', 'Server' : 'pyastroimageview', 'Version' : '1.0' }
+        msgdict = {'Event' : 'Connection', 'Server' : 'pyastroimageview', 'Version' : '1.0'}
         msgstr = json.dumps(msgdict) + '\n'
 
         logging.info(f'Sending initial message {msgstr}')
@@ -495,6 +496,4 @@ if __name__ == '__main__':
         s.listen()
 
         QtCore.QCoreApplication.instance().exec_()
-
-
 
