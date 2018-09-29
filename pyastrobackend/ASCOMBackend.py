@@ -119,10 +119,10 @@ class Camera(BaseCamera):
         return self.cam.ImageReady
 
     def supports_progress(self):
-        logging.info(f'ascomcamera: supports_progress {self.camera_has_progress}')
+#        logging.info(f'ascomcamera: supports_progress {self.camera_has_progress}')
         if self.camera_has_progress is None:
             self.camera_has_progress = self.get_exposure_progress() != -1
-        logging.info(f'ascomcamera: supports_progress return  {self.camera_has_progress}')
+#        logging.info(f'ascomcamera: supports_progress return  {self.camera_has_progress}')
         return self.camera_has_progress
 
 # FIXME returns -1 to indicate progress is not available
@@ -157,7 +157,7 @@ class Camera(BaseCamera):
         # Transpose to get into row-major
         image_data = np.array(self.cam.ImageArray, dtype=out_dtype).T
 
-        logging.info(f'in backend image shape is {image_data.shape}')
+#        logging.info(f'in backend image shape is {image_data.shape}')
 
         return image_data
 

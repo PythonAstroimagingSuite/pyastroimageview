@@ -238,7 +238,7 @@ class MainWindow(QtGui.QMainWindow):
         dlg.run(self.settings)
 
     def new_camera_image(self, result):
-        logging.info(f'new_camera_image: {result}')
+#        logging.info(f'new_camera_image: {result}')
 
         complete_status, fits_doc = result
 
@@ -275,6 +275,9 @@ class MainWindow(QtGui.QMainWindow):
     # add all the FITS headers - it just finds the proper tab
     # and loads the image there
     def find_tab_for_new_image(self, tab_name, fits_doc):
+        logging.info('find_tab_for_new_image: START')
+
+
         tab_widget = self.image_area_ui.find_view_widget(tab_name)
 
         if tab_widget is None:
@@ -314,13 +317,17 @@ class MainWindow(QtGui.QMainWindow):
         imgdoc.image_data = fits_doc.image_data()
         imgdoc.median = np.median(imgdoc.image_data)
 
-        logging.info(f'{imgdoc.image_data.shape}  {fits_doc.image_data().shape}')
+#        logging.info(f'{imgdoc.image_data.shape}  {fits_doc.image_data().shape}')
 
         imgdoc.image_widget.show_data(imgdoc.image_data)
+
+        logging.info('find_tab_for_new_image: DONE')
 
         return (imgdoc, tab_index)
 
     def handle_new_image(self, tab_name, fits_doc):
+        logging.info('handle_new_image: START')
+
         tab_widget = self.image_area_ui.find_view_widget(tab_name)
 
         if tab_widget is None:
@@ -360,7 +367,7 @@ class MainWindow(QtGui.QMainWindow):
         imgdoc.image_data = fits_doc.image_data()
         imgdoc.median = np.median(imgdoc.image_data)
 
-        logging.info(f'{imgdoc.image_data.shape}  {fits_doc.image_data().shape}')
+#        logging.info(f'{imgdoc.image_data.shape}  {fits_doc.image_data().shape}')
 
         imgdoc.image_widget.show_data(imgdoc.image_data)
 
@@ -416,7 +423,7 @@ class MainWindow(QtGui.QMainWindow):
                 hour_angle = (hour_angle.hour - 24.0)*u.hourangle
 
             hastr = Angle(hour_angle).to_string(u.hour, sep=":", pad=True)
-            logging.info(f'HA={hour_angle} HASTR={hastr} {type(hour_angle)}')
+#            logging.info(f'HA={hour_angle} HASTR={hastr} {type(hour_angle)}')
             imgdoc.fits.set_object_hourangle(hastr)
 
         # controlled by user selection in camera or sequence config
@@ -425,6 +432,8 @@ class MainWindow(QtGui.QMainWindow):
 
         # set by application version
         imgdoc.fits.set_software_info('pyastroview TEST')
+
+        logging.info('handle_new_image: DONE')
 
         return (imgdoc, tab_index)
 

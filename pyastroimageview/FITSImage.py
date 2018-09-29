@@ -105,6 +105,6 @@ class FITSImage:
         r += 'FITS HEADER:\n'
         # FIXME this is unpythonic!
         for k in self.hdulist[0].header.keys():
-            r += f'    {k}: {self.hdulist[0].header[k]}\n'
+            r += f' {k}: {self.hdulist[0].header[k]}'
         return r
 

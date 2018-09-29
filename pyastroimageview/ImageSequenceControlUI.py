@@ -131,7 +131,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.ui.sequence_filter.setEnabled(val)
 
     def camera_lock_handler(self, val):
-        logging.info('camera_lock_handler')
+#        logging.info('camera_lock_handler')
+        pass
 
     def camera_connect_handler(self, val):
         logging.info(f'ImageSequenceControlUI:camera_connect_handler: val={val}')
@@ -178,7 +179,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
             self.sequence.roi = (0, 0, maxx, maxy)
 
-            logging.info(f'imgseqcntrl: reset_roi set to {self.sequence.roi}')
+#            logging.info(f'imgseqcntrl: reset_roi set to {self.sequence.roi}')
 
             self.update_ui()
 
@@ -344,22 +345,22 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
         # result will contain (bool, FITSImage)
         # bool will be True if image successful
-        logging.info(f'ImageSequenceControlUI:camera_exposure_complete: result={result}')
+        logging.info(f'ImageSequenceControlUI:cam_exp_comp: result={result}')
 
         if self.exposure_ongoing:
 
             flag, fitsimage = result
 
             if not flag:
-                logging.warning('ImageSequenceControlUI:camera_exposure_complete - result was False!')
+                logging.warning('ImageSequenceControlUI:cam_exp_comp - result was False!')
                 return
 
             program_settings = AppContainer.find('/program_settings')
             if program_settings is None:
-                logging.error('ImageSequenceControlUI:camera_exposure_complete: cannot retrieve program settings!')
+                logging.error('ImageSequenceControlUI:cam_exp_comp: cannot retrieve program settings!')
                 QtWidgets.QMessageBox.critical(None,
                                                'Error',
-                                               'Unknown error reading program settings in camera_exposure_complete - exiting!',
+                                               'Unknown error reading program settings in cam_exp_comp - exiting!',
                                                QtWidgets.QMessageBox.Ok)
                 sys.exit(-1)
 
@@ -405,7 +406,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             # then the dithering may not work out correctly but for a sequenentially
             # numbered sequence of frames it will do what we want and that is almost
             # always the use case!
-            logging.info(f'ImageSequenceControlUI:camera_exposure_complete -> num_dither = {self.sequence.num_dither}')
+            logging.info(f'ImageSequenceControlUI:cam_exp_comp -> num_dither = {self.sequence.num_dither}')
             if self.sequence.is_light_frames() and self.sequence.num_dither > 0:
                 num_frames = self.sequence.current_index - self.sequence.start_index
                 num_left = self.sequence.start_index + self.sequence.number_frames - self.sequence.current_index
@@ -422,7 +423,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                     logging.info('sequence: time to dither!')
 
 
-                    logging.info(f'ImageSequenceControlUI:camera_exposure_complete: dither: {program_settings.phd2_scale} ' + \
+                    logging.info(f'ImageSequenceControlUI:cam_exp_comp: dither: {program_settings.phd2_scale} ' + \
                                  f'{program_settings.phd2_threshold}' + \
                                  f'{program_settings.phd2_starttime} ' + \
                                  f'{program_settings.phd2_settledtime} ' + \
@@ -438,13 +439,13 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                         # failed to get PHD2 to dither - just fall through and start next frame after notifying user
                         # FIXME what is best case here?  Use the dither fail checkbox from general settings to guide
                         # how to handle?
-                        logging.error('ImageSequenceControlUI:camera_exposure_complete: Could not communicate with PHD2 to start a dither op')
+                        logging.error('ImageSequenceControlUI:cam_exp_comp: Could not communicate with PHD2 to start a dither op')
                         QtWidgets.QMessageBox.critical(None,
                                                    'Error',
                                                    'PHD2 failed to respond to dither request - dither aborted!',
                                                    QtWidgets.QMessageBox.Ok)
                     else:
-                        logging.error('ImageSequenceControlUI:camera_exposure_complete: Dither command sent to PHD2 successfully')
+                        logging.error('ImageSequenceControlUI:cam_exp_comp: Dither command sent to PHD2 successfully')
 
                         # now the 'SettleDone' event should come in from PHD2 and it will be handled
                         # and next frame started unless we get a settle timeout event instead
@@ -455,7 +456,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             # start next exposure
             self.device_manager.camera.start_exposure(self.sequence.exposure)
         else:
-            logging.warning('ImageSequenceControlUI:camera_exposure_complete: no exposure was ongoing!')
+            logging.warning('ImageSequenceControlUI:cam_exp_comp: no exposure was ongoing!')
 
     def start_sequence(self):
         # FIXME this sequence would probably be MUCH NICER using a lock/semaphore
@@ -542,6 +543,19 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                 self.device_manager.camera.release_lock()
                 self.device_manager.filterwheel.release_lock()
                 return
+
+        if is_light_frame and program_settings.sequence_mount_warn_notconnect:
+            if not self.device_manager.mount.is_connected():
+                logging.error('start_sequence: mount not connected')
+                choice = QtWidgets.QMessageBox.question(None, 'Mount Not Connected',
+                                                        'Mount is not connected - proceed with sequence?',
+                                                        QtWidgets.QMessageBox.Yes|QtWidgets.QMessageBox.No)
+                if choice == QtWidgets.QMessageBox.No:
+                    self.device_manager.camera.release_lock()
+                    self.device_manager.filterwheel.release_lock()
+                    return
+                else:
+                    logging.info('start_sequence: User choose to start sequence without mount connected.')
 
         if program_settings.sequence_warn_coolertemp:
             set_temp = self.device_manager.camera.get_target_temperature()

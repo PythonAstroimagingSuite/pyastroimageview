@@ -750,7 +750,7 @@ class MTFTick(QtGui.QGraphicsWidget):  ## NOTE: Making this a subclass of Graphi
     sigMoved = QtCore.Signal(object)
 
     def __init__(self, view, pos, color, movable=True, removable=True, scale=10, pen='w'):
-        logging.info(f'MTFTick::init: removable={removable}')
+#        logging.info(f'MTFTick::init: removable={removable}')
         self.movable = movable
         self.moving = False
         self.removeAllowed = removable
@@ -812,7 +812,7 @@ class MTFTick(QtGui.QGraphicsWidget):  ## NOTE: Making this a subclass of Graphi
                 self.view().tickMoveFinished(self)
 
     def mouseClickEvent(self, ev):
-        logging.info(f'MTFTick::mouseClickEvent: {ev}')
+#        logging.info(f'MTFTick::mouseClickEvent: {ev}')
         if  ev.button() == QtCore.Qt.RightButton and self.moving:
             ev.accept()
             self.setPos(self.startPosition)

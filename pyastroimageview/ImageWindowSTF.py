@@ -128,7 +128,6 @@ class ImageWindowSTF(pg.GraphicsLayoutWidget):
 
         # follow mouse position
         self.mouse_proxy = pg.SignalProxy(self.image_item.scene().sigMouseMoved, rateLimit=60, slot=self.image_item_mouse_moved_event)
-        logging.info(f'proxy: {self.mouse_proxy}')
 
     def image_item_mouse_moved_event(self, evt):
         pos = evt[0]  ## using signal proxy turns original arguments into a tuple
@@ -184,7 +183,7 @@ class ImageWindowSTF(pg.GraphicsLayoutWidget):
     def show_data(self, image_data):
         self.image_data = image_data
 
-        logging.info(f'show_data shape = {image_data.shape}')
+#        logging.info(f'show_data shape = {image_data.shape}')
 
         self.image_item.setImage(self.image_data, autoLevels=False, levels=(0, 65535), autoRange=False)
 
@@ -348,7 +347,6 @@ class STFSlider(MTFSliderItem):
     """ sends sc, mc, hc """
 
     def __init__(self, **kwargs):
-        logging.info(f'{kwargs}')
         super().__init__(**kwargs)
 
         self.tick_white = self.addTick(1.0, color=pg.mkColor(255, 255, 255),

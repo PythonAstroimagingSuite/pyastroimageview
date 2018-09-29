@@ -251,7 +251,7 @@ class RPCServer:
 
                     program_settings = AppContainer.find('/program_settings')
                     if program_settings is None:
-                        logging.error('RPCServer():camera_exposure_complete: unable to access program settings!')
+                        logging.error('RPCServer():cam_exp_comp: unable to access program settings!')
                         self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Error getting program settings',
                                                       msgid=method_id)
                         return False
@@ -285,23 +285,23 @@ class RPCServer:
 
         # result will contain (bool, FITSImage)
         # bool will be True if image successful
-        logging.info(f'RPCServer():camera_exposure_complete: result={result}')
+        logging.info(f'RPCServer():cam_exp_comp: result={result}')
 
         if self.exposure_ongoing_method_id is None:
-            logging.warning('RPC:camera_exposure_complete: ignoring as no exposure was active!')
+            logging.warning('RPC:cam_exp_comp: ignoring as no exposure was active!')
             return
 
         self.device_manager.camera.release_lock()
 
         if not self.exposure_ongoing:
-            logging.warning('RPCServer():camera_exposure_complete - no exposure was ongoing! Ignoring...')
+            logging.warning('RPCServer():cam_exp_comp - no exposure was ongoing! Ignoring...')
             return
 
         self.exposure_ongoing = False
 
         program_settings = AppContainer.find('/program_settings')
         if program_settings is None:
-            logging.error('RPCServer():camera_exposure_complete: unable to access program settings!')
+            logging.error('RPCServer():cam_exp_comp: unable to access program settings!')
             return False
 
         complete_status, fitsimage = result

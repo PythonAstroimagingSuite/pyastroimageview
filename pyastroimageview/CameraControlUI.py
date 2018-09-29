@@ -128,7 +128,7 @@ class CameraControlUI(QtWidgets.QWidget):
         self.ui.camera_setting_status.setText(status_string)
 
     def camera_exposure_complete(self, result):
-        logging.info(f'CameraControlUI:camera_exposure_complete: result={result}')
+        logging.info(f'CameraControlUI:cam_exp_comp: result={result}')
         if self.state != EXPOSURE_STATE_IDLE:
             if self.state != EXPOSURE_STATE_CANCEL:
                 # notify about current image
@@ -151,7 +151,7 @@ class CameraControlUI(QtWidgets.QWidget):
             self.set_exposestop_state(False)
 
         else:
-            logging.warning('CameraControLUI:camera_exposure_complete: no exposure was ongoing!')
+            logging.warning('CameraControLUI:cam_exp_comp: no exposure was ongoing!')
 
 
     def set_exposestop_state(self, state):
@@ -165,12 +165,11 @@ class CameraControlUI(QtWidgets.QWidget):
             self.ui.camera_setting_expose.setText('Expose')
 
     def expose_pressed(self):
-        logging.info(f'expose_presseded:')
+        logging.info(f'expose_pressed:')
 
         # FIXME this is not clean
         button_text = self.ui.camera_setting_expose.text()
         state = button_text == 'Expose'
-        logging.info(f'text = {button_text} state = {state}')
 
         if state:
             self.camera_expose()

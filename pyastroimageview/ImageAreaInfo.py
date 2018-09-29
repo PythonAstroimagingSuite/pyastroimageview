@@ -1,4 +1,6 @@
 import numpy as np
+import logging
+
 import pyqtgraph as pg
 
 from PyQt5 import QtCore, QtWidgets, QtGui
@@ -85,6 +87,7 @@ class ImageAreaInfo(QtWidgets.QWidget):
 
 #        if binning:
 #            self.image_bin_label.setText(f'{binning}')
+        logging.info('update_info: START')
 
         self.ui.image_median_label.setText(f'{image_doc.median:6.1f}')
 
@@ -96,20 +99,28 @@ class ImageAreaInfo(QtWidgets.QWidget):
             self.ui.image_size_label.setText(f'{image_doc.hfr_result.width} x {image_doc.hfr_result.height}')
 
             # update histogram plot
+            logging.info('update_info: Start hist calc')
             hy, hx = np.histogram(image_doc.hfr_result.FWHM_R, range=(0, image_doc.hfr_result.hfr_in*2))
+            logging.info('update_info: End hist calc')
             self.ui.hfr_histogram.plotItem.clear()
             #self.hfr_histogram.plotItem.setLogMode(x=True)
             self.ui.hfr_histogram.plotItem.vb.setXRange(0, image_doc.hfr_result.hfr_in*2)
+            logging.info('update_info: Start hist plot')
             curve = pg.PlotCurveItem(hx, hy, stepMode=True, fillLevel=0, brush=(0, 0, 255, 80))
             self.ui.hfr_histogram.plotItem.addItem(curve)
             self.ui.hfr_histogram.autoRange()
+            logging.info('update_info: End hist plotc')
 
         if image_doc.image_data is not None:
+            logging.info('update_info: Start perc calc')
+
             # plot between 0 and 99 percentile
             if not hasattr(image_doc, 'perc01'):
                 image_doc.perc01 = np.percentile(image_doc.image_data, 1)
             if not hasattr(image_doc, 'perc99'):
                 image_doc.perc99 = np.percentile(image_doc.image_data, 99)
+            logging.info('update_info: End perc calc')
+
             py, px = np.histogram(image_doc.image_data, range=(image_doc.perc01, image_doc.perc99), bins=100)
             self.ui.pixel_histogram.plotItem.clear()
             curve = pg.PlotCurveItem(px, py, stepMode=True, fillLevel=0, brush=(0, 0, 255, 80))
@@ -117,6 +128,9 @@ class ImageAreaInfo(QtWidgets.QWidget):
             infline = pg.InfiniteLine(pos=image_doc.median, angle=90)
             self.ui.pixel_histogram.plotItem.addItem(infline)
             self.ui.pixel_histogram.autoRange()
+
+        logging.info('update_info: DONE')
+
 
     # lets hide implementation of views
     def add_view(self, image_widget, name):

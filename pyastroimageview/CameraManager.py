@@ -51,8 +51,8 @@ class CameraSettings:
         self.roi = None
 
     def __str__(self):
-        return f'frame size = {self.frame_width} x {self.frame_height} ' + \
-               f'binning = {self.binning} ' + \
+        return f'size = {self.frame_width} x {self.frame_height} ' + \
+               f'bin = {self.binning} ' + \
                f'roi = {self.roi}\n'
 
 class CameraManagerSignals(QtCore.QObject):
