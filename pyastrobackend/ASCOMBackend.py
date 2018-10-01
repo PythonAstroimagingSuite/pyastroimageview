@@ -31,6 +31,10 @@ class DeviceBackend(BaseDeviceBackend):
 
 class Camera(BaseCamera):
     def __init__(self):
+
+        warnings.warn('ASCOMBackend.Camera is deprecated - use ASCOM.Camera instead!',
+                      DeprecationWarning)
+
         self.cam = None
         self.camera_has_progress = None
 
@@ -156,12 +160,12 @@ class Camera(BaseCamera):
 
         # DEBUG speed testing
         logging.info('reading ImageArray into image_data')
-        if False:    
+        if False:
             logging('Running profile of loading image data via COM!')
             # Transpose to get into row-major
             import cProfile
             from pstats import Stats
-            
+
             pr = cProfile.Profile()
             pr.enable()
             image_data = self.cam.ImageArray
@@ -170,12 +174,12 @@ class Camera(BaseCamera):
             with open('get_image_data_output.txt', 'wt') as output:
                 stats = Stats('get_image_data.stats', stream=output)
                 stats.strip_dirs().sort_stats('cumulative', 'time')
-                stats.print_stats()  
+                stats.print_stats()
                 stats.print_callers()
                 stats.print_callees()
-            
+
             print(len(image_data), len(image_data[0]))
-            print(type(image_data[0][0]))             
+            print(type(image_data[0][0]))
         else:
             image_data = np.array(self.cam.ImageArray, dtype=out_dtype).T
 

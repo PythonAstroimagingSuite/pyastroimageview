@@ -11,8 +11,7 @@ from PyQt5 import QtCore
 # all source files for hw managers reference contrete backend class this way
 #from pyastrobackend import ASCOMBackend as Backend
 
-from pyastrobackend.ASCOM.Camera_comtypes import Camera
-
+from pyastrobackend.ASCOM.Camera import Camera
 
 from pyastroimageview.FITSImage import FITSImage
 
