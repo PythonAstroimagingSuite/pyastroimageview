@@ -9,7 +9,10 @@ from PyQt5 import QtCore
 
 # FIXME this needs to be 'configured' somewhere central as currently
 # all source files for hw managers reference contrete backend class this way
-from pyastrobackend import ASCOMBackend as Backend
+#from pyastrobackend import ASCOMBackend as Backend
+
+from pyastrobackend.ASCOM.Camera_comtypes import Camera
+
 
 from pyastroimageview.FITSImage import FITSImage
 
@@ -71,7 +74,10 @@ class CameraManagerSignals(QtCore.QObject):
     exposure_status = QtCore.pyqtSignal(int)
     status = QtCore.pyqtSignal(CameraStatus)
 
-class CameraManager(Backend.Camera):
+#class CameraManager(Backend.Camera):
+
+class CameraManager(Camera):
+
     """The CameraManager class acts as an arbiter of requests to the camera device.
 
     Signals
@@ -117,6 +123,7 @@ class CameraManager(Backend.Camera):
         self.timer.start(1000)
 
     def camera_status_poll(self):
+        logging.info('camera_manager:camera_status_poll()')
         status = self.get_status()
         self.signals.status.emit(status)
 
@@ -143,7 +150,9 @@ class CameraManager(Backend.Camera):
                 # to None if image failed!
 
                 # put together a FITS document with image data
+                logging.info('get_image_data')
                 image_data = super().get_image_data()
+                logging.info('FITSImage()')
                 fits_image = FITSImage(image_data)
                 fits_image.set_exposure(self.current_exposure_length)
                 fits_image.set_dateobs(self.exposure_start_time)
