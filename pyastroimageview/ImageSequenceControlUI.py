@@ -751,14 +751,16 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             ra, dec = self.device_manager.mount.get_position_radec()
 
             radec = SkyCoord(ra=ra*u.hour, dec=dec*u.degree, frame='fk5')
-            rastr = radec.ra.to_string(u.hour, sep=":", pad=True)
-            decstr = radec.dec.to_string(alwayssign=True, sep=":", pad=True)
+            rastr = radec.ra.to_string(u.hour, sep=" ", pad=True)
+            decstr = radec.dec.to_string(alwayssign=True, sep=" ", pad=True)
             fits_doc.set_object_radec(rastr, decstr)
 
             alt, az = self.device_manager.mount.get_position_altaz()
             altaz = AltAz(alt=alt*u.degree, az=az*u.degree)
-            altstr = altaz.alt.to_string(alwayssign=True, sep=":", pad=True)
-            azstr = altaz.az.to_string(alwayssign=True, sep=":", pad=True)
+#            altstr = altaz.alt.to_string(alwayssign=True, sep=":", pad=True)
+#            azstr = altaz.az.to_string(alwayssign=True, sep=":", pad=True)
+            altstr = f'{altaz.alt.degree}'
+            azstr = f'{altaz.az.degree}'
             fits_doc.set_object_altaz(altstr, azstr)
 
             now = Time.now()
@@ -769,7 +771,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             if hour_angle.hour > 12:
                 hour_angle = (hour_angle.hour - 24.0)*u.hourangle
 
-            hastr = Angle(hour_angle).to_string(u.hour, sep=":", pad=True)
+#            hastr = Angle(hour_angle).to_string(u.hour, sep=":", pad=True)
+            hastr = f'{Angle(hour_angle).hour}'
             logging.info(f'HA={hour_angle} HASTR={hastr} {type(hour_angle)}')
             fits_doc.set_object_hourangle(hastr)
 
