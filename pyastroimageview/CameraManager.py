@@ -123,7 +123,7 @@ class CameraManager(Camera):
         self.timer.start(1000)
 
     def camera_status_poll(self):
-        logging.info('camera_manager:camera_status_poll()')
+#        logging.info('camera_manager:camera_status_poll()')
         status = self.get_status()
         self.signals.status.emit(status)
 
@@ -154,6 +154,7 @@ class CameraManager(Camera):
                 image_data = super().get_image_data()
                 logging.info('FITSImage()')
                 fits_image = FITSImage(image_data)
+                logging.info('FITSimage data xfer done')
                 fits_image.set_exposure(self.current_exposure_length)
                 fits_image.set_dateobs(self.exposure_start_time)
                 xsize, ysize = super().get_pixelsize()

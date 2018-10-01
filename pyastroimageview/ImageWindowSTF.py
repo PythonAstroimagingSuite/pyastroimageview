@@ -181,6 +181,12 @@ class ImageWindowSTF(pg.GraphicsLayoutWidget):
         self.image_item.setImage(self.image_data, autoLevels=False, levels=(0, 65535), autoRange=False)
 
     def show_data(self, image_data):
+        # remove any existing star labels
+        for item in self.star_items:
+            self.view.removeItem(item)
+
+        self.star_items = []
+
         self.image_data = image_data
 
 #        logging.info(f'show_data shape = {image_data.shape}')

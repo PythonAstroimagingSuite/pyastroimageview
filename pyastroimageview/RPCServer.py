@@ -268,13 +268,14 @@ class RPCServer:
 
                     # TESTING ONLY!!!
                     # COPY a test file over to requested name so pyfocusstars3 works!
-                    logging.warning('#########################################')
-                    logging.warning('USING TEST DATA INSTEAD OF CAMERA DATA!!!')
-                    logging.warning('#########################################')
-                    from shutil import copyfile
-                    copyfile('C:\\Users/msf/Documents/Astronomy/AutoFocus/testdata/20180828_024611/20180828_024611_FINAL_focus_08146.fits', filename)
+                    if False:
+                        logging.warning('#########################################')
+                        logging.warning('USING TEST DATA INSTEAD OF CAMERA DATA!!!')
+                        logging.warning('#########################################')
+                        from shutil import copyfile
+                        copyfile('C:\\Users/msf/Documents/Astronomy/AutoFocus/testdata/20180828_024611/20180828_024611_FINAL_focus_08146.fits', filename)
+                        
                     self.send_method_complete_message(socket, method_id)
-
                 else:
                     logging.error(f'RPCServer: unknown JSONRPC method {method}')
                     self.send_json_error_response(socket, JSON_BADMETHOD_ERRCODE, 'Unknown method')

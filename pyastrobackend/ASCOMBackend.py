@@ -154,10 +154,32 @@ class Camera(BaseCamera):
             logging.error(f'Unknown MAXADU {maxadu} in getImageData!!')
             return None
 
-        # Transpose to get into row-major
-        image_data = np.array(self.cam.ImageArray, dtype=out_dtype).T
+        # DEBUG speed testing
+        logging.info('reading ImageArray into image_data')
+        if False:    
+            logging('Running profile of loading image data via COM!')
+            # Transpose to get into row-major
+            import cProfile
+            from pstats import Stats
+            
+            pr = cProfile.Profile()
+            pr.enable()
+            image_data = self.cam.ImageArray
+            pr.disable()
+            pr.dump_stats('get_image_data.stats')
+            with open('get_image_data_output.txt', 'wt') as output:
+                stats = Stats('get_image_data.stats', stream=output)
+                stats.strip_dirs().sort_stats('cumulative', 'time')
+                stats.print_stats()  
+                stats.print_callers()
+                stats.print_callees()
+            
+            print(len(image_data), len(image_data[0]))
+            print(type(image_data[0][0]))             
+        else:
+            image_data = np.array(self.cam.ImageArray, dtype=out_dtype).T
 
-#        logging.info(f'in backend image shape is {image_data.shape}')
+        logging.info('done')
 
         return image_data
 

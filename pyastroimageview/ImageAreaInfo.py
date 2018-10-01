@@ -114,14 +114,19 @@ class ImageAreaInfo(QtWidgets.QWidget):
         if image_doc.image_data is not None:
             logging.info('update_info: Start perc calc')
 
+            # subsample to speed up calcs
+            sub_image_data = image_doc.image_data[1::2, 1::2]
+
+            logging.info(f'image_data.shape = {image_doc.image_data.shape} sub_image_data.shape={sub_image_data.shape}')
+
             # plot between 0 and 99 percentile
             if not hasattr(image_doc, 'perc01'):
-                image_doc.perc01 = np.percentile(image_doc.image_data, 1)
+                image_doc.perc01 = np.percentile(sub_image_data, 1)
             if not hasattr(image_doc, 'perc99'):
-                image_doc.perc99 = np.percentile(image_doc.image_data, 99)
+                image_doc.perc99 = np.percentile(sub_image_data, 99)
             logging.info('update_info: End perc calc')
 
-            py, px = np.histogram(image_doc.image_data, range=(image_doc.perc01, image_doc.perc99), bins=100)
+            py, px = np.histogram(sub_image_data, range=(image_doc.perc01, image_doc.perc99), bins=100)
             self.ui.pixel_histogram.plotItem.clear()
             curve = pg.PlotCurveItem(px, py, stepMode=True, fillLevel=0, brush=(0, 0, 255, 80))
             self.ui.pixel_histogram.plotItem.addItem(curve)
