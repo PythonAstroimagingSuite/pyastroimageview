@@ -98,12 +98,32 @@ class DeviceBackend(BaseDeviceBackend):
         return self.connected
 
 class Camera(BaseCamera):
+
+    class CameraSettings:
+        def __init__(self):
+            pass
+
+    class CCD_INFO:
+        def _init__(self):
+            pass
+
     def __init__(self, indiclient):
         self.cam = None
         self.name = None
         self.indiclient = indiclient
         self.camera_has_progress = None
         self.timeout = 5
+
+        # camera attributes, modelled off ASCOM
+        # these values are the DESIRED settings
+        # used for when the next image is taken
+        # these ARE NOT to be used to query
+        # the CURRENT settings!
+        self.camera_settings = self.CameraSettings()
+        self.camera_settings.binning = None
+        self.camera_settings.exposure = None
+        self.camera_settings.roi = None
+        self.camera_settings.temperature_target = None
 
 # FIXME SHOULDNT BE HERE
     def getSwitch(self, name):
@@ -116,6 +136,9 @@ class Camera(BaseCamera):
 
         return sw
 
+    def sendNewSwitch(self, sw):
+        self.indiclient.sendNewSwitch(sw)
+
 # FIXME SHOULDNT BE HERE
     def getNumber(self, name):
         num = self.cam.getNumber(name)
@@ -126,6 +149,9 @@ class Camera(BaseCamera):
             cnt += 1
 
         return num
+
+    def sendNewNumber(self, number):
+        return self.indiclient.sendNewNumber(number)
 
     def show_chooser(self, last_choice):
 #        pythoncom.CoInitialize()
@@ -176,10 +202,10 @@ class Camera(BaseCamera):
             return False
 
     def get_camera_name(self):
-        logging.warning('Camera.get_camera_name() is not implemented for INDI!')
-        return None
-        if self.cam:
-            return self.cam.Name
+        return self.name
+#        logging.warning('Camera.get_camera_name() is not implemented for INDI!')
+#        return None
+
 
     def get_camera_description(self):
         logging.warning('Camera.get_camera_description() is not implemented for INDI!')
@@ -194,10 +220,11 @@ class Camera(BaseCamera):
             return self.cam.DriverInfo
 
     def get_driver_version(self):
-        logging.warning('Camera.get_driver_version() is not implemented for INDI!')
-        return None
-        if self.cam:
-            return self.cam.DriverVersion
+        return self.cam.getDriverVersion()
+
+#        logging.warning('Camera.get_driver_version() is not implemented for INDI!')
+#        return None
+
 
     def get_state(self):
         logging.warning('Camera.get_state() is not implemented for INDI!')
@@ -296,20 +323,42 @@ class Camera(BaseCamera):
 # FIXME ASCOM get_image_data returns a numpy array of the native camera data type!
         return hdulist
 
+    def get_info(self):
+        ccd_info = self.getNumber('CCD_INFO')
+
+        if not ccd_info:
+            return None
+
+        obj = self.CCD_INFO()
+        obj.CCD_MAX_X = ccd_info[0].value
+        obj.CCD_MAX_Y = ccd_info[1].value
+        obj.CCD_PIXEL_SIZE = ccd_info[2].value
+        # ignoring elements 3 & 4 which have X/Y pixel size
+        obj.CCD_BITSPERPIXEL = ccd_info[5].value
+
+        return obj
+
     def get_pixelsize(self):
-        logging.warning('Camera.get_pixelsize() is not implemented for INDI!')
-        return None
-        return self.cam.PixelSizeX, self.cam.PixelSizeY
+        ccd_info = self.get_info()
+        if not ccd_info:
+            return None
+
+        return ccd_info.CCD_PIXEL_SIZE
+#        logging.warning('Camera.get_pixelsize() is not implemented for INDI!')
+#        return None
 
     def get_egain(self):
+# FIXME need to see how gain is represented in drivers like ASI
         logging.warning('Camera.get_egain() is not implemented for INDI!')
         return None
         return self.cam.ElectronsPerADU
 
     def get_current_temperature(self):
-        logging.warning('Camera.get_current_temperature() is not implemented for INDI!')
-        return None
-        return self.cam.CCDTemperature
+        ccd_temp = self.getNumber('CCD_TEMPERATURE')
+        logging.info(f'get_current_temperature():  ccd_temp = {ccd_temp}')
+        return ccd_temp[0].value
+#        logging.warning('Camera.get_current_temperature() is not implemented for INDI!')
+#        return None
 
     def get_target_temperature(self):
         logging.warning('Camera.get_target_temperature() is not implemented for INDI!')
@@ -317,72 +366,81 @@ class Camera(BaseCamera):
         return self.cam.SetCCDTemperature
 
     def set_target_temperature(self, temp_c):
-        logging.warning('Camera.set_target_temperature() is not implemented for INDI!')
-        return None
-        try:
-            self.cam.SetCCDTemperature = temp_c
-        except:
-            logging.warning('camera.set_target_temperature() failed!')
+        # FIXME Handling ccd temperature needs to be more robust
+        ccd_temp = self.getNumber('CCD_TEMPERATURE')
+        ccd_temp[0].value = temp_c
+        self.sendNewNumber(ccd_temp)
+
+#        logging.warning('Camera.set_target_temperature() is not implemented for INDI!')
+#        return None
 
     def set_cooler_state(self, onoff):
-        logging.warning('Camera.set_cooler_state() is not implemented for INDI!')
-        return None
-        try:
-            self.cam.CoolerOn = onoff
-        except:
-            logging.warning('camera.set_cooler_state() failed!')
+        cool_state = self.getSwitch('CCD_COOLER')
+        cool_state[0].s == PyIndi.ISS_ON
+        self.sendNewSwitch(cool_state)
+
+#        logging.warning('Camera.set_cooler_state() is not implemented for INDI!')
+#        return None
 
     def get_cooler_state(self):
-        logging.warning('Camera.get_cooler_state() is not implemented for INDI!')
-        return None
-        return self.cam.CoolerOn
+        cool_state = self.getSwitch('CCD_COOLER')
+        print(cool_state)
+        return cool_state[0].s == PyIndi.ISS_ON
+#        logging.warning('Camera.get_cooler_state() is not implemented for INDI!')
+#        return None
 
     def get_binning(self):
-        logging.warning('Camera.get_binning() is not implemented for INDI!')
-        return None
-        return (self.cam.BinX, self.cam.BinY)
+        ccd_bin = self.getNumber('CCD_BINNING')
+        print(ccd_bin, ccd_bin.nnp)
+        return ccd_bin[0].value, ccd_bin[1].value
+#        logging.warning('Camera.get_binning() is not implemented for INDI!')
+#        return None
 
     def get_cooler_power(self):
-        logging.warning('Camera.get_cooler_power() is not implemented for INDI!')
-        return None
-        try:
-            return self.cam.CoolerPower
-        except Exception as e:
-            logging.warning('camera.get_cooler_power() failed!')
-            logging.error('Exception ->', exc_info=True)
-            return 0
+        cool_power = self.getNumber('CCD_COOLER_POWER')
+        if cool_power is not None:
+            return cool_power[0].value
+        else:
+            return None
+#        logging.warning('Camera.get_cooler_power() is not implemented for INDI!')
+#        return None
 
     def set_binning(self, binx, biny):
-        logging.warning('Camera.set_binning() is not implemented for INDI!')
-        return None
-        self.cam.BinX = binx
-        self.cam.BinY = biny
-        return True
+        ccd_bin = self.getNumber('CCD_BINNING')
+        ccd_bin[0].value = binx
+        ccd_bin[1].value = biny
+        self.sendNewNumber(ccd_bin)
+#        logging.warning('Camera.set_binning() is not implemented for INDI!')
+#        return None
 
     def get_max_binning(self):
         logging.warning('Camera.get_max_binning() is not implemented for INDI!')
         return None
-        return self.cam.MaxBinX
 
     def get_size(self):
-        logging.warning('Camera.get_size() is not implemented for INDI!')
-        return None
-        return (self.cam.CameraXSize, self.cam.CameraYSize)
+        ccd_info = self.get_info()
+        return (ccd_info.CCD_MAX_X, ccd_info.CCD_MAX_Y)
+#        logging.warning('Camera.get_size() is not implemented for INDI!')
+#        return None
 
     def get_frame(self):
-        logging.warning('Camera.get_frame() is not implemented for INDI!')
-        return None
-        return(self.cam.StartX, self.cam.StartY, self.cam.NumX, self.cam.NumY)
+        ccd_frame = self.getNumber('CCD_FRAME')
+        return (ccd_frame[0].value, ccd_frame[1].value, ccd_frame[2].value, ccd_frame[3].value)
+#        logging.warning('Camera.get_frame() is not implemented for INDI!')
+#        return None
 
     def set_frame(self, minx, miny, width, height):
-        logging.warning('Camera.set_frame() is not implemented for INDI!')
-        return None
-        self.cam.StartX = minx
-        self.cam.StartY = miny
-        self.cam.NumX = width
-        self.cam.NumY = height
-
+        ccd_frame = self.getNumber('CCD_FRAME')
+        ccd_frame[0].value = minx
+        ccd_frame[1].value = miny
+        ccd_frame[2].value = width
+        ccd_frame[3].value = height
+        self.sendNewNumber(ccd_frame)
         return True
+#        logging.warning('Camera.set_frame() is not implemented for INDI!')
+#        return None
+
+
 
 
 class Focuser(BaseFocuser):
