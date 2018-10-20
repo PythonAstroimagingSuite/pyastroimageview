@@ -1,5 +1,53 @@
 # stuff with no home (yet)
+
+import time
+
 import PyIndi
+
+
+DEFAULT_TIMEOUT=0.5
+
+def getSwitch(device, name, timeout=DEFAULT_TIMEOUT):
+    sw = device.getSwitch(name)
+    cnt = 0
+    while sw is None and cnt < (timeout/0.5):
+        time.sleep(0.5)
+        sw = device.getSwitch(name)
+        cnt += 1
+
+    return sw
+
+def sendNewSwitch(indiclient, sw):
+    indiclient.sendNewSwitch(sw)
+
+def getNumber(device, name, timeout=DEFAULT_TIMEOUT):
+    num = device.getNumber(name)
+    cnt = 0
+    while num is None and cnt < (timeout/0.5):
+        time.sleep(0.5)
+        num = device.getNumber(name)
+        cnt += 1
+
+    return num
+
+def findNumber(invect, name):
+    for i in range(0, invect.nnp):
+        #print(i, invect[i].name, invect[i].s)
+        if invect[i].name == name:
+            return invect[i]
+
+    return None
+
+def findSwitch(iswvect, name):
+    for i in range(0, iswvect.nsp):
+        #print(i, iswvect[i].name, iswvect[i].s)
+        if iswvect[i].name == name:
+            return iswvect[i]
+
+    return None
+
+#def sendNewNumber(indiclient, number):
+#    return indiclient.sendNewNumber(number)
 
 def strISState(s):
     if (s == PyIndi.ISS_OFF):

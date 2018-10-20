@@ -87,10 +87,12 @@ if __name__ == '__main__':
     logging.info(f'cooler state = {cool_state}')
 
     logging.info('Turning on cooler')
-    camera.set_cooler_state(True)
+    rc = camera.set_cooler_state(True)
+    logging.info(f'set_cooler_state returns {rc}')
 
     logging.info('Setting temp to -10C')
-    camera.set_target_temperature(-10)
+    rc = camera.set_target_temperature(-10)
+    logging.info(f'set_target_temperature returns {rc}')
 
     logging.info('Getting cooler power')
     cool_power = camera.get_cooler_power()

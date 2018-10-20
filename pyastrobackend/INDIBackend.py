@@ -11,8 +11,10 @@ import PyIndi
 
 from pyastrobackend.BaseBackend import BaseDeviceBackend, BaseCamera, BaseFocuser
 from pyastrobackend.BaseBackend import BaseFilterWheel, BaseMount
+import pyastrobackend.INDI.IndiHelper as indihelper
 
 warnings.filterwarnings('always', category=DeprecationWarning)
+
 
 class DeviceBackend(BaseDeviceBackend):
     # needed for ccd callback
@@ -125,33 +127,7 @@ class Camera(BaseCamera):
         self.camera_settings.roi = None
         self.camera_settings.temperature_target = None
 
-# FIXME SHOULDNT BE HERE
-    def getSwitch(self, name):
-        sw = self.cam.getSwitch(name)
-        cnt = 0
-        while sw is None and cnt < (self.timeout/0.5):
-            time.sleep(0.5)
-            sw = self.cam.getSwitch(name)
-            cnt += 1
 
-        return sw
-
-    def sendNewSwitch(self, sw):
-        self.indiclient.sendNewSwitch(sw)
-
-# FIXME SHOULDNT BE HERE
-    def getNumber(self, name):
-        num = self.cam.getNumber(name)
-        cnt = 0
-        while num is None and cnt < (self.timeout/0.5):
-            time.sleep(0.5)
-            num = self.cam.getNumber(name)
-            cnt += 1
-
-        return num
-
-    def sendNewNumber(self, number):
-        return self.indiclient.sendNewNumber(number)
 
     def show_chooser(self, last_choice):
 #        pythoncom.CoInitialize()
@@ -165,30 +141,26 @@ class Camera(BaseCamera):
         return None
 
     def connect(self, name):
-
         logging.debug(f'Connecting to camera device: {name}')
-
         if self.cam is not None:
             logging.warning('Camera.connect() self.cam is not None!')
-
         cnt = 0
         while self.cam is None and cnt < (self.timeout/0.5):
             time.sleep(0.5)
             self.cam = self.indiclient.getDevice(name)
             cnt += 1
-
         if self.cam is None:
             return False
-
-        connect = self.getSwitch('CONNECTION')
-
-        logging.info(f'connect = {connect[0].s == PyIndi.ISS_ON} {connect[0].label}')
-
-        connected = connect[0].s == PyIndi.ISS_ON
-
+        connect = indihelper.getSwitch(self.cam, 'CONNECTION')
+        if connect is None:
+            return False
+        connect_sw = indihelper.findSwitch(connect, 'CONNECT')
+        if connect_sw is None:
+            return False
+        connect_sw.s = PyIndi.ISS_ON
+        connected = connect_sw.s == PyIndi.ISS_ON
         if connected:
             self.name = name
-
         return connected
 
     def disconnect(self):
@@ -239,7 +211,7 @@ class Camera(BaseCamera):
         # FIXME currently always requesting a light frame
         # FIXME need to check return codes of all steps
         if self.cam:
-            ccd_exposure = self.getNumber('CCD_EXPOSURE')
+            ccd_exposure = indihelper.getNumber(self.cam, 'CCD_EXPOSURE')
             if ccd_exposure is None:
                 return False
 
@@ -256,7 +228,10 @@ class Camera(BaseCamera):
 
             blobEvent = None
 
-            ccd_exposure[0].value = expos
+            ccd_expnum = indihelper.findNumber(ccd_exposure, 'CCD_EXPOSURE_VALUE')
+            if ccd_expnum is None:
+                return False
+            ccd_expnum.value = expos
             self.indiclient.sendNewNumber(ccd_exposure)
 
             return True
@@ -324,17 +299,28 @@ class Camera(BaseCamera):
         return hdulist
 
     def get_info(self):
-        ccd_info = self.getNumber('CCD_INFO')
+        ccd_info = indihelper.getNumber(self.cam, 'CCD_INFO')
 
-        if not ccd_info:
+        if ccd_info is None:
             return None
 
+        maxx = indihelper.findNumber(ccd_info, 'CCD_MAX_X')
+        maxy = indihelper.findNumber(ccd_info, 'CCD_MAX_Y')
+        pix_size = indihelper.findNumber(ccd_info, 'CCD_PIXEL_SIZE')
+        pix_size_x = indihelper.findNumber(ccd_info, 'CCD_PIXEL_SIZE_X')
+        pix_size_y = indihelper.findNumber(ccd_info, 'CCD_PIXEL_SIZE_Y')
+        bpp = indihelper.findNumber(ccd_info, 'CCD_BITSPERPIXEL')
+
+        if maxx is None or maxy is None is pix_size is None \
+           or pix_size_x is None or pix_size_y is None or bpp is None:
+               return None
+
         obj = self.CCD_INFO()
-        obj.CCD_MAX_X = ccd_info[0].value
-        obj.CCD_MAX_Y = ccd_info[1].value
-        obj.CCD_PIXEL_SIZE = ccd_info[2].value
+        obj.CCD_MAX_X = maxx.value
+        obj.CCD_MAX_Y = maxy.value
+        obj.CCD_PIXEL_SIZE = pix_size.value
         # ignoring elements 3 & 4 which have X/Y pixel size
-        obj.CCD_BITSPERPIXEL = ccd_info[5].value
+        obj.CCD_BITSPERPIXEL = bpp.value
 
         return obj
 
@@ -351,14 +337,14 @@ class Camera(BaseCamera):
 # FIXME need to see how gain is represented in drivers like ASI
         logging.warning('Camera.get_egain() is not implemented for INDI!')
         return None
-        return self.cam.ElectronsPerADU
 
     def get_current_temperature(self):
-        ccd_temp = self.getNumber('CCD_TEMPERATURE')
+        ccd_temp = indihelper.getNumber(self.cam, 'CCD_TEMPERATURE')
         logging.info(f'get_current_temperature():  ccd_temp = {ccd_temp}')
-        return ccd_temp[0].value
-#        logging.warning('Camera.get_current_temperature() is not implemented for INDI!')
-#        return None
+        num = indihelper.findNumber(ccd_temp, 'CCD_TEMPERATURE_VALUE')
+        if num is None:
+            return False
+        return num.value
 
     def get_target_temperature(self):
         logging.warning('Camera.get_target_temperature() is not implemented for INDI!')
@@ -367,51 +353,62 @@ class Camera(BaseCamera):
 
     def set_target_temperature(self, temp_c):
         # FIXME Handling ccd temperature needs to be more robust
-        ccd_temp = self.getNumber('CCD_TEMPERATURE')
-        ccd_temp[0].value = temp_c
-        self.sendNewNumber(ccd_temp)
-
-#        logging.warning('Camera.set_target_temperature() is not implemented for INDI!')
-#        return None
+        ccd_temp = indihelper.getNumber(self.cam, 'CCD_TEMPERATURE')
+        if ccd_temp is None:
+            return False
+        num = indihelper.findNumber(ccd_temp, 'CCD_TEMPERATURE_VALUE')
+        if num is None:
+            return False
+        num.value = temp_c
+        self.indiclient.sendNewNumber(ccd_temp)
+        return True
 
     def set_cooler_state(self, onoff):
-        cool_state = self.getSwitch('CCD_COOLER')
-        cool_state[0].s == PyIndi.ISS_ON
-        self.sendNewSwitch(cool_state)
-
-#        logging.warning('Camera.set_cooler_state() is not implemented for INDI!')
-#        return None
+        cool_state = indihelper.getSwitch(self.cam, 'CCD_COOLER')
+        on_switch = indihelper.findSwitch(cool_state, 'COOLER_ON')
+        if on_switch is None:
+            return False
+        on_switch == PyIndi.ISS_ON
+        self.indiclient.sendNewSwitch(cool_state)
+        return True
 
     def get_cooler_state(self):
-        cool_state = self.getSwitch('CCD_COOLER')
-        print(cool_state)
-        return cool_state[0].s == PyIndi.ISS_ON
-#        logging.warning('Camera.get_cooler_state() is not implemented for INDI!')
-#        return None
+        cool_state = indihelper.getSwitch(self.cam, 'CCD_COOLER')
+        if cool_state is None:
+            return None
+        sw = indihelper.findSwitch(cool_state, 'COOLER_ON')
+        if sw is None:
+            return None
+        return sw.s == PyIndi.ISS_ON
 
     def get_binning(self):
-        ccd_bin = self.getNumber('CCD_BINNING')
-        print(ccd_bin, ccd_bin.nnp)
-        return ccd_bin[0].value, ccd_bin[1].value
-#        logging.warning('Camera.get_binning() is not implemented for INDI!')
-#        return None
+        ccd_bin = indihelper.getNumber(self.cam, 'CCD_BINNING')
+        binx = indihelper.findNumber(ccd_bin, 'HOR_BIN')
+        biny = indihelper.findNumber(ccd_bin, 'VER_BIN')
+        if binx is None or biny is None:
+            return None, None
+        return (binx.value, biny.value)
 
     def get_cooler_power(self):
-        cool_power = self.getNumber('CCD_COOLER_POWER')
-        if cool_power is not None:
-            return cool_power[0].value
-        else:
+        cool_power = indihelper.getNumber(self.cam, 'CCD_COOLER_POWER')
+        if cool_power is None:
             return None
-#        logging.warning('Camera.get_cooler_power() is not implemented for INDI!')
-#        return None
+        num = indihelper.findNumber(cool_power, 'CCD_COOLER_VALUE')
+        if num is None:
+            return None
+        return num.value
 
     def set_binning(self, binx, biny):
-        ccd_bin = self.getNumber('CCD_BINNING')
-        ccd_bin[0].value = binx
-        ccd_bin[1].value = biny
-        self.sendNewNumber(ccd_bin)
-#        logging.warning('Camera.set_binning() is not implemented for INDI!')
-#        return None
+        ccd_bin = indihelper.getNumber(self.cam, 'CCD_BINNING')
+        if ccd_bin is None:
+            return False
+        num_binx = indihelper.findNumber(ccd_bin, 'HOR_BIN')
+        num_biny = indihelper.findNumber(ccd_bin, 'VER_BIN')
+        if num_binx is None or num_biny is None:
+            return False
+        num_binx.value = binx
+        num_biny.value = biny
+        return True
 
     def get_max_binning(self):
         logging.warning('Camera.get_max_binning() is not implemented for INDI!')
@@ -424,24 +421,33 @@ class Camera(BaseCamera):
 #        return None
 
     def get_frame(self):
-        ccd_frame = self.getNumber('CCD_FRAME')
-        return (ccd_frame[0].value, ccd_frame[1].value, ccd_frame[2].value, ccd_frame[3].value)
-#        logging.warning('Camera.get_frame() is not implemented for INDI!')
-#        return None
+        ccd_frame = indihelper.getNumber(self.cam, 'CCD_FRAME')
+        if ccd_frame is None:
+            return None
+        ccd_x = indihelper.findNumber(ccd_frame, 'X')
+        ccd_y = indihelper.findNumber(ccd_frame, 'Y')
+        ccd_w = indihelper.findNumber(ccd_frame, 'WIDTH')
+        ccd_h = indihelper.findNumber(ccd_frame, 'HEIGHT')
+        if ccd_x is None or ccd_y is None or ccd_w is None or ccd_h is None:
+            return (None, None, None, None)
+        return (ccd_x.value, ccd_y.value, ccd_w.value, ccd_h.value)
 
     def set_frame(self, minx, miny, width, height):
-        ccd_frame = self.getNumber('CCD_FRAME')
-        ccd_frame[0].value = minx
-        ccd_frame[1].value = miny
-        ccd_frame[2].value = width
-        ccd_frame[3].value = height
-        self.sendNewNumber(ccd_frame)
+        ccd_frame = indihelper.getNumber(self.cam, 'CCD_FRAME')
+        if ccd_frame is None:
+            return False
+        ccd_x = indihelper.findNumber(ccd_frame, 'X')
+        ccd_y = indihelper.findNumber(ccd_frame, 'Y')
+        ccd_w = indihelper.findNumber(ccd_frame, 'WIDTH')
+        ccd_h = indihelper.findNumber(ccd_frame, 'HEIGHT')
+        if ccd_x is None or ccd_y is None or ccd_w is None or ccd_h is None:
+            return False
+        ccd_x.value = minx
+        ccd_y.value = miny
+        ccd_w.value = width
+        ccd_h.value = height
+        self.indiclient.sendNewNumber(ccd_frame)
         return True
-#        logging.warning('Camera.set_frame() is not implemented for INDI!')
-#        return None
-
-
-
 
 class Focuser(BaseFocuser):
     def __init__(self):
