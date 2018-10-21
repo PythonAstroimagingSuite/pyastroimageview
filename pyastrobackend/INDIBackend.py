@@ -35,7 +35,7 @@ class DeviceBackend(BaseDeviceBackend):
             self.eventQueue.put(d)
 
         def newProperty(self, p):
-            print('newprop')
+#            print('newprop')
             self.eventQueue.put(p)
 
         def removeProperty(self, p):
@@ -144,24 +144,17 @@ class Camera(BaseCamera):
         logging.debug(f'Connecting to camera device: {name}')
         if self.cam is not None:
             logging.warning('Camera.connect() self.cam is not None!')
-        cnt = 0
-        while self.cam is None and cnt < (self.timeout/0.5):
-            time.sleep(0.5)
-            self.cam = self.indiclient.getDevice(name)
-            cnt += 1
-        if self.cam is None:
-            return False
-        connect = indihelper.getSwitch(self.cam, 'CONNECTION')
-        if connect is None:
-            return False
-        connect_sw = indihelper.findSwitch(connect, 'CONNECT')
-        if connect_sw is None:
-            return False
-        connect_sw.s = PyIndi.ISS_ON
-        connected = connect_sw.s == PyIndi.ISS_ON
-        if connected:
+
+        cam = indihelper.connectDevice(self.indiclient, name)
+
+        logging.info(f'connectDevice returned {cam}')
+
+        if cam is not None:
             self.name = name
-        return connected
+            self.cam = cam
+            return True
+
+        return False
 
     def disconnect(self):
         logging.warning('Camera.disconnect() is not implemented for INDI!')
@@ -339,12 +332,8 @@ class Camera(BaseCamera):
         return None
 
     def get_current_temperature(self):
-        ccd_temp = indihelper.getNumber(self.cam, 'CCD_TEMPERATURE')
-        logging.info(f'get_current_temperature():  ccd_temp = {ccd_temp}')
-        num = indihelper.findNumber(ccd_temp, 'CCD_TEMPERATURE_VALUE')
-        if num is None:
-            return False
-        return num.value
+        return indihelper.getfindNumberValue(self.cam, 'CCD_TEMPERATURE',
+                                             'CCD_TEMPERATURE_VALUE')
 
     def get_target_temperature(self):
         logging.warning('Camera.get_target_temperature() is not implemented for INDI!')
@@ -353,35 +342,26 @@ class Camera(BaseCamera):
 
     def set_target_temperature(self, temp_c):
         # FIXME Handling ccd temperature needs to be more robust
-        ccd_temp = indihelper.getNumber(self.cam, 'CCD_TEMPERATURE')
-        if ccd_temp is None:
-            return False
-        num = indihelper.findNumber(ccd_temp, 'CCD_TEMPERATURE_VALUE')
-        if num is None:
-            return False
-        num.value = temp_c
-        self.indiclient.sendNewNumber(ccd_temp)
-        return True
+        return indihelper.setfindNumberValue(self.indiclient, self.cam,
+                                             'CCD_TEMPERATURE',
+                                             'CCD_TEMPERATURE_VALUE',
+                                             temp_c)
 
     def set_cooler_state(self, onoff):
-        cool_state = indihelper.getSwitch(self.cam, 'CCD_COOLER')
-        if cool_state is None:
-            return False
-        on_switch = indihelper.findSwitch(cool_state, 'COOLER_ON')
-        if on_switch is None:
-            return False
-        on_switch == PyIndi.ISS_ON
-        self.indiclient.sendNewSwitch(cool_state)
-        return True
+        rc = indihelper.setfindSwitchState(self.indiclient, self.cam,
+                                          'CCD_COOLER', 'COOLER_ON',
+                                           onoff)
+        if not rc:
+            return rc
+
+        rc = indihelper.setfindSwitchState(self.indiclient, self.cam,
+                                          'CCD_COOLER', 'COOLER_OFF',
+                                           not onoff)
+
+        return rc
 
     def get_cooler_state(self):
-        cool_state = indihelper.getSwitch(self.cam, 'CCD_COOLER')
-        if cool_state is None:
-            return None
-        sw = indihelper.findSwitch(cool_state, 'COOLER_ON')
-        if sw is None:
-            return None
-        return sw.s == PyIndi.ISS_ON
+        return indihelper.getfindSwitchState(self.cam, 'CCD_COOLER', 'COOLER_ON')
 
     def get_binning(self):
         ccd_bin = indihelper.getNumber(self.cam, 'CCD_BINNING')
@@ -419,8 +399,6 @@ class Camera(BaseCamera):
     def get_size(self):
         ccd_info = self.get_info()
         return (ccd_info.CCD_MAX_X, ccd_info.CCD_MAX_Y)
-#        logging.warning('Camera.get_size() is not implemented for INDI!')
-#        return None
 
     def get_frame(self):
         ccd_frame = indihelper.getNumber(self.cam, 'CCD_FRAME')
@@ -464,25 +442,18 @@ class Focuser(BaseFocuser):
     def connect(self, name):
         logging.debug(f'Connecting to focuser device: {name}')
         if self.focuser is not None:
-            logging.warning('Focuser.connect() self.cam is not None!')
-        cnt = 0
-        while self.focuser is None and cnt < (self.timeout/0.5):
-            time.sleep(0.5)
-            self.focuser = self.indiclient.getDevice(name)
-            cnt += 1
-        if self.focuser is None:
-            return False
-        connect = indihelper.getSwitch(self.focuser, 'CONNECTION')
-        if connect is None:
-            return False
-        connect_sw = indihelper.findSwitch(connect, 'CONNECT')
-        if connect_sw is None:
-            return False
-        connect_sw.s = PyIndi.ISS_ON
-        connected = connect_sw.s == PyIndi.ISS_ON
-        if connected:
+            logging.warning('Focuser.connect() self.focuser is not None!')
+
+        focuser = indihelper.connectDevice(self.indiclient, name)
+
+        logging.info(f'connectDevice returned {focuser}')
+
+        if focuser is not None:
             self.name = name
-        return connected
+            self.focuser = focuser
+            return True
+
+        return False
 
     def disconnect(self):
         logging.warning('Focuser.disconnect() is not implemented for INDI!')
@@ -495,44 +466,24 @@ class Focuser(BaseFocuser):
             return False
 
     def get_absolute_position(self):
-        abspos = indihelper.getNumber(self.focuser, 'ABS_FOCUS_POSITION')
-        num = indihelper.findNumber(abspos, 'FOCUS_ABSOLUTE_POSITION')
-        if num is None:
-            return False
-        return num.value
+        return indihelper.getfindNumberValue(self.focuser, 'ABS_FOCUS_POSITION', 'FOCUS_ABSOLUTE_POSITION')
 
     def move_absolute_position(self, abspos):
-        abspos_num = indihelper.getNumber(self.focuser, 'ABS_FOCUS_POSITION')
-        if abspos_num is None:
-            return False
-        num = indihelper.findNumber(abspos_num, 'FOCUS_ABSOLUTE_POSITION')
-        if num is None:
-            return False
-        num.value = abspos
-        rc = self.indiclient.sendNewNumber(abspos_num)
-        print(rc)
-        return True
+        return indihelper.setfindNumberValue(self.indiclient, self.focuser,
+                                             'ABS_FOCUS_POSITION',
+                                             'FOCUS_ABSOLUTE_POSITION',
+                                             abspos)
 
     def get_max_absolute_position(self):
-        logging.warning('Focuser.get_max_absolute_position() is not implemented for INDI!')
-        return None
+        return indihelper.getfindNumberValue(self.focuser, 'FOCUS_MAXTRAVEL', 'MAXTRAVEL')
 
     def get_current_temperature(self):
-        logging.warning('Focuser.get_current_temperature() is not implemented for INDI!')
-        return None
+        return indihelper.getfindNumberValue(self.focuser, 'FOCUS_TEMPERATURE', 'TEMPERATURE')
 
     def stop(self):
-        abort_motion = indihelper.getSwitch(self.focuser, 'FOCUS_ABORT_MOTION')
-        if abort_motion is None:
-            print('abort_motion is None')
-            return False
-        abort_switch = indihelper.findSwitch(abort_motion, 'ABORT')
-        if abort_switch is None:
-            print('abort_switch is None')
-            return False
-        abort_switch == PyIndi.ISS_ON
-        self.indiclient.sendNewSwitch(abort_motion)
-        return True
+        return indihelper.setfindSwitchState(self.indiclient, self.focuser,
+                                             'FOCUS_ABORT_MOTION', 'ABORT',
+                                             True)
 
     def is_moving(self):
         logging.warning('Focuser.is_moving() is not implemented for INDI!')
@@ -551,25 +502,18 @@ class FilterWheel(BaseFilterWheel):
     def connect(self, name):
         logging.debug(f'Connecting to filterwheel device: {name}')
         if self.filterwheel is not None:
-            logging.warning('FilterWheel.connect() self.cam is not None!')
-        cnt = 0
-        while self.filterwheel is None and cnt < (self.timeout/0.5):
-            time.sleep(0.5)
-            self.filterwheel = self.indiclient.getDevice(name)
-            cnt += 1
-        if self.filterwheel is None:
-            return False
-        connect = indihelper.getSwitch(self.filterwheel, 'CONNECTION')
-        if connect is None:
-            return False
-        connect_sw = indihelper.findSwitch(connect, 'CONNECT')
-        if connect_sw is None:
-            return False
-        connect_sw.s = PyIndi.ISS_ON
-        connected = connect_sw.s == PyIndi.ISS_ON
-        if connected:
+            logging.warning('FilterWheel.connect() self.filterwheel is not None!')
+
+        fw = indihelper.connectDevice(self.indiclient, name)
+
+        logging.info(f'connectDevice returned {fw}')
+
+        if fw is not None:
             self.name = name
-        return connected
+            self.filterwheel = fw
+            return True
+
+        return False
 
     def disconnect(self):
         logging.warning('FilterWheel.disconnect() is not implemented for INDI!')

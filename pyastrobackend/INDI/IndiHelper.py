@@ -1,6 +1,7 @@
 # stuff with no home (yet)
 
 import time
+import logging
 
 import PyIndi
 
@@ -25,6 +26,35 @@ def findSwitch(iswvect, name):
 
     return None
 
+def getfindSwitch(device, propname, swname):
+    sw_prop = getSwitch(device, propname)
+    if sw_prop is None:
+        return None
+    sw = findSwitch(sw_prop, swname)
+    if sw is None:
+        return None
+    return sw
+
+def getfindSwitchState(device, propname, swname):
+    sw = getfindSwitch(device, propname, swname)
+    if sw is None:
+        return None
+    return sw.s == PyIndi.ISS_ON
+
+def setfindSwitchState(indiclient, device, propname, swname, onoff):
+    sw_prop = getSwitch(device, propname)
+    if sw_prop is None:
+        return False
+    sw = findSwitch(sw_prop, swname)
+    if sw is None:
+        return False
+    if onoff:
+        sw.s = PyIndi.ISS_ON
+    else:
+        sw.s = PyIndi.ISS_OFF
+    indiclient.sendNewSwitch(sw_prop)
+    return True
+
 def getNumber(device, name, timeout=DEFAULT_TIMEOUT):
     num = device.getNumber(name)
     cnt = 0
@@ -42,6 +72,56 @@ def findNumber(invect, name):
             return invect[i]
 
     return None
+
+def getfindNumber(device, propname, numname):
+    """ Combines getNumber() and findNumber() """
+    num_prop = getNumber(device, propname)
+    if num_prop is None:
+        return None
+    num = findNumber(num_prop, numname)
+    if num is None:
+        return None
+    return num
+
+def getfindNumberValue(device, propname, numname):
+    """ Combines getNumber() and findNumber() """
+    num = getfindNumber(device, propname, numname)
+    if num is None:
+        return None
+    return num.value
+
+def setfindNumberValue(indiclient, device, propname, numname, value):
+    num_prop = getNumber(device, propname)
+    if num_prop is None:
+        return False
+    num = findNumber(num_prop, numname)
+    if num is None:
+        return False
+    num.value = value
+    indiclient.sendNewNumber(num_prop)
+    return True
+
+def connectDevice(indiclient, devicename, timeout=2):
+    logging.debug(f'Connecting to device: {devicename}')
+    cnt = 0
+    device = None
+    while device is None and cnt < (timeout/0.5):
+        time.sleep(0.5)
+        device = indiclient.getDevice(devicename)
+        cnt += 1
+    if device is None:
+        return None
+    connect = getSwitch(device, 'CONNECTION')
+    if connect is None:
+        return None
+    connect_sw = findSwitch(connect, 'CONNECT')
+    if connect_sw is None:
+        return None
+    connect_sw.s = PyIndi.ISS_ON
+    connected = connect_sw.s == PyIndi.ISS_ON
+    if not connected:
+        return None
+    return device
 
 def getText(device, name, timeout=DEFAULT_TIMEOUT):
     text = device.getText(name)
@@ -115,7 +195,6 @@ def strGetType(o):
     return s
 
 def dump_INumberVectorProperty(p):
-    print(dir(p))
     s = f'device: {p.device}\n'
     s += f'name: {p.name}\n'
     s += f'label: {p.label}\n'
@@ -128,7 +207,6 @@ def dump_INumberVectorProperty(p):
     return s
 
 def dump_ITextVectorProperty(p):
-    print(dir(p))
     s = f'device: {p.device}\n'
     s += f'name: {p.name}\n'
     s += f'label: {p.label}\n'

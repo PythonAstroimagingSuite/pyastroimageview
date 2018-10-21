@@ -79,12 +79,23 @@ if __name__ == '__main__':
 
     logging.info('Getting current temp')
     ccd_temp = camera.get_current_temperature()
-    #print(dump_INumberVectorProperty(ccd_temp))
     logging.info(f'current temp = {ccd_temp}')
 
     logging.info('Getting cooler state')
     cool_state = camera.get_cooler_state()
     logging.info(f'cooler state = {cool_state}')
+
+    logging.info('Turning off cooler')
+    rc = camera.set_cooler_state(False)
+    logging.info(f'set_cooler_state returns {rc}')
+
+    i = 0
+    while i < 10:
+        logging.info('Getting current temp')
+        ccd_temp = camera.get_current_temperature()
+        logging.info(f'current temp = {ccd_temp}')
+        time.sleep(0.5)
+        i += 1
 
     logging.info('Turning on cooler')
     rc = camera.set_cooler_state(True)
