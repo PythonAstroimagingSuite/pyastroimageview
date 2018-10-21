@@ -121,11 +121,11 @@ class Camera(BaseCamera):
         # used for when the next image is taken
         # these ARE NOT to be used to query
         # the CURRENT settings!
-        self.camera_settings = self.CameraSettings()
-        self.camera_settings.binning = None
-        self.camera_settings.exposure = None
-        self.camera_settings.roi = None
-        self.camera_settings.temperature_target = None
+#        self.camera_settings = self.CameraSettings()
+#        self.camera_settings.binning = None
+#        self.camera_settings.exposure = None
+#        self.camera_settings.roi = None
+#        self.camera_settings.temperature_target = None
 
 
 
@@ -365,6 +365,8 @@ class Camera(BaseCamera):
 
     def set_cooler_state(self, onoff):
         cool_state = indihelper.getSwitch(self.cam, 'CCD_COOLER')
+        if cool_state is None:
+            return False
         on_switch = indihelper.findSwitch(cool_state, 'COOLER_ON')
         if on_switch is None:
             return False
@@ -450,122 +452,151 @@ class Camera(BaseCamera):
         return True
 
 class Focuser(BaseFocuser):
-    def __init__(self):
-
-        warnings.warn('ASCOMBackend.Focuser is deprecated - use ASCOM.Focuser instead!',
-                      DeprecationWarning)
-
-        self.focus = None
+    def __init__(self, indiclient):
+        self.focuser = None
+        self.indiclient = indiclient
+        self.timeout = 5
 
     def show_chooser(self, last_choice):
-        pythoncom.CoInitialize()
-        chooser = win32com.client.Dispatch("ASCOM.Utilities.Chooser")
-        chooser.DeviceType="Focuser"
-        focuser = chooser.Choose(last_choice)
-        logging.info(f'choice = {focuser}')
-        return focuser
+        logging.warning('Focuser.show_chooser() is not implemented for INDI!')
+        return None
 
     def connect(self, name):
-        pythoncom.CoInitialize()
-        self.focus = win32com.client.Dispatch(name)
-
-        if self.focus.Connected:
-            logging.info("	-> Focuser was already connected")
-        else:
-            try:
-                self.focus.Connected = True
-            except Exception as e:
-                logging.error('ASCOMBackend:focuser:connect() Exception ->', exc_info=True)
-                return False
-
-        if self.focus.Connected:
-            logging.info(f"	Connected to focuser {name} now")
-        else:
-            logging.info("	Unable to connect to focuser, expect exception")
-
-        # check focuser works in absolute position
-        if not self.focus.Absolute:
-            logging.info("ERROR - focuser does not use absolute position!")
-
-        return True
+        logging.debug(f'Connecting to focuser device: {name}')
+        if self.focuser is not None:
+            logging.warning('Focuser.connect() self.cam is not None!')
+        cnt = 0
+        while self.focuser is None and cnt < (self.timeout/0.5):
+            time.sleep(0.5)
+            self.focuser = self.indiclient.getDevice(name)
+            cnt += 1
+        if self.focuser is None:
+            return False
+        connect = indihelper.getSwitch(self.focuser, 'CONNECTION')
+        if connect is None:
+            return False
+        connect_sw = indihelper.findSwitch(connect, 'CONNECT')
+        if connect_sw is None:
+            return False
+        connect_sw.s = PyIndi.ISS_ON
+        connected = connect_sw.s == PyIndi.ISS_ON
+        if connected:
+            self.name = name
+        return connected
 
     def disconnect(self):
-        if self.focuser:
-            if self.focuser.Connected:
-                self.focuser.Connected = False
-                self.focuser = None
+        logging.warning('Focuser.disconnect() is not implemented for INDI!')
+        return None
 
     def is_connected(self):
-        if self.focus:
-            return self.focus.Connected
+        if self.focuser:
+            return self.focuser.isConnected()
         else:
             return False
 
     def get_absolute_position(self):
-        return self.focus.Position
+        abspos = indihelper.getNumber(self.focuser, 'ABS_FOCUS_POSITION')
+        num = indihelper.findNumber(abspos, 'FOCUS_ABSOLUTE_POSITION')
+        if num is None:
+            return False
+        return num.value
 
     def move_absolute_position(self, abspos):
-        self.focus.Move(abspos)
+        abspos_num = indihelper.getNumber(self.focuser, 'ABS_FOCUS_POSITION')
+        if abspos_num is None:
+            return False
+        num = indihelper.findNumber(abspos_num, 'FOCUS_ABSOLUTE_POSITION')
+        if num is None:
+            return False
+        num.value = abspos
+        rc = self.indiclient.sendNewNumber(abspos_num)
+        print(rc)
         return True
 
     def get_max_absolute_position(self):
-        return self.focus.MaxStep
+        logging.warning('Focuser.get_max_absolute_position() is not implemented for INDI!')
+        return None
 
     def get_current_temperature(self):
-        return self.focus.Temperature
+        logging.warning('Focuser.get_current_temperature() is not implemented for INDI!')
+        return None
 
     def stop(self):
-        self.focus.Halt()
-
-    def is_moving(self):
-        return self.focus.isMoving
-
-class FilterWheel(BaseFilterWheel):
-    def __init__(self):
-        self.filterwheel = None
-
-    def show_chooser(self, last_choice):
-        pythoncom.CoInitialize()
-        chooser = win32com.client.Dispatch("ASCOM.Utilities.Chooser")
-        chooser.DeviceType="FilterWheel"
-        filterwheel = chooser.Choose(last_choice)
-        logging.info(f'choice = {filterwheel}')
-        return filterwheel
-
-    def connect(self, name):
-        pythoncom.CoInitialize()
-        self.filterwheel = win32com.client.Dispatch(name)
-
-        if self.filterwheel.Connected:
-            logging.info("	-> filterwheel was already connected")
-        else:
-            try:
-                self.filterwheel.Connected = True
-            except Exception as e:
-                logging.error('ASCOMBackend:filterwheel:connect() Exception ->', exc_info=True)
-                return False
-
-        if self.filterwheel.Connected:
-            logging.info(f"	Connected to filter wheel {name} now")
-        else:
-            logging.info("	Unable to connect to filter wheel, expect exception")
-
+        abort_motion = indihelper.getSwitch(self.focuser, 'FOCUS_ABORT_MOTION')
+        if abort_motion is None:
+            print('abort_motion is None')
+            return False
+        abort_switch = indihelper.findSwitch(abort_motion, 'ABORT')
+        if abort_switch is None:
+            print('abort_switch is None')
+            return False
+        abort_switch == PyIndi.ISS_ON
+        self.indiclient.sendNewSwitch(abort_motion)
         return True
 
+    def is_moving(self):
+        logging.warning('Focuser.is_moving() is not implemented for INDI!')
+        return None
+
+class FilterWheel(BaseFilterWheel):
+    def __init__(self, indiclient):
+        self.filterwheel = None
+        self.indiclient = indiclient
+        self.timeout = 5
+
+    def show_chooser(self, last_choice):
+        logging.warning('FilterWheel.show_chooser() is not implemented for INDI!')
+        return None
+
+    def connect(self, name):
+        logging.debug(f'Connecting to filterwheel device: {name}')
+        if self.filterwheel is not None:
+            logging.warning('FilterWheel.connect() self.cam is not None!')
+        cnt = 0
+        while self.filterwheel is None and cnt < (self.timeout/0.5):
+            time.sleep(0.5)
+            self.filterwheel = self.indiclient.getDevice(name)
+            cnt += 1
+        if self.filterwheel is None:
+            return False
+        connect = indihelper.getSwitch(self.filterwheel, 'CONNECTION')
+        if connect is None:
+            return False
+        connect_sw = indihelper.findSwitch(connect, 'CONNECT')
+        if connect_sw is None:
+            return False
+        connect_sw.s = PyIndi.ISS_ON
+        connected = connect_sw.s == PyIndi.ISS_ON
+        if connected:
+            self.name = name
+        return connected
+
     def disconnect(self):
-        if self.filterwheel:
-            if self.filterwheel.Connected:
-                self.filterwheel.Connected = False
-                self.filterwheel = None
+        logging.warning('FilterWheel.disconnect() is not implemented for INDI!')
+        return None
 
     def is_connected(self):
         if self.filterwheel:
-            return self.filterwheel.Connected
+            return self.filterwheel.isConnected()
         else:
             return False
 
     def get_position(self):
-        return self.filterwheel.Position
+        filter_slot = indihelper.getNumber(self.filterwheel, 'FILTER_SLOT')
+
+        print(indihelper.dump_INumberVectorProperty(filter_slot))
+
+        filter_name = indihelper.getText(self.filterwheel, 'FILTER_NAME')
+
+        print(indihelper.dump_ITextVectorProperty(filter_name))
+
+
+        return
+
+#        num = indihelper.findNumber(abspos, 'FOCUS_ABSOLUTE_POSITION')
+#        if num is None:
+#            return False
+#        return num.value
 
     def get_position_name(self):
         #FIXME this should check return from get names, etc

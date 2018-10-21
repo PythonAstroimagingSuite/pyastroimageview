@@ -17,8 +17,13 @@ def getSwitch(device, name, timeout=DEFAULT_TIMEOUT):
 
     return sw
 
-def sendNewSwitch(indiclient, sw):
-    indiclient.sendNewSwitch(sw)
+def findSwitch(iswvect, name):
+    for i in range(0, iswvect.nsp):
+        #print(i, iswvect[i].name, iswvect[i].s)
+        if iswvect[i].name == name:
+            return iswvect[i]
+
+    return None
 
 def getNumber(device, name, timeout=DEFAULT_TIMEOUT):
     num = device.getNumber(name)
@@ -38,16 +43,15 @@ def findNumber(invect, name):
 
     return None
 
-def findSwitch(iswvect, name):
-    for i in range(0, iswvect.nsp):
-        #print(i, iswvect[i].name, iswvect[i].s)
-        if iswvect[i].name == name:
-            return iswvect[i]
+def getText(device, name, timeout=DEFAULT_TIMEOUT):
+    text = device.getText(name)
+    cnt = 0
+    while text is None and cnt < (timeout/0.5):
+        time.sleep(0.5)
+        text = device.getText(name)
+        cnt += 1
 
-    return None
-
-#def sendNewNumber(indiclient, number):
-#    return indiclient.sendNewNumber(number)
+    return text
 
 def strISState(s):
     if (s == PyIndi.ISS_OFF):
@@ -119,6 +123,19 @@ def dump_INumberVectorProperty(p):
     s += f'nnp: {p.nnp}\n'
     for i in range(0, p.nnp):
         n = p[i]
-        s += f'   {i} {n.name} {n.value}'
+        s += f'   {i} {n.name} {n.value}\n'
+
+    return s
+
+def dump_ITextVectorProperty(p):
+    print(dir(p))
+    s = f'device: {p.device}\n'
+    s += f'name: {p.name}\n'
+    s += f'label: {p.label}\n'
+    s += f'group: {p.group}\n'
+    s += f'ntp: {p.ntp}\n'
+    for i in range(0, p.ntp):
+        t = p[i]
+        s += f'   {i} {t.name} "{t.text}"\n'
 
     return s
