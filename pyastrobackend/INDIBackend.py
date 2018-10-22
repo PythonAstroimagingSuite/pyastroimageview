@@ -601,88 +601,121 @@ class FilterWheel(BaseFilterWheel):
         return len(self.get_names())
 
 class Mount(BaseMount):
-    def __init__(self):
-
-        warnings.warn('ASCOMBackend.Mount is deprecated - use ASCOM.Mount instead!',
-                      DeprecationWarning)
-
+    def __init__(self, indiclient):
         self.mount = None
+        self.indiclient = indiclient
+        self.timeout = 5
 
     def show_chooser(self, last_choice):
-        pythoncom.CoInitialize()
-        chooser = win32com.client.Dispatch("ASCOM.Utilities.Chooser")
-        chooser.DeviceType="Telescope"
-        mount = chooser.Choose(last_choice)
-        logging.info(f'choice = {mount}')
-        return mount
+        logging.warning('Mount.show_chooser() is not implemented for INDI!')
+        return None
 
     def connect(self, name):
-        pythoncom.CoInitialize()
-        self.mount = win32com.client.Dispatch(name)
+        logging.debug(f'Connecting to mount device: {name}')
+        if self.mount is not None:
+            logging.warning('Mount.connect() self.mount is not None!')
 
-        if self.mount.Connected:
-            logging.info("	-> mount was already connected")
-        else:
-            try:
-                self.mount.Connected = True
-            except Exception as e:
-                logging.error('ASCOMBackend:mount:connect() Exception ->', exc_info=True)
-                return False
+        mount = indihelper.connectDevice(self.indiclient, name)
 
-        if self.mount.Connected:
-            logging.info(f"	Connected to mount {name} now")
-        else:
-            logging.info("	Unable to connect to mount, expect exception")
+        logging.info(f'connectDevice returned {mount}')
 
-        return True
+        if mount is not None:
+            self.name = name
+            self.mount = mount
+            return True
+
+        return False
 
     def disconnect(self):
-        if self.mount:
-            if self.mount.Connected:
-                self.mount.Connected = False
-                self.mount = None
+        logging.warning('Mount.disconnect() is not implemented for INDI!')
+        return None
 
     def is_connected(self):
         if self.mount:
-            return self.mount.Connected
+            return self.mount.isConnected()
         else:
             return False
 
     def can_park(self):
-        return self.mount.CanPark
+        logging.warning('Mount.can_park() is not implemented for INDI!')
+        return None
 
     def is_parked(self):
-        return self.AtPark
+        logging.warning('Mount.is_parked() is not implemented for INDI!')
+        return None
 
     def get_position_altaz(self):
         """Returns tuple of (alt, az) in degrees"""
-        alt = self.mount.Altitude
-        az = self.mount.Azimuth
+        #
+        # NOTE seems like some (most?) INDI GEM drivers don't return alt/az
+        #
+        az = indihelper.getfindNumberValue(self.mount, 'HORIZONTAL_COORD','AZ')
+        alt = indihelper.getfindNumberValue(self.mount, 'HORIZONTAL_COORD','ALT')
         return (alt, az)
 
     def get_position_radec(self):
         """Returns tuple of (ra, dec) with ra in decimal hours and dec in degrees"""
-        ra = self.mount.RightAscension
-        dec = self.mount.Declination
+        ra = indihelper.getfindNumberValue(self.mount,
+                                           'EQUATORIAL_EOD_COORD','RA')
+        dec = indihelper.getfindNumberValue(self.mount,
+                                            'EQUATORIAL_EOD_COORD','DEC')
         return (ra, dec)
 
     def is_slewing(self):
-        return self.mount.Slewing
+        state = indihelper.getNumberState(self.mount, 'EQUATORIAL_EOD_COORD')
+        if state is None:
+            return None
+        return state == PyIndi.IPS_BUSY
 
     def abort_slew(self):
-        self.mount.AbortSlew()
+        return indihelper.setfindSwitchState(self.indiclient, self.mount,
+                                             'TELESCOPE_ABORT_MOTION',
+                                             'ABORT_MOTION', True)
 
     def park(self):
-        self.mount.Park()
+        logging.warning('Mount.park() is not implemented for INDI!')
+        return None
 
     def slew(self, ra, dec):
         """Slew to ra/dec with ra in decimal hours and dec in degrees"""
-        self.mount.SlewToCoordinates(ra, dec)
+        indihelper.setfindSwitchState(self.indiclient, self.mount,
+                                      'ON_COORD_SET', 'TRACK', True)
+
+        eq_coord = indihelper.getNumber(self.mount, 'EQUATORIAL_EOD_COORD')
+        if eq_coord is None:
+            return False
+
+        ra_coord = indihelper.findNumber(eq_coord,'RA')
+        if ra_coord is None:
+            return False
+        dec_coord = indihelper.findNumber(eq_coord, 'DEC')
+        if dec_coord is None:
+            return False
+        ra_coord.value = ra
+        dec_coord.value = dec
+        self.indiclient.sendNewNumber(eq_coord)
+        return True
 
     def sync(self, ra, dec):
         """Sync to ra/dec with ra in decimal hours and dec in degrees"""
-        self.mount.SyncToCoordinates(ra, dec)
+        indihelper.setfindSwitchState(self.indiclient, self.mount,
+                                      'ON_COORD_SET', 'SYNC', True)
+
+        eq_coord = indihelper.getNumber(self.mount, 'EQUATORIAL_EOD_COORD')
+        if eq_coord is None:
+            return False
+
+        ra_coord = indihelper.findNumber(eq_coord,'RA')
+        if ra_coord is None:
+            return False
+        dec_coord = indihelper.findNumber(eq_coord, 'DEC')
+        if dec_coord is None:
+            return False
+        ra_coord.value = ra
+        dec_coord.value = dec
+        self.indiclient.sendNewNumber(eq_coord)
+        return True
 
     def unpark(self):
-        self.mount.Unpark()
-
+        logging.warning('Mount.unpark() is not implemented for INDI!')
+        return None
