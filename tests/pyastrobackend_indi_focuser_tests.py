@@ -95,6 +95,7 @@ if __name__ == '__main__':
         logging.info('Getting focuser position')
         abspos = focuser.get_absolute_position()
         logging.info(f'abs pos = {abspos}')
+        logging.info(f'is_moving = {focuser.is_moving()}')
         time.sleep(0.5)
         i += 1
 
@@ -109,8 +110,9 @@ if __name__ == '__main__':
         logging.info('Getting focuser temperature')
         focus_temp = focuser.get_current_temperature()
         logging.info(f'Current temp = {focus_temp} C')
+        logging.info(f'is_moving = {focuser.is_moving()}')
 
-        time.sleep(5)
+        time.sleep(2)
 
 
 

@@ -33,8 +33,6 @@ def getfindSwitch(device, propname, swname):
     if sw_prop is None:
         return None
     sw = findSwitch(sw_prop, swname)
-    if sw is None:
-        return None
     return sw
 
 def getfindSwitchState(device, propname, swname):
@@ -83,8 +81,6 @@ def getfindNumber(device, propname, numname):
     if num_prop is None:
         return None
     num = findNumber(num_prop, numname)
-    if num is None:
-        return None
     return num
 
 def getfindNumberValue(device, propname, numname):
@@ -93,6 +89,12 @@ def getfindNumberValue(device, propname, numname):
     if num is None:
         return None
     return num.value
+
+def getNumberState(device, propname):
+    num = getNumber(device, propname)
+    if num is None:
+        return None
+    return num.s
 
 def setfindNumberValue(indiclient, device, propname, numname, value):
     num_prop = getNumber(device, propname)
@@ -129,8 +131,6 @@ def getfindText(device, propname, txtname):
     if txt_prop is None:
         return None
     txt = findText(txt_prop, txtname)
-    if txt is None:
-        return None
     return txt
 
 def getfindTextText(device, propname, txtname):
@@ -150,7 +150,50 @@ def setfindTextText(indiclient, device, propname, txtname, value):
     indiclient.sendNewText(txt_prop)
     return True
 
+# routines for light properties
 
+def getLight(device, name, timeout=DEFAULT_TIMEOUT):
+    light = device.getLight(name)
+    cnt = 0
+    while light is None and cnt < (timeout/0.5):
+        time.sleep(0.5)
+        light = device.getLight(name)
+        cnt += 1
+
+    return light
+
+def findLight(ilvect, name):
+    for i in range(0, ilvect.nlp):
+        #print(i, invect[i].name, invect[i].s)
+        if ilvect[i].name == name:
+            return ilvect[i]
+    return None
+
+def getfindLight(device, propname, lightname):
+    light_prop = getLight(device, propname)
+    if light_prop is None:
+        return None
+    light = findLight(light_prop, lightname)
+    return light
+
+def getfindLightState(device, propname, lightname):
+    light = getfindLight(device, propname, lightname)
+    if light is None:
+        return None
+    return light.s
+
+def setfindLightState(indiclient, device, propname, lightname, state):
+    light_prop = getLight(device, propname)
+    if light_prop is None:
+        return False
+    light = findLight(light_prop, lightname)
+    if light is None:
+        return False
+    light.s = state
+    indiclient.sendNewLight(light_prop)
+    return True
+
+# device routines
 
 def connectDevice(indiclient, devicename, timeout=2):
     logging.debug(f'Connecting to device: {devicename}')

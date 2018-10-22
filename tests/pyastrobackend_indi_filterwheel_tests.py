@@ -73,9 +73,26 @@ if __name__ == '__main__':
     filter_pos = filterwheel.get_position()
     logging.info(f'filter pos = {filter_pos}')
 
+    logging.info('Getting filterwheel position name')
+    filter_pos_name = filterwheel.get_position_name()
+    logging.info(f'filter pos = {filter_pos_name}')
+
+    logging.info('Getting filterwheel number of positions')
+    num_pos = filterwheel.get_num_positions()
+    logging.info(f'num pos = {num_pos}')
+
     logging.info('Getting filter names')
     filter_names = filterwheel.get_names()
-    logging.info('filter names = {filter_names}')
+    logging.info(f'filter names = {filter_names}')
+
+
+    while True:
+        logging.info('Getting is_moving()')
+        is_moving = filterwheel.is_moving()
+        logging.info(f'is_moving = {is_moving}')
+        time.sleep(0.25)
+
+
 
     sys.exit(0)
 

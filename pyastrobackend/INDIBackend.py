@@ -35,7 +35,7 @@ class DeviceBackend(BaseDeviceBackend):
             self.eventQueue.put(d)
 
         def newProperty(self, p):
-#            print('newprop')
+#            print('newprop:', p, ' type =', indihelper.strGetType(p))
             self.eventQueue.put(p)
 
         def removeProperty(self, p):
@@ -58,6 +58,7 @@ class DeviceBackend(BaseDeviceBackend):
             self.eventQueue.put(tvp)
 
         def newLight(self, lvp):
+            print(lvp)
             self.eventQueue.put(lvp)
 
         def newMessage(self, d, m):
@@ -486,8 +487,10 @@ class Focuser(BaseFocuser):
                                              True)
 
     def is_moving(self):
-        logging.warning('Focuser.is_moving() is not implemented for INDI!')
-        return None
+        state = indihelper.getNumberState(self.focuser, 'ABS_FOCUS_POSITION')
+        if state is None:
+            return None
+        return state == PyIndi.IPS_BUSY
 
 class FilterWheel(BaseFilterWheel):
     def __init__(self, indiclient):
@@ -526,25 +529,15 @@ class FilterWheel(BaseFilterWheel):
             return False
 
     def get_position(self):
-        filter_slot = indihelper.getNumber(self.filterwheel, 'FILTER_SLOT')
-
-        print(indihelper.dump_INumberVectorProperty(filter_slot))
-
-        filter_name = indihelper.getText(self.filterwheel, 'FILTER_NAME')
-
-        print(indihelper.dump_ITextVectorProperty(filter_name))
-
-
-        return
-
-#        num = indihelper.findNumber(abspos, 'FOCUS_ABSOLUTE_POSITION')
-#        if num is None:
-#            return False
-#        return num.value
+        return indihelper.getfindNumberValue(self.filterwheel,
+                                             'FILTER_SLOT', 'FILTER_SLOT_VALUE')
 
     def get_position_name(self):
         #FIXME this should check return from get names, etc
-        return self.get_names()[self.get_position()]
+        pos = self.get_position()
+        if pos is None:
+            return None
+        return self.get_names()[int(pos)-1]
 
     def set_position(self, pos):
         """Sends request to driver to move filter wheel position
@@ -579,6 +572,16 @@ class FilterWheel(BaseFilterWheel):
             return True
 
     def is_moving(self):
+        state = indihelper.getNumberState(self.filterwheel, 'FILTER_SLOT')
+        if state is None:
+            return None
+        return state == PyIndi.IPS_BUSY
+
+
+        state = indihelper.getfindLightState(self.filterwheel,
+                                             'FILTER_SLOT')
+        return state == PyIndi.IPS_BUSY
+
         logging.warning('FilterWheel.is_moving() is not implemented for INDI!')
         return None
 
