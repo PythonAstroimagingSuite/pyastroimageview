@@ -68,6 +68,8 @@ if __name__ == '__main__':
         logging.error('Failed to connect - quitting')
         sys.exit(-1)
 
+    logging.info(f'is_connected() returns {focuser.is_connected()}')
+
     logging.info('Getting focuser max position')
     abspos = focuser.get_max_absolute_position()
     logging.info(f'max abs pos = {abspos}')

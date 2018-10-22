@@ -67,9 +67,15 @@ if __name__ == '__main__':
         logging.error('Failed to connect - quitting')
         sys.exit(-1)
 
+    logging.info(f'is_connected() returns {filterwheel.is_connected()}')
+
     logging.info('Getting filterwheel position')
     filter_pos = filterwheel.get_position()
     logging.info(f'filter pos = {filter_pos}')
+
+    logging.info('Getting filter names')
+    filter_names = filterwheel.get_names()
+    logging.info('filter names = {filter_names}')
 
     sys.exit(0)
 

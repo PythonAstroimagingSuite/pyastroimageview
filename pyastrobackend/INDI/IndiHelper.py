@@ -8,6 +8,8 @@ import PyIndi
 
 DEFAULT_TIMEOUT=0.5
 
+# routines for dealing with switch properties
+
 def getSwitch(device, name, timeout=DEFAULT_TIMEOUT):
     sw = device.getSwitch(name)
     cnt = 0
@@ -55,6 +57,8 @@ def setfindSwitchState(indiclient, device, propname, swname, onoff):
     indiclient.sendNewSwitch(sw_prop)
     return True
 
+# routines for number properties
+
 def getNumber(device, name, timeout=DEFAULT_TIMEOUT):
     num = device.getNumber(name)
     cnt = 0
@@ -101,6 +105,53 @@ def setfindNumberValue(indiclient, device, propname, numname, value):
     indiclient.sendNewNumber(num_prop)
     return True
 
+# routines for text properties
+
+def getText(device, name, timeout=DEFAULT_TIMEOUT):
+    text = device.getText(name)
+    cnt = 0
+    while text is None and cnt < (timeout/0.5):
+        time.sleep(0.5)
+        text = device.getText(name)
+        cnt += 1
+
+    return text
+
+def findText(itvect, name):
+    for i in range(0, itvect.ntp):
+        #print(i, invect[i].name, invect[i].s)
+        if itvect[i].name == name:
+            return itvect[i]
+    return None
+
+def getfindText(device, propname, txtname):
+    txt_prop = getText(device, propname)
+    if txt_prop is None:
+        return None
+    txt = findText(txt_prop, txtname)
+    if txt is None:
+        return None
+    return txt
+
+def getfindTextText(device, propname, txtname):
+    txt = getfindText(device, propname, txtname)
+    if txt is None:
+        return None
+    return txt.text
+
+def setfindTextText(indiclient, device, propname, txtname, value):
+    txt_prop = getText(device, propname)
+    if txt_prop is None:
+        return False
+    txt = findText(txt_prop, txtname)
+    if txt is None:
+        return False
+    txt.text = value
+    indiclient.sendNewText(txt_prop)
+    return True
+
+
+
 def connectDevice(indiclient, devicename, timeout=2):
     logging.debug(f'Connecting to device: {devicename}')
     cnt = 0
@@ -122,16 +173,6 @@ def connectDevice(indiclient, devicename, timeout=2):
     if not connected:
         return None
     return device
-
-def getText(device, name, timeout=DEFAULT_TIMEOUT):
-    text = device.getText(name)
-    cnt = 0
-    while text is None and cnt < (timeout/0.5):
-        time.sleep(0.5)
-        text = device.getText(name)
-        cnt += 1
-
-    return text
 
 def strISState(s):
     if (s == PyIndi.ISS_OFF):

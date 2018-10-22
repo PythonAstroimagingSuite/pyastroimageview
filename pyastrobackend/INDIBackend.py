@@ -579,12 +579,20 @@ class FilterWheel(BaseFilterWheel):
             return True
 
     def is_moving(self):
-        # ASCOM API defines position of -1 as wheel in motion
-        return self.get_position() == -1
+        logging.warning('FilterWheel.is_moving() is not implemented for INDI!')
+        return None
 
     def get_names(self):
-        # names are setup in the 'Setup' dialog for the filter wheel
-        return self.filterwheel.Names
+        # lookup filter names from driver
+        filter_name_prop = indihelper.getText(self.filterwheel, 'FILTER_NAME')
+        if filter_name_prop is None:
+            return None
+
+        names = []
+        for i in range(0, filter_name_prop.ntp):
+            names.append(filter_name_prop[i].text)
+
+        return names
 
     def get_num_positions(self):
         return len(self.get_names())

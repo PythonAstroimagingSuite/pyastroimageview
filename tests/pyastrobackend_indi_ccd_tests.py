@@ -67,6 +67,8 @@ if __name__ == '__main__':
         logging.error('Failed to connect - quitting')
         sys.exit(-1)
 
+    logging.info(f'is_connected() returns {camera.is_connected()}')
+
     logging.info('Getting ccd_info')
     ccd_info = camera.get_info()
     logging.info(f'CCD_MAX_X = {ccd_info.CCD_MAX_X}')
