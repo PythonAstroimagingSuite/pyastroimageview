@@ -109,7 +109,7 @@ class CameraControlUI(QtWidgets.QWidget):
         self.ui.camera_setting_continuous.setEnabled(enable)
 
     def camera_status_poll(self, status):
-        logging.info('camera poll start')
+#        logging.info('camera poll start')
         status_string = ''
         if status.connected:
             status_string += 'CONNECTED'
@@ -148,7 +148,7 @@ class CameraControlUI(QtWidgets.QWidget):
                 self.temperature_poll_last = time.time()
 
         self.ui.camera_setting_status.setText(status_string)
-        logging.info('camera poll end')
+#        logging.info('camera poll end')
 
     def camera_exposure_complete(self, result):
         logging.info(f'CameraControlUI:cam_exp_comp: result={result} self.state={self.state}')
@@ -312,6 +312,7 @@ class CameraControlUI(QtWidgets.QWidget):
             if maxbin is None:
                 maxbin = 4
             self.ui.camera_setting_binning_spinbox.setMaximum(maxbin)
+            self.ui.camera_setting_binning_spinbox.setMinimum(1)
 
             self.camera_manager.release_lock()
 

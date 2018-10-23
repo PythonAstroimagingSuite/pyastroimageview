@@ -70,6 +70,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
         # until camera connects assume no binning allowed
         self.ui.sequence_binning.setMaximum(1)
+        self.ui.sequence_binning.setMinimum(1)
 
         self.ui.sequence_name.textChanged.connect(self.values_changed)
         self.ui.sequence_elements.textChanged.connect(self.values_changed)

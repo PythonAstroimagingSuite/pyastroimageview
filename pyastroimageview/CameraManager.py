@@ -164,6 +164,8 @@ class CameraManager(Camera):
                 #
                 # FIXME INDIBackend returns a FITS image
                 #       ASCOMBackend returns a numpy array
+                #       This is a temporary HACK to address this
+                #       but needs to be better handled!
                 #
                 try:
                     pri_header = image_data[0].header
@@ -179,8 +181,6 @@ class CameraManager(Camera):
                     logging.info('FITSImage()')
                     fits_image = FITSImage(image_data)
                     logging.info('FITSimage data xfer done')
-
-                print(fits_image.hdulist[0].header)
 
                 fits_image.set_exposure(self.current_exposure_length)
                 fits_image.set_dateobs(self.exposure_start_time)
@@ -209,9 +209,6 @@ class CameraManager(Camera):
                 # sequence controller it might start up a new exposure as
                 # soon as it gets this signal so we have to be done handling
                 # the new image on this side first.
-
-                print(fits_image.hdulist[0].header)
-
 
                 logging.warning('sequence image complete forcing complete to TRUE!!!')
                 complete = True

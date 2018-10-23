@@ -60,7 +60,7 @@ def setfindSwitchState(indiclient, device, propname, swname, onoff):
 # routines for number properties
 
 def getNumber(device, name, timeout=DEFAULT_TIMEOUT):
-    print('getNumber:', name)
+#    print('getNumber:', name)
     num = device.getNumber(name)
     cnt = 0
     while num is None and cnt < (timeout/0.1):

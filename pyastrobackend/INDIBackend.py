@@ -689,9 +689,6 @@ class FilterWheel(BaseFilterWheel):
 
         Use is_moving() method to check if its done.
         """
-        logging.warning('FilterWheel.set_position_name() is not implemented for INDI!')
-        return None
-
         names = self.get_names()
         try:
             newpos = names.index(name)
@@ -701,7 +698,7 @@ class FilterWheel(BaseFilterWheel):
         if newpos == -1:
             return False
         else:
-            self.filterwheel.Position = newpos
+            self.set_position(newpos)
             return True
 
     def is_moving(self):
