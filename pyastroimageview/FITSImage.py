@@ -45,8 +45,10 @@ class FITSImage:
     def set_exposure(self, exp):
         self.set_header_keyvalue('EXPOSURE', exp)
 
-    def set_temperature(self, settemp, acttemp):
+    def set_temperature_target(self, settemp):
         self.set_header_keyvalue('SET-TEMP', settemp)
+
+    def set_temperature_current(self, acttemp):
         self.set_header_keyvalue('CCD-TEMP', acttemp)
 
     def set_camera_pixelsize(self, xsize, ysize):

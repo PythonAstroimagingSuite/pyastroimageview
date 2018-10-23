@@ -46,8 +46,14 @@ class CameraControlUI(QtWidgets.QWidget):
             cooler_state = self.camera_manager.get_cooler_state()
             self.ui.camera_setting_cooleronoff.setChecked(cooler_state)
             settemp = self.camera_manager.get_target_temperature()
-            self.ui.camera_setting_coolersetpt.setValue(int(settemp))
+            if settemp is not None:
+                self.ui.camera_setting_coolersetpt.setValue(int(settemp))
+            else:
+                logging.warning('camera_connect: settemp is None!')
             maxbin = self.camera_managerget_max_binning()
+            # FIXME need better way to handle maxbin being unavailable!
+            if maxbin is None:
+                maxbin = 4
             self.ui.camera_setting_binning_spinbox.setMaximum(maxbin)
         else:
             self.ui.camera_setting_binning_spinbox.setMaximum(1)
@@ -63,6 +69,14 @@ class CameraControlUI(QtWidgets.QWidget):
         self.roi = None
         self.state = EXPOSURE_STATE_IDLE
         self.current_exposure = None
+
+        # under INDI it is expensive to check things like
+        # camera temperature
+        # so make it so we do it less frequently
+        self.temperature_poll_interval = 5
+        self.temperature_poll_last = None
+#        self.temperature_current_last = None
+#        self.temperature_target_last = None
 
         self.set_widget_states()
 
@@ -95,6 +109,7 @@ class CameraControlUI(QtWidgets.QWidget):
         self.ui.camera_setting_continuous.setEnabled(enable)
 
     def camera_status_poll(self, status):
+        logging.info('camera poll start')
         status_string = ''
         if status.connected:
             status_string += 'CONNECTED'
@@ -118,14 +133,22 @@ class CameraControlUI(QtWidgets.QWidget):
 
             self.ui.camera_setting_progress.setText(perc_string)
 
-            curtemp = self.camera_manager.get_current_temperature()
-            curpower =self.camera_manager.get_cooler_power()
-            self.ui.camera_setting_coolercur.setText(f'{curtemp:5.1f}C @ {curpower:.0f}%')
+            if self.temperature_poll_last is None or \
+                (time.time()-self.temperature_poll_last) > self.temperature_poll_interval:
+                curtemp = self.camera_manager.get_current_temperature()
+                curpower =self.camera_manager.get_cooler_power()
+                if curpower is None:
+                    #logging.warning('camera_status_poll: curpower is None!')
+                    curpower = 0
+                self.ui.camera_setting_coolercur.setText(f'{curtemp:5.1f}C @ {curpower:.0f}%')
 
-            cooler_state = self.camera_manager.get_cooler_state()
-            self.ui.camera_setting_cooleronoff.setChecked(cooler_state)
+                cooler_state = self.camera_manager.get_cooler_state()
+                self.ui.camera_setting_cooleronoff.setChecked(cooler_state)
+
+                self.temperature_poll_last = time.time()
 
         self.ui.camera_setting_status.setText(status_string)
+        logging.info('camera poll end')
 
     def camera_exposure_complete(self, result):
         logging.info(f'CameraControlUI:cam_exp_comp: result={result} self.state={self.state}')
@@ -184,11 +207,33 @@ class CameraControlUI(QtWidgets.QWidget):
         else:
             last_choice = ''
 
-        camera_choice = self.camera_manager.show_chooser(last_choice)
-        if len(camera_choice) > 0:
-            self.settings.camera_driver = camera_choice
-            self.settings.write()
-            self.ui.camera_driver_label.setText(camera_choice)
+        if self.camera_manager.has_chooser():
+            camera_choice = self.camera_manager.show_chooser(last_choice)
+            if len(camera_choice) > 0:
+                self.settings.camera_driver = camera_choice
+                self.settings.write()
+                self.ui.camera_driver_label.setText(camera_choice)
+        else:
+            backend = AppContainer.find('/dev/backend')
+
+            choices = backend.getDevicesByClass('ccd')
+
+            if len(choices) < 1:
+                QtWidgets.QMessageBox.critical(None, 'Error', 'No cameras available!',
+                                               QtWidgets.QMessageBox.Ok)
+                return
+
+            if last_choice in choices:
+                selection = choices.index(last_choice)
+            else:
+                selection = 0
+
+            camera_choice, ok = QtWidgets.QInputDialog.getItem(None, 'Choose Camera Driver',
+                                                               'Driver', choices, selection)
+            if ok:
+                self.settings.camera_driver = camera_choice
+                self.settings.write()
+                self.ui.camera_driver_label.setText(camera_choice)
 
     def set_roi(self):
         settings = self.camera_manager.get_settings()
@@ -256,10 +301,16 @@ class CameraControlUI(QtWidgets.QWidget):
 
             cooler_state = self.camera_manager.get_cooler_state()
             self.ui.camera_setting_cooleronoff.setChecked(cooler_state)
+            self.camera_manager.get_current_temperature()  # TEMP!!
             settemp = self.camera_manager.get_target_temperature()
-            self.ui.camera_setting_coolersetpt.setValue(int(settemp))
-
+            if settemp is not None:
+                self.ui.camera_setting_coolersetpt.setValue(int(settemp))
+            else:
+                logging.warning('camera_connect: settemp is None!')
             maxbin = self.camera_manager.get_max_binning()
+            # FIXME need better way to handle maxbin being unavailable!
+            if maxbin is None:
+                maxbin = 4
             self.ui.camera_setting_binning_spinbox.setMaximum(maxbin)
 
             self.camera_manager.release_lock()
@@ -304,7 +355,7 @@ class CameraControlUI(QtWidgets.QWidget):
 
         status = self.camera_manager.get_status()
         if CameraState(status.state) != CameraState.IDLE:
-            logging.error('CameraControlUI: camera_expose : camera not IDLE')
+            logging.error(f'CameraControlUI: camera_expose : camera not IDLE state = {status.state}')
             self.camera_manager.release_lock()
             return
 

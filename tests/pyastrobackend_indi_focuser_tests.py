@@ -57,7 +57,7 @@ if __name__ == '__main__':
         sys.exit(-1)
 
     # connect to focuser
-    focuser = INDIBackend.Focuser(backend.indiclient)
+    focuser = backend.newFocuser()
 
     logging.info('Connecting to Focsuer')
     #rc = focuser.connect('Focuser Simulator')

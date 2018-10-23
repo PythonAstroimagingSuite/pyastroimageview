@@ -75,7 +75,8 @@ class FocuserControlUI(QtWidgets.QWidget):
         if self.focuser_manager.is_connected():
             status_string += 'CONNECTED'
             t = self.focuser_manager.get_current_temperature()
-            status_string += f' {t: 4.1f} C'
+            if t is not None:
+                status_string += f' {t: 4.1f} C'
             if self.focuser_manager.is_moving():
                 status_string += ' MOVING'
             else:
@@ -87,9 +88,12 @@ class FocuserControlUI(QtWidgets.QWidget):
 
         if self.focuser_manager.is_connected():
             pos = self.focuser_manager.get_absolute_position()
-            self.ui.focuser_setting_position.setText(f'{pos:05d}')
+            self.ui.focuser_setting_position.setText(f'{int(pos):05d}')
 
             maxpos = self.focuser_manager.get_max_absolute_position()
+            # FIXME If focuser does not return a max pos need better way to handle!
+            if maxpos is None:
+                maxpos = 65000
             self.ui.focuser_setting_moveabs_spinbox.setMaximum(maxpos)
 
     def focuser_setup(self):
@@ -98,11 +102,33 @@ class FocuserControlUI(QtWidgets.QWidget):
         else:
             last_choice = ''
 
-        focuser_choice = self.focuser_manager.show_chooser(last_choice)
-        if len(focuser_choice) > 0:
-            self.settings.focuser_driver = focuser_choice
-            self.settings.write()
-            self.ui.focuser_driver_label.setText(focuser_choice)
+        if self.focuser_manager.has_chooser():
+            focuser_choice = self.focuser_manager.show_chooser(last_choice)
+            if len(focuser_choice) > 0:
+                self.settings.focuser_driver = focuser_choice
+                self.settings.write()
+                self.ui.focuser_driver_label.setText(focuser_choice)
+        else:
+            backend = AppContainer.find('/dev/backend')
+
+            choices = backend.getDevicesByClass('focuser')
+
+            if len(choices) < 1:
+                QtWidgets.QMessageBox.critical(None, 'Error', 'No focusers available!',
+                                               QtWidgets.QMessageBox.Ok)
+                return
+
+            if last_choice in choices:
+                selection = choices.index(last_choice)
+            else:
+                selection = 0
+
+            focuser_choice, ok = QtWidgets.QInputDialog.getItem(None, 'Choose Focuser Driver',
+                                                               'Driver', choices, selection)
+            if ok:
+                self.settings.focuser_driver = focuser_choice
+                self.settings.write()
+                self.ui.focuser_driver_label.setText(focuser_choice)
 
     def focuser_connect(self):
         if self.settings.focuser_driver:
@@ -115,6 +141,10 @@ class FocuserControlUI(QtWidgets.QWidget):
             self.set_widget_states()
 
             maxpos = self.focuser_manager.get_max_absolute_position()
+            # FIXME If focuser doesnt return a maximum position
+            #       need a better way to inform user!
+            if maxpos is None:
+                maxpos = 65000
             self.ui.focuser_setting_moveabs_spinbox.setMaximum(maxpos)
 
             curpos = self.focuser_manager.get_absolute_position()

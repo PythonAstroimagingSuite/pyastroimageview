@@ -57,7 +57,7 @@ if __name__ == '__main__':
         sys.exit(-1)
 
     # connect to focuser
-    filterwheel = INDIBackend.FilterWheel(backend.indiclient)
+    filterwheel = backend.newFilterWheel()
 
     logging.info('Connecting to FilterWheel')
     rc = filterwheel.connect('Filter Simulator')

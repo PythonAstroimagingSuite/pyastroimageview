@@ -140,6 +140,9 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
         if val:
             maxbin = self.device_manager.camera.get_max_binning()
+            # FIXME need better way to handle maxbin being unavailable!
+            if maxbin is None:
+                maxbin = 4
             self.ui.sequence_binning.setMaximum(maxbin)
 
     def filterwheel_lock_handler(self, val):
@@ -561,7 +564,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             set_temp = self.device_manager.camera.get_target_temperature()
             cur_temp = self.device_manager.camera.get_current_temperature()
             # FIXME Should delta temp be hard coded
-            if abs(set_temp-cur_temp) > 2:
+            # FIXME INDI might not have target set unless we've explicitely done it
+            if set_temp is None or abs(set_temp-cur_temp) > 2:
                 logging.info(f'start_sequence: target T = {set_temp} current T = {cur_temp}')
                 choice = QtWidgets.QMessageBox.question(None, 'Cooler Temperature',
                                                         f'The current camera temperature is {cur_temp} but the ' + \

@@ -14,8 +14,28 @@ class BaseDeviceBackend(metaclass=ABCMeta):
     def isConnected(self):
         pass
 
+    @abstractmethod
+    def newCamera(self):
+        pass
+
+    @abstractmethod
+    def newFocuser(self):
+        pass
+
+    @abstractmethod
+    def newFilterWheel(self):
+        pass
+
+    @abstractmethod
+    def newMount(self):
+        pass
+
 
 class BaseCamera(metaclass=ABCMeta):
+
+    @abstractmethod
+    def has_chooser(self):
+        pass
 
     @abstractmethod
     def show_chooser(self, last_choice):

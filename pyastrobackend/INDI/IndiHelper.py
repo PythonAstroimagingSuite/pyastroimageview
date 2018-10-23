@@ -1,6 +1,7 @@
 # stuff with no home (yet)
 
 import time
+import ctypes
 import logging
 
 import PyIndi
@@ -13,8 +14,9 @@ DEFAULT_TIMEOUT=0.5
 def getSwitch(device, name, timeout=DEFAULT_TIMEOUT):
     sw = device.getSwitch(name)
     cnt = 0
-    while sw is None and cnt < (timeout/0.5):
-        time.sleep(0.5)
+    while sw is None and cnt < (timeout/0.1):
+        time.sleep(0.1)
+        print('S')
         sw = device.getSwitch(name)
         cnt += 1
 
@@ -58,10 +60,12 @@ def setfindSwitchState(indiclient, device, propname, swname, onoff):
 # routines for number properties
 
 def getNumber(device, name, timeout=DEFAULT_TIMEOUT):
+    print('getNumber:', name)
     num = device.getNumber(name)
     cnt = 0
-    while num is None and cnt < (timeout/0.5):
-        time.sleep(0.5)
+    while num is None and cnt < (timeout/0.1):
+        time.sleep(0.1)
+        print('N')
         num = device.getNumber(name)
         cnt += 1
 
@@ -112,8 +116,9 @@ def setfindNumberValue(indiclient, device, propname, numname, value):
 def getText(device, name, timeout=DEFAULT_TIMEOUT):
     text = device.getText(name)
     cnt = 0
-    while text is None and cnt < (timeout/0.5):
-        time.sleep(0.5)
+    while text is None and cnt < (timeout/0.1):
+        time.sleep(0.1)
+        print('T')
         text = device.getText(name)
         cnt += 1
 
@@ -155,8 +160,9 @@ def setfindTextText(indiclient, device, propname, txtname, value):
 def getLight(device, name, timeout=DEFAULT_TIMEOUT):
     light = device.getLight(name)
     cnt = 0
-    while light is None and cnt < (timeout/0.5):
-        time.sleep(0.5)
+    while light is None and cnt < (timeout/0.1):
+        time.sleep(0.1)
+        print('L')
         light = device.getLight(name)
         cnt += 1
 
@@ -199,8 +205,8 @@ def connectDevice(indiclient, devicename, timeout=2):
     logging.debug(f'Connecting to device: {devicename}')
     cnt = 0
     device = None
-    while device is None and cnt < (timeout/0.5):
-        time.sleep(0.5)
+    while device is None and cnt < (timeout/0.1):
+        time.sleep(0.1)
         device = indiclient.getDevice(devicename)
         cnt += 1
     if device is None:
@@ -301,3 +307,55 @@ def dump_ITextVectorProperty(p):
         s += f'   {i} {t.name} "{t.text}"\n'
 
     return s
+
+#
+# from https://github.com/GuLinux/indi-lite-tools/blob/e1f6fa52b59474d5d27eba571c87ae67d2cd1724/pyindi_sequence/device.py
+#
+def findDeviceInterfaces(indidevice):
+    interface = indidevice.getDriverInterface()
+    interface.acquire()
+    device_interfaces = int(ctypes.cast(interface.__int__(), ctypes.POINTER(ctypes.c_uint16)).contents.value)
+    interface.disown()
+    interfaces = {
+        PyIndi.BaseDevice.GENERAL_INTERFACE: 'general',
+        PyIndi.BaseDevice.TELESCOPE_INTERFACE: 'telescope',
+        PyIndi.BaseDevice.CCD_INTERFACE: 'ccd',
+        PyIndi.BaseDevice.GUIDER_INTERFACE: 'guider',
+        PyIndi.BaseDevice.FOCUSER_INTERFACE: 'focuser',
+        PyIndi.BaseDevice.FILTER_INTERFACE: 'filter',
+        PyIndi.BaseDevice.DOME_INTERFACE: 'dome',
+        PyIndi.BaseDevice.GPS_INTERFACE: 'gps',
+        PyIndi.BaseDevice.WEATHER_INTERFACE: 'weather',
+        PyIndi.BaseDevice.AO_INTERFACE: 'ao',
+        PyIndi.BaseDevice.DUSTCAP_INTERFACE: 'dustcap',
+        PyIndi.BaseDevice.LIGHTBOX_INTERFACE: 'lightbox',
+        PyIndi.BaseDevice.DETECTOR_INTERFACE: 'detector',
+        PyIndi.BaseDevice.ROTATOR_INTERFACE: 'rotator',
+        PyIndi.BaseDevice.AUX_INTERFACE: 'aux'
+    }
+    interfaces = [interfaces[x] for x in interfaces if x & device_interfaces]
+    return interfaces
+
+def findDeviceName(indidevice):
+    return indidevice.getDriverName()
+
+def findDevices(indiclient, timeout=2):
+    devs = indiclient.getDevices()
+    cnt = 0
+    while (devs is None or len(devs) < 1) and cnt < (timeout/0.1):
+        time.sleep(0.1)
+        devs = indiclient.getDevices()
+        cnt += 1
+
+    return devs
+
+def findDevicesByClass(indiclient, device_class):
+    """ class can be 'ccd', 'filter', 'focuser', 'guider', 'telescope' """
+    devs = indiclient.getDevices()
+    matches = []
+    for d in devs:
+        interfaces = findDeviceInterfaces(d)
+        if device_class in interfaces:
+            matches.append(findDeviceName(d))
+    return matches
+

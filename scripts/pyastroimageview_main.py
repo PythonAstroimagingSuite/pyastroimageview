@@ -104,7 +104,15 @@ class MainWindow(QtGui.QMainWindow):
 
         # start HFR Server
         self.hfr_server = MeasureHFRServer()
-        self.hfr_server.start()
+
+        logging.warning('------------------------')
+        logging.warning('------------------------')
+        logging.warning('REENABLE STARTING HFR SERVER!!!!')
+        logging.warning('------------------------')
+        logging.warning('------------------------')
+
+
+#        self.hfr_server.start()
         self.hfr_cur_widget = None # when doing a calc set to where result should go
 
         self.resize(960, 740)
@@ -126,6 +134,11 @@ class MainWindow(QtGui.QMainWindow):
         #  I don't have any ideas at the moment how to make this cleaner
 
         self.device_manager = DeviceManager()
+        logging.info('Connecting to backend')
+        rc = self.device_manager.backend.connect()
+        if not rc:
+            logging.error('Failed to connect to backend!')
+            sys.exit(-1)
 
 #        self.camera_control_ui = CameraControlUI(self.device_manager.camera, self.settings)
 #        self.camera_control_ui.new_camera_image.connect(self.new_camera_image)

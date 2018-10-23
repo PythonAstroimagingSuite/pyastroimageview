@@ -60,23 +60,25 @@ class MountControlUI(QtWidgets.QWidget):
         self.ui.mount_setting_status.setText(status_string)
 
         if self.mount_manager.is_connected():
-            (alt, az) = self.mount_manager.get_position_altaz()
-            altaz = AltAz(alt=alt*u.degree, az=az*u.degree)
-            altstr = altaz.alt.to_string(alwayssign=True, sep=":", precision=1, pad=True)
-            azstr = altaz.az.to_string(alwayssign=True, sep=":", precision=1, pad=True)
-            self.ui.mount_setting_position_alt.setText(altstr)
-            self.ui.mount_setting_position_az.setText(azstr)
-#            self.ui.mount_setting_position_alt.setText(f'{alt:06.2f}')
-#            self.ui.mount_setting_position_az.setText(f'{az:06.2f}')
-
             (ra, dec) = self.mount_manager.get_position_radec()
             radec = SkyCoord(ra=ra*u.hour, dec=dec*u.degree, frame='fk5')
             rastr = radec.ra.to_string(u.hour, sep=":", precision=1, pad=True)
             decstr = radec.dec.to_string(alwayssign=True, sep=":", precision=1, pad=True)
             self.ui.mount_setting_position_ra.setText(rastr)
             self.ui.mount_setting_position_dec.setText(decstr)
-#            self.ui.mount_setting_position_ra.setText(f'{ra:05.2f}')
-#            self.ui.mount_setting_position_dec.setText(f'{dec:06.2f}')
+
+            (alt, az) = self.mount_manager.get_position_altaz()
+            if alt is not None and az is not None:
+                altaz = AltAz(alt=alt*u.degree, az=az*u.degree)
+                altstr = altaz.alt.to_string(alwayssign=True, sep=":", precision=1, pad=True)
+                azstr = altaz.az.to_string(alwayssign=True, sep=":", precision=1, pad=True)
+                self.ui.mount_setting_position_alt.setText(altstr)
+                self.ui.mount_setting_position_az.setText(azstr)
+            else:
+                # FIXME Add code to compute alt/az when not given by mount
+                self.ui.mount_setting_position_alt.setText('N/A')
+                self.ui.mount_setting_position_az.setText('N/A')
+
 
     def mount_setup(self):
         if self.settings.mount_driver:
@@ -84,11 +86,33 @@ class MountControlUI(QtWidgets.QWidget):
         else:
             last_choice = ''
 
-        mount_choice = self.mount_manager.show_chooser(last_choice)
-        if len(mount_choice) > 0:
-            self.settings.mount_driver = mount_choice
-            self.settings.write()
-            self.ui.mount_driver_label.setText(mount_choice)
+        if self.mount_manager.has_chooser():
+            mount_choice = self.mount_manager.show_chooser(last_choice)
+            if len(mount_choice) > 0:
+                self.settings.mount_driver = mount_choice
+                self.settings.write()
+                self.ui.mount_driver_label.setText(mount_choice)
+        else:
+            backend = AppContainer.find('/dev/backend')
+
+            choices = backend.getDevicesByClass('telescope')
+
+            if len(choices) < 1:
+                QtWidgets.QMessageBox.critical(None, 'Error', 'No mounts available!',
+                                               QtWidgets.QMessageBox.Ok)
+                return
+
+            if last_choice in choices:
+                selection = choices.index(last_choice)
+            else:
+                selection = 0
+
+            mount_choice, ok = QtWidgets.QInputDialog.getItem(None, 'Choose Mount Driver',
+                                                               'Driver', choices, selection)
+            if ok:
+                self.settings.mount_driver = mount_choice
+                self.settings.write()
+                self.ui.mount_driver_label.setText(mount_choice)
 
     def mount_connect(self):
         if self.settings.mount_driver:

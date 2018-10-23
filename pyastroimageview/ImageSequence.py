@@ -61,6 +61,8 @@ class ImageSequence:
         if self.device_manager.camera.is_connected():
             tempc = self.device_manager.camera.get_current_temperature()
             temps = self.device_manager.camera.get_target_temperature()
+            if temps is None:
+                temps = -15
             binx, _ = self.device_manager.camera.get_binning()
         else:
             tempc = -15

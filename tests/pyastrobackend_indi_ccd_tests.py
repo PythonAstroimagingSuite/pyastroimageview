@@ -57,7 +57,8 @@ if __name__ == '__main__':
         sys.exit(-1)
 
     # connect to camera
-    camera = INDIBackend.Camera(backend.indiclient)
+    #camera = INDIBackend.Camera(backend.indiclient)
+    camera = backend.newCamera()
 
     logging.info('Connecting to CCD')
     rc = camera.connect('CCD Simulator')

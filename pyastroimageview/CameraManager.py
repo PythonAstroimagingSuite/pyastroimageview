@@ -11,7 +11,16 @@ from PyQt5 import QtCore
 # all source files for hw managers reference contrete backend class this way
 #from pyastrobackend import ASCOMBackend as Backend
 
-from pyastrobackend.ASCOM.Camera import Camera
+from pyastroimageview.BackendConfig import get_backend_for_os
+
+BACKEND = get_backend_for_os()
+
+if BACKEND == 'ASCOM':
+    from pyastrobackend.ASCOM.Camera import Camera
+elif BACKEND == 'INDI':
+    from pyastrobackend.INDIBackend import Camera
+else:
+    raise Exception(f'Unknown backend {BACKEND} - choose ASCOM or INDI in BackendConfig.py')
 
 from pyastroimageview.FITSImage import FITSImage
 
@@ -99,8 +108,8 @@ class CameraManager(Camera):
 
 
 #    def __init__(self, backend):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, backend):
+        super().__init__(backend)
 
         # device backend
         #self.backendClient = DeviceBackend.DeviceBackendASCOM(mainThread=True)
@@ -151,9 +160,28 @@ class CameraManager(Camera):
                 # put together a FITS document with image data
                 logging.info('get_image_data')
                 image_data = super().get_image_data()
-                logging.info('FITSImage()')
-                fits_image = FITSImage(image_data)
-                logging.info('FITSimage data xfer done')
+
+                #
+                # FIXME INDIBackend returns a FITS image
+                #       ASCOMBackend returns a numpy array
+                #
+                try:
+                    pri_header = image_data[0].header
+                    fits_image = FITSImage(image_data[0].data)
+                    # must be FITS so munge into a FITSImage() object
+                    logging.info('get_image_data() returned a FITS object')
+                    for key, val in pri_header.items():
+                        fits_image.set_header_keyvalue(key, val)
+
+                except:
+                    # must be numpy array
+                    logging.info('get_image_data() returned numpy array')
+                    logging.info('FITSImage()')
+                    fits_image = FITSImage(image_data)
+                    logging.info('FITSimage data xfer done')
+
+                print(fits_image.hdulist[0].header)
+
                 fits_image.set_exposure(self.current_exposure_length)
                 fits_image.set_dateobs(self.exposure_start_time)
                 xsize, ysize = super().get_pixelsize()
@@ -162,7 +190,10 @@ class CameraManager(Camera):
                 fits_image.set_camera_binning(camera_binning, camera_binning)
                 camera_tempnow = super().get_current_temperature()
                 camera_tempset = super().get_target_temperature()
-                fits_image.set_temperature(camera_tempset, camera_tempnow)
+                if camera_tempnow is not None:
+                    fits_image.set_temperature_current(camera_tempnow)
+                if camera_tempset is not None:
+                    fits_image.set_temperature_target(camera_tempset)
 
                 # FIXME not sure all backends will have this
                 egain = super().get_egain()
@@ -178,6 +209,9 @@ class CameraManager(Camera):
                 # sequence controller it might start up a new exposure as
                 # soon as it gets this signal so we have to be done handling
                 # the new image on this side first.
+
+                print(fits_image.hdulist[0].header)
+
 
                 logging.warning('sequence image complete forcing complete to TRUE!!!')
                 complete = True

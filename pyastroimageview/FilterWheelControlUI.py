@@ -1,3 +1,4 @@
+import time
 import logging
 
 from PyQt5 import QtCore, QtWidgets
@@ -78,15 +79,41 @@ class FilterWheelControlUI(QtWidgets.QWidget):
         else:
             last_choice = ''
 
-        filterwheel_choice = self.filterwheel_manager.show_chooser(last_choice)
-        if len(filterwheel_choice) > 0:
-            self.settings.filterwheel_driver = filterwheel_choice
-            self.settings.write()
-            self.ui.filterwheel_driver_label.setText(filterwheel_choice)
+        if self.filterwheel_manager.has_chooser():
+            filterwheel_choice = self.filterwheel_manager.show_chooser(last_choice)
+            if len(filterwheel_choice) > 0:
+                self.settings.filterwheel_driver = filterwheel_choice
+                self.settings.write()
+                self.ui.filterwheel_driver_label.setText(filterwheel_choice)
+        else:
+            backend = AppContainer.find('/dev/backend')
+
+            choices = backend.getDevicesByClass('filter')
+
+            if len(choices) < 1:
+                QtWidgets.QMessageBox.critical(None, 'Error', 'No filterwheels available!',
+                                               QtWidgets.QMessageBox.Ok)
+                return
+
+            if last_choice in choices:
+                selection = choices.index(last_choice)
+            else:
+                selection = 0
+
+            filterwheel_choice, ok = QtWidgets.QInputDialog.getItem(None, 'Choose FilterWheel Driver',
+                                                               'Driver', choices, selection)
+            if ok:
+                self.settings.filterwheel_driver = filterwheel_choice
+                self.settings.write()
+                self.ui.filterwheel_driver_label.setText(filterwheel_choice)
 
     def filterwheel_connect(self):
         if self.settings.filterwheel_driver:
             rc = self.filterwheel_manager.connect(self.settings.filterwheel_driver)
+
+            # FIXME add some time so INDI stuff settles sigh
+            time.sleep(5)
+
             if not rc:
                 QtWidgets.QMessageBox.critical(None, 'Error', 'Unable to connect to filterwheel!',
                                                QtWidgets.QMessageBox.Ok)
@@ -135,5 +162,8 @@ class FilterWheelControlUI(QtWidgets.QWidget):
             return
 
         newpos = self.ui.filterwheel_setting_filter_combobox.currentIndex()
+
+        print('moving to filter pos ', newpos)
+
         self.filterwheel_manager.set_position(newpos)
         self.filterwheel_manager.release_lock()

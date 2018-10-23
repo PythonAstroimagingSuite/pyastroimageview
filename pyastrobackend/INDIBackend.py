@@ -4,6 +4,8 @@ import warnings
 from io import BytesIO
 from queue import Queue
 
+import ctypes
+
 import numpy as np
 import astropy.io.fits as pyfits
 
@@ -17,21 +19,29 @@ warnings.filterwarnings('always', category=DeprecationWarning)
 
 
 class DeviceBackend(BaseDeviceBackend):
-    # needed for ccd callback
-    blobEvent = None
+
 
     # INDI client connection
 #    indiclient=None
 
     class IndiClient(PyIndi.BaseClient):
+        # needed for ccd callback
+        #blobEvent = None
+
         def __init__(self):
             super().__init__()
             self.eventQueue = Queue()
+            self.blobEvent = None
+
+        # FIXME probably need to do this through a queue or callback!
+        def getBlobEvent(self):
+            return self.blobEvent
 
         def getEventQueue(self):
             return self.eventQueue
 
         def newDevice(self, d):
+            print('Device: ',d)
             self.eventQueue.put(d)
 
         def newProperty(self, p):
@@ -43,15 +53,16 @@ class DeviceBackend(BaseDeviceBackend):
 
         def newBLOB(self, bp):
 # FIXME Global is BAD
-            global blobEvent
+            #global blobEvent
             print('blob')
             #self.eventQueue.put(bp)
-            blobEvent = bp
+            self.blobEvent = bp
 
         def newSwitch(self, svp):
             self.eventQueue.put(svp)
 
         def newNumber(self, nvp):
+#            print('num:', nvp.name)
             self.eventQueue.put(nvp)
 
         def newText(self, tvp):
@@ -100,6 +111,63 @@ class DeviceBackend(BaseDeviceBackend):
     def isConnected(self):
         return self.connected
 
+    def newCamera(self):
+        return Camera(self)
+
+    def newFocuser(self):
+        return Focuser(self)
+
+    def newFilterWheel(self):
+        return FilterWheel(self)
+
+    def newMount(self):
+        return Mount(self)
+
+#
+# from https://github.com/GuLinux/indi-lite-tools/blob/e1f6fa52b59474d5d27eba571c87ae67d2cd1724/pyindi_sequence/device.py
+#
+    @staticmethod
+    def findDeviceInterfaces(indidevice):
+        interface = indidevice.getDriverInterface()
+        interface.acquire()
+        device_interfaces = int(ctypes.cast(interface.__int__(), ctypes.POINTER(ctypes.c_uint16)).contents.value)
+        interface.disown()
+        interfaces = {
+            PyIndi.BaseDevice.GENERAL_INTERFACE: 'general',
+            PyIndi.BaseDevice.TELESCOPE_INTERFACE: 'telescope',
+            PyIndi.BaseDevice.CCD_INTERFACE: 'ccd',
+            PyIndi.BaseDevice.GUIDER_INTERFACE: 'guider',
+            PyIndi.BaseDevice.FOCUSER_INTERFACE: 'focuser',
+            PyIndi.BaseDevice.FILTER_INTERFACE: 'filter',
+            PyIndi.BaseDevice.DOME_INTERFACE: 'dome',
+            PyIndi.BaseDevice.GPS_INTERFACE: 'gps',
+            PyIndi.BaseDevice.WEATHER_INTERFACE: 'weather',
+            PyIndi.BaseDevice.AO_INTERFACE: 'ao',
+            PyIndi.BaseDevice.DUSTCAP_INTERFACE: 'dustcap',
+            PyIndi.BaseDevice.LIGHTBOX_INTERFACE: 'lightbox',
+            PyIndi.BaseDevice.DETECTOR_INTERFACE: 'detector',
+            PyIndi.BaseDevice.ROTATOR_INTERFACE: 'rotator',
+            PyIndi.BaseDevice.AUX_INTERFACE: 'aux'
+        }
+        interfaces = [interfaces[x] for x in interfaces if x & device_interfaces]
+        return interfaces
+
+    def getDevicesByClass(self, device_class):
+        """ class is one of:
+               'ccd'
+               'focuser'
+               'filter'
+               'telscope'
+               'guider'       """
+
+        devs = self.indiclient.getDevices()
+        matches = []
+        for d in devs:
+            interfaces = self.findDeviceInterfaces(d)
+            if device_class in interfaces:
+                matches.append(d.getDriverName())
+        return matches
+
 class Camera(BaseCamera):
 
     class CameraSettings:
@@ -110,34 +178,28 @@ class Camera(BaseCamera):
         def _init__(self):
             pass
 
-    def __init__(self, indiclient):
+    def __init__(self, backend):
         self.cam = None
         self.name = None
-        self.indiclient = indiclient
+        self.backend = backend
+        self.indiclient = None
         self.camera_has_progress = None
+
+        # some cameras do not have this and we cache this
+        # information after first attempt since the
+        # timeout waiting on this hurts monitoring loops
+        # in client software
+        self.camera_has_cooler_power = None
+
+        # INDI doesnt seem to have a way to access target temperature
+        # so we keep up with it whenever the client changing it
+        self.temperature_target = None
         self.timeout = 5
 
-        # camera attributes, modelled off ASCOM
-        # these values are the DESIRED settings
-        # used for when the next image is taken
-        # these ARE NOT to be used to query
-        # the CURRENT settings!
-#        self.camera_settings = self.CameraSettings()
-#        self.camera_settings.binning = None
-#        self.camera_settings.exposure = None
-#        self.camera_settings.roi = None
-#        self.camera_settings.temperature_target = None
-
-
+    def has_chooser(self):
+        return False
 
     def show_chooser(self, last_choice):
-#        pythoncom.CoInitialize()
-#        chooser = win32com.client.Dispatch("ASCOM.Utilities.Chooser")
-#        chooser.DeviceType="Camera"
-#        camera = chooser.Choose(last_choice)
-#        logging.info(f'choice = {camera}')
-#        return camera
-
         logging.warning('Camera.show_chooser() is not implemented for INDI!')
         return None
 
@@ -146,13 +208,18 @@ class Camera(BaseCamera):
         if self.cam is not None:
             logging.warning('Camera.connect() self.cam is not None!')
 
-        cam = indihelper.connectDevice(self.indiclient, name)
+        cam = indihelper.connectDevice(self.backend.indiclient, name)
 
         logging.info(f'connectDevice returned {cam}')
 
         if cam is not None:
             self.name = name
             self.cam = cam
+
+            # reset some flags
+            self.camera_has_progress = None
+            self.camera_has_cooler_power = None
+            self.temperature_target = None
             return True
 
         return False
@@ -193,10 +260,24 @@ class Camera(BaseCamera):
 
 
     def get_state(self):
-        logging.warning('Camera.get_state() is not implemented for INDI!')
-        return None
-        if self.cam:
-            return self.cam.CameraState
+        # FIXME using hard coded values based on ASCOM camera state
+        # and definied in pyastroimageview.CameraManager.CameraState!
+        state = indihelper.getNumberState(self.cam, 'CCD_EXPOSURE')
+        if state is None:
+            # UNKNOWN
+            return -1
+        elif state == PyIndi.IPS_BUSY:
+            # just use EXPOSING
+            return 2
+        elif state == PyIndi.IPS_ALERT:
+            # ERROR
+            return 5
+        elif state == PyIndi.IPS_IDLE or state == PyIndi.IPS_OK:
+            # IDLE
+            return 0
+
+        # otherwise UNKNOWN
+        return -1
 
     def start_exposure(self, expos):
         global blobEvent
@@ -213,11 +294,11 @@ class Camera(BaseCamera):
             # 'CCD1' blob from this device
             # FIXME not good to reference global 'config' here - we already pass
             #       a device object should combine?
-            self.indiclient.setBLOBMode(PyIndi.B_ALSO, self.name, 'CCD1')
+            self.backend.indiclient.setBLOBMode(PyIndi.B_ALSO, self.name, 'CCD1')
 
             ccd_ccd1 = self.cam.getBLOB('CCD1')
             while not ccd_ccd1:
-                time.sleep(0.5)
+                time.sleep(0.25)
                 ccd_ccd1 = self.device.getBLOB('CCD1')
 
             blobEvent = None
@@ -226,7 +307,7 @@ class Camera(BaseCamera):
             if ccd_expnum is None:
                 return False
             ccd_expnum.value = expos
-            self.indiclient.sendNewNumber(ccd_exposure)
+            self.backend.indiclient.sendNewNumber(ccd_exposure)
 
             return True
         else:
@@ -237,8 +318,8 @@ class Camera(BaseCamera):
         return None
 
     def check_exposure(self):
-        global blobEvent
-        return blobEvent != None
+        # FIXME accessing blob event seems like a poor choice
+        return self.backend.indiclient.getBlobEvent() != None
 
     def supports_progress(self):
         logging.warning('Camera.supports_progress() is not implemented for INDI!')
@@ -273,7 +354,7 @@ class Camera(BaseCamera):
         image_data : numpy array
             Data is in row-major format!
         """
-        global blobEvent
+        blobEvent = self.backend.indiclient.getBlobEvent()
         if blobEvent is None:
             logging.error('Camera.get_image_data() blobEvent is None!')
             return None
@@ -313,7 +394,8 @@ class Camera(BaseCamera):
         obj.CCD_MAX_X = maxx.value
         obj.CCD_MAX_Y = maxy.value
         obj.CCD_PIXEL_SIZE = pix_size.value
-        # ignoring elements 3 & 4 which have X/Y pixel size
+        obj.CCD_PIXEL_SIZE_X = pix_size_x.value
+        obj.CCD_PIXEL_SIZE_Y = pix_size_y.value
         obj.CCD_BITSPERPIXEL = bpp.value
 
         return obj
@@ -323,9 +405,7 @@ class Camera(BaseCamera):
         if not ccd_info:
             return None
 
-        return ccd_info.CCD_PIXEL_SIZE
-#        logging.warning('Camera.get_pixelsize() is not implemented for INDI!')
-#        return None
+        return ccd_info.CCD_PIXEL_SIZE_X, ccd_info.CCD_PIXEL_SIZE_Y
 
     def get_egain(self):
 # FIXME need to see how gain is represented in drivers like ASI
@@ -337,25 +417,24 @@ class Camera(BaseCamera):
                                              'CCD_TEMPERATURE_VALUE')
 
     def get_target_temperature(self):
-        logging.warning('Camera.get_target_temperature() is not implemented for INDI!')
-        return None
-        return self.cam.SetCCDTemperature
+        return self.temperature_target
 
     def set_target_temperature(self, temp_c):
         # FIXME Handling ccd temperature needs to be more robust
-        return indihelper.setfindNumberValue(self.indiclient, self.cam,
+        self.temperature_target = temp_c
+        return indihelper.setfindNumberValue(self.backend.indiclient, self.cam,
                                              'CCD_TEMPERATURE',
                                              'CCD_TEMPERATURE_VALUE',
                                              temp_c)
 
     def set_cooler_state(self, onoff):
-        rc = indihelper.setfindSwitchState(self.indiclient, self.cam,
+        rc = indihelper.setfindSwitchState(self.backend.indiclient, self.cam,
                                           'CCD_COOLER', 'COOLER_ON',
                                            onoff)
         if not rc:
             return rc
 
-        rc = indihelper.setfindSwitchState(self.indiclient, self.cam,
+        rc = indihelper.setfindSwitchState(self.backend.indiclient, self.cam,
                                           'CCD_COOLER', 'COOLER_OFF',
                                            not onoff)
 
@@ -373,11 +452,15 @@ class Camera(BaseCamera):
         return (binx.value, biny.value)
 
     def get_cooler_power(self):
+        if self.camera_has_cooler_power is False:
+            return None
         cool_power = indihelper.getNumber(self.cam, 'CCD_COOLER_POWER')
         if cool_power is None:
+            self.camera_has_cooler_power = False
             return None
         num = indihelper.findNumber(cool_power, 'CCD_COOLER_VALUE')
         if num is None:
+            self.camera_has_cooler_power = False
             return None
         return num.value
 
@@ -427,14 +510,25 @@ class Camera(BaseCamera):
         ccd_y.value = miny
         ccd_w.value = width
         ccd_h.value = height
-        self.indiclient.sendNewNumber(ccd_frame)
+        self.backend.indiclient.sendNewNumber(ccd_frame)
         return True
 
 class Focuser(BaseFocuser):
-    def __init__(self, indiclient):
+    def __init__(self, backend):
         self.focuser = None
-        self.indiclient = indiclient
+        self.backend = backend
+        self.indiclient = None
+
+        # some focusers do not have a numbers so dont
+        # keep trying it as the timeout waiting for
+        # response hurts apps that poll
+        self.focuser_has_max_travel = None
+        self.focuser_has_temperature = None
+
         self.timeout = 5
+
+    def has_chooser(self):
+        return False
 
     def show_chooser(self, last_choice):
         logging.warning('Focuser.show_chooser() is not implemented for INDI!')
@@ -445,13 +539,17 @@ class Focuser(BaseFocuser):
         if self.focuser is not None:
             logging.warning('Focuser.connect() self.focuser is not None!')
 
-        focuser = indihelper.connectDevice(self.indiclient, name)
+        focuser = indihelper.connectDevice(self.backend.indiclient, name)
 
         logging.info(f'connectDevice returned {focuser}')
 
         if focuser is not None:
             self.name = name
             self.focuser = focuser
+
+            # reset flag(s)
+            self.focuser_has_max_travel = None
+            self.focuser_has_temperature = None
             return True
 
         return False
@@ -470,19 +568,38 @@ class Focuser(BaseFocuser):
         return indihelper.getfindNumberValue(self.focuser, 'ABS_FOCUS_POSITION', 'FOCUS_ABSOLUTE_POSITION')
 
     def move_absolute_position(self, abspos):
-        return indihelper.setfindNumberValue(self.indiclient, self.focuser,
+        return indihelper.setfindNumberValue(self.backend.indiclient, self.focuser,
                                              'ABS_FOCUS_POSITION',
                                              'FOCUS_ABSOLUTE_POSITION',
                                              abspos)
 
     def get_max_absolute_position(self):
-        return indihelper.getfindNumberValue(self.focuser, 'FOCUS_MAXTRAVEL', 'MAXTRAVEL')
+        # Moonlite driver defines max travel
+        if self.focuser_has_max_travel is not False:
+            maxpos = indihelper.getfindNumberValue(self.focuser, 'FOCUS_MAXTRAVEL', 'MAXTRAVEL')
+            if maxpos is not None:
+                return maxpos
+            else:
+                self.focuser_has_max_travel = False
+
+        # try using max value for abs pos slider
+        p = indihelper.getfindNumber(self.focuser, 'ABS_FOCUS_POSITION', 'FOCUS_ABSOLUTE_POSITION')
+        if p is not None:
+            return p.max
+        return None
 
     def get_current_temperature(self):
-        return indihelper.getfindNumberValue(self.focuser, 'FOCUS_TEMPERATURE', 'TEMPERATURE')
+        if self.focuser_has_temperature is not False:
+            curtemp = indihelper.getfindNumberValue(self.focuser, 'FOCUS_TEMPERATURE', 'TEMPERATURE')
+            if curtemp is not None:
+                return curtemp
+            else:
+                self.focuser_has_temperature = False
+
+        return None
 
     def stop(self):
-        return indihelper.setfindSwitchState(self.indiclient, self.focuser,
+        return indihelper.setfindSwitchState(self.backend.indiclient, self.focuser,
                                              'FOCUS_ABORT_MOTION', 'ABORT',
                                              True)
 
@@ -493,10 +610,14 @@ class Focuser(BaseFocuser):
         return state == PyIndi.IPS_BUSY
 
 class FilterWheel(BaseFilterWheel):
-    def __init__(self, indiclient):
+    def __init__(self, backend):
         self.filterwheel = None
-        self.indiclient = indiclient
+        self.backend = backend
+        self.indiclient = None
         self.timeout = 5
+
+    def has_chooser(self):
+        return False
 
     def show_chooser(self, last_choice):
         logging.warning('FilterWheel.show_chooser() is not implemented for INDI!')
@@ -507,7 +628,7 @@ class FilterWheel(BaseFilterWheel):
         if self.filterwheel is not None:
             logging.warning('FilterWheel.connect() self.filterwheel is not None!')
 
-        fw = indihelper.connectDevice(self.indiclient, name)
+        fw = indihelper.connectDevice(self.backend.indiclient, name)
 
         logging.info(f'connectDevice returned {fw}')
 
@@ -529,15 +650,19 @@ class FilterWheel(BaseFilterWheel):
             return False
 
     def get_position(self):
-        return indihelper.getfindNumberValue(self.filterwheel,
-                                             'FILTER_SLOT', 'FILTER_SLOT_VALUE')
+        """ Position starts at 0! """
+        pos = indihelper.getfindNumberValue(self.filterwheel,
+                                            'FILTER_SLOT', 'FILTER_SLOT_VALUE')
+        if pos is not None:
+            return int(pos)-1
+        return None
 
     def get_position_name(self):
         #FIXME this should check return from get names, etc
         pos = self.get_position()
         if pos is None:
             return None
-        return self.get_names()[int(pos)-1]
+        return self.get_names()[int(pos)]
 
     def set_position(self, pos):
         """Sends request to driver to move filter wheel position
@@ -545,10 +670,15 @@ class FilterWheel(BaseFilterWheel):
         This DOES NOT wait for filter to move into position!
 
         Use is_moving() method to check if its done.
+
+        Positions start at 0!
         """
         if pos < self.get_num_positions():
-            self.filterwheel.Position = pos
-            return True
+            return indihelper.setfindNumberValue(self.backend.indiclient,
+                                                     self.filterwheel,
+                                                     'FILTER_SLOT',
+                                                     'FILTER_SLOT_VALUE',
+                                                     pos+1)
         else:
             return False
 
@@ -559,6 +689,9 @@ class FilterWheel(BaseFilterWheel):
 
         Use is_moving() method to check if its done.
         """
+        logging.warning('FilterWheel.set_position_name() is not implemented for INDI!')
+        return None
+
         names = self.get_names()
         try:
             newpos = names.index(name)
@@ -601,10 +734,15 @@ class FilterWheel(BaseFilterWheel):
         return len(self.get_names())
 
 class Mount(BaseMount):
-    def __init__(self, indiclient):
+    def __init__(self, backend):
         self.mount = None
-        self.indiclient = indiclient
+        self.backend = backend
+        self.indiclient = None
+        self.has_altaz_coord = None
         self.timeout = 5
+
+    def has_chooser(self):
+        return False
 
     def show_chooser(self, last_choice):
         logging.warning('Mount.show_chooser() is not implemented for INDI!')
@@ -615,7 +753,7 @@ class Mount(BaseMount):
         if self.mount is not None:
             logging.warning('Mount.connect() self.mount is not None!')
 
-        mount = indihelper.connectDevice(self.indiclient, name)
+        mount = indihelper.connectDevice(self.backend.indiclient, name)
 
         logging.info(f'connectDevice returned {mount}')
 
@@ -649,8 +787,14 @@ class Mount(BaseMount):
         #
         # NOTE seems like some (most?) INDI GEM drivers don't return alt/az
         #
-        az = indihelper.getfindNumberValue(self.mount, 'HORIZONTAL_COORD','AZ')
-        alt = indihelper.getfindNumberValue(self.mount, 'HORIZONTAL_COORD','ALT')
+        if self.has_altaz_coord is not False:
+            az = indihelper.getfindNumberValue(self.mount, 'HORIZONTAL_COORD','AZ')
+            alt = indihelper.getfindNumberValue(self.mount, 'HORIZONTAL_COORD','ALT')
+            if az is None or alt is None:
+                self.has_altaz_coord = False
+        else:
+            az = None
+            alt = None
         return (alt, az)
 
     def get_position_radec(self):
@@ -668,7 +812,7 @@ class Mount(BaseMount):
         return state == PyIndi.IPS_BUSY
 
     def abort_slew(self):
-        return indihelper.setfindSwitchState(self.indiclient, self.mount,
+        return indihelper.setfindSwitchState(self.backend.indiclient, self.mount,
                                              'TELESCOPE_ABORT_MOTION',
                                              'ABORT_MOTION', True)
 
@@ -678,7 +822,7 @@ class Mount(BaseMount):
 
     def slew(self, ra, dec):
         """Slew to ra/dec with ra in decimal hours and dec in degrees"""
-        indihelper.setfindSwitchState(self.indiclient, self.mount,
+        indihelper.setfindSwitchState(self.backend.indiclient, self.mount,
                                       'ON_COORD_SET', 'TRACK', True)
 
         eq_coord = indihelper.getNumber(self.mount, 'EQUATORIAL_EOD_COORD')
@@ -693,12 +837,12 @@ class Mount(BaseMount):
             return False
         ra_coord.value = ra
         dec_coord.value = dec
-        self.indiclient.sendNewNumber(eq_coord)
+        self.backend.indiclient.sendNewNumber(eq_coord)
         return True
 
     def sync(self, ra, dec):
         """Sync to ra/dec with ra in decimal hours and dec in degrees"""
-        indihelper.setfindSwitchState(self.indiclient, self.mount,
+        indihelper.setfindSwitchState(self.backend.indiclient, self.mount,
                                       'ON_COORD_SET', 'SYNC', True)
 
         eq_coord = indihelper.getNumber(self.mount, 'EQUATORIAL_EOD_COORD')
@@ -713,7 +857,7 @@ class Mount(BaseMount):
             return False
         ra_coord.value = ra
         dec_coord.value = dec
-        self.indiclient.sendNewNumber(eq_coord)
+        self.backend.indiclient.sendNewNumber(eq_coord)
         return True
 
     def unpark(self):

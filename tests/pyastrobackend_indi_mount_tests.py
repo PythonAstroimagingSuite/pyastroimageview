@@ -57,7 +57,7 @@ if __name__ == '__main__':
         sys.exit(-1)
 
     # connect to focuser
-    mount = INDIBackend.Mount(backend.indiclient)
+    mount = backend.newMount()
 
     logging.info('Connecting to Mount')
     #rc = mount.connect('Telescope Simulator')
