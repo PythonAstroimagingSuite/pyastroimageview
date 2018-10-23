@@ -1,10 +1,11 @@
 #!/usr/bin/python
 import sys
 import json
+import time
 import logging
 from enum import Enum
 
-from PyQt5 import QtNetwork, QtCore
+from PyQt5 import QtNetwork, QtCore, QtWidgets
 
 from pyastroimageview.ApplicationContainer import AppContainer
 
@@ -153,7 +154,7 @@ class PHD2Manager:
     def process(self):
         """See if any data has arrived and process"""
 
- #       logging.info('processing')
+#        logging.info('processing')
 
         if not self.socket:
             logging.error('PHD2Manager:process PHD2 not connected!')
@@ -272,10 +273,36 @@ class PHD2Manager:
                             "time" : settle_start_time,
                             "timeout" : settle_finish_time}]}
 
-        rc = self.__send_json_command(cmd)
-        if not rc:
-            logging.error('phd2manager:dither - sending json command failed!')
-            return False
+        while True:
+            # reset dither state
+            self.dither_state = DitherState.IDLE
+            rc = self.__send_json_command(cmd)
+            if not rc:
+                logging.error('phd2manager:dither - sending json command failed!')
+                return False
+
+            # FIXME 20181022 Having problems under Linux gettng dither cmd
+            #                to send reliably so make sure we see a settling
+            #                event otherwise we resend?
+            #                Not ideal but seems to handle the rare times
+            #                a dither doesnt start on first try
+            logging.info('Waiting for settling to start!')
+            ts = time.time()
+            logging.info(f'0 self.dither_state = {self.dither_state}')
+
+            while (time.time()-ts) < 3:
+#                logging.info(f'1 self.dither_state = {self.dither_state}')
+                if self.dither_state != DitherState.IDLE:
+                    logging.info('Dither started!')
+                    break
+
+                # let Qt main loop run and find events??
+                QtWidgets.QApplication.processEvents()
+                time.sleep(0.05)
+
+            if self.dither_state != DitherState.IDLE:
+                break
+            logging.warning('resending dither to PHD2!')
 
         # start a timer for dither timeout (meaning phd2 did not settle in time)
         self.dither_timeout_timer = QtCore.QTimer()

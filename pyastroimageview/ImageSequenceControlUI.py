@@ -58,7 +58,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.sequence = ImageSequence(self.device_manager)
 
         # use an exposure timer if the camera driver doesn't report progress
-        self.exposure_timer = None
+#        self.exposure_timer = None
 
         # initialize sequence settings from general settings
         # FIXME do we need a centralized config object/singleton?
@@ -116,7 +116,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
         val = camok and filtok
 
-#        logging.info(f'imgcontrolUI: set_widget_states: {camok} {filtok}')
+        logging.info(f'imgcontrolUI: set_widget_states: {camok} {filtok}')
 
         self.ui.sequence_name.setEnabled(val)
         self.ui.sequence_elements.setEnabled(val)
@@ -150,6 +150,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         logging.info('filterwheel_lock_handler')
 
     def filterwheel_connect_handler(self, val):
+        logging.info(f'ImageSequenceControlUI:filterwheel_connect_handler: val={val}')
         self.set_widget_states()
 
         if val:
@@ -449,7 +450,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                                                    'PHD2 failed to respond to dither request - dither aborted!',
                                                    QtWidgets.QMessageBox.Ok)
                     else:
-                        logging.error('ImageSequenceControlUI:cam_exp_comp: Dither command sent to PHD2 successfully')
+                        logging.info('ImageSequenceControlUI:cam_exp_comp: Dither command sent to PHD2 successfully')
 
                         # now the 'SettleDone' event should come in from PHD2 and it will be handled
                         # and next frame started unless we get a settle timeout event instead
@@ -618,9 +619,10 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.device_manager.camera.start_exposure(self.sequence.exposure)
 
         # SIMULATE PROGRESS IN CAMERA MANAGER INSTEAD!
-        if not self.device_manager.camera.supports_progress():
-            self.exposure_timer = QtCore.QTimer()
-            self.exposure_timer.start(self.sequence.exposure)
+#        if not self.device_manager.camera.supports_progress():
+#            logging.info(f'starting exposure timer for {self.sequence.exposure} sec')
+#            self.exposure_timer = QtCore.QTimer()
+#            self.exposure_timer.start(self.sequence.exposure)
 
         self.exposure_ongoing = True
 
@@ -761,12 +763,15 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             fits_doc.set_object_radec(rastr, decstr)
 
             alt, az = self.device_manager.mount.get_position_altaz()
-            altaz = AltAz(alt=alt*u.degree, az=az*u.degree)
-#            altstr = altaz.alt.to_string(alwayssign=True, sep=":", pad=True)
-#            azstr = altaz.az.to_string(alwayssign=True, sep=":", pad=True)
-            altstr = f'{altaz.alt.degree}'
-            azstr = f'{altaz.az.degree}'
-            fits_doc.set_object_altaz(altstr, azstr)
+            if alt is None or az is None:
+                logging.warning('imagesequi: alt/az are None!')
+            else:
+                altaz = AltAz(alt=alt*u.degree, az=az*u.degree)
+    #            altstr = altaz.alt.to_string(alwayssign=True, sep=":", pad=True)
+    #            azstr = altaz.az.to_string(alwayssign=True, sep=":", pad=True)
+                altstr = f'{altaz.alt.degree}'
+                azstr = f'{altaz.az.degree}'
+                fits_doc.set_object_altaz(altstr, azstr)
 
             now = Time.now()
             local_sidereal = now.sidereal_time('apparent',

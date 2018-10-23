@@ -37,6 +37,9 @@ class DeviceBackend(BaseDeviceBackend):
         def getBlobEvent(self):
             return self.blobEvent
 
+        def clearBlobEvent(self):
+            self.blobEvent = None
+
         def getEventQueue(self):
             return self.eventQueue
 
@@ -280,7 +283,7 @@ class Camera(BaseCamera):
         return -1
 
     def start_exposure(self, expos):
-        global blobEvent
+ #       global blobEvent
         logging.info(f'Exposing image for {expos} seconds')
 
         # FIXME currently always requesting a light frame
@@ -301,7 +304,7 @@ class Camera(BaseCamera):
                 time.sleep(0.25)
                 ccd_ccd1 = self.device.getBLOB('CCD1')
 
-            blobEvent = None
+            self.backend.indiclient.clearBlobEvent()
 
             ccd_expnum = indihelper.findNumber(ccd_exposure, 'CCD_EXPOSURE_VALUE')
             if ccd_expnum is None:

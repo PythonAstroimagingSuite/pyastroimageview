@@ -204,6 +204,7 @@ class CameraManager(Camera):
                 self.exposure_start_time = None
                 self.current_exposure_length = None
                 self.exposure_camera_settings = None
+                self.exposure_timer = None
 
                 # HAVE to do this last - if signal handler is something like the
                 # sequence controller it might start up a new exposure as
