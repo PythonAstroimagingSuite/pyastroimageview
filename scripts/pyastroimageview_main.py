@@ -422,10 +422,13 @@ class MainWindow(QtGui.QMainWindow):
             imgdoc.fits.set_object_radec(rastr, decstr)
 
             alt, az = self.device_manager.mount.get_position_altaz()
-            altaz = AltAz(alt=alt*u.degree, az=az*u.degree)
-            altstr = altaz.alt.to_string(alwayssign=True, sep=":", pad=True)
-            azstr = altaz.az.to_string(alwayssign=True, sep=":", pad=True)
-            imgdoc.fits.set_object_altaz(altstr, azstr)
+            if alt is None or az is None:
+                logging.warning('imagesequi: alt/az are None!')
+            else:
+                altaz = AltAz(alt=alt*u.degree, az=az*u.degree)
+                altstr = altaz.alt.to_string(alwayssign=True, sep=":", pad=True)
+                azstr = altaz.az.to_string(alwayssign=True, sep=":", pad=True)
+                imgdoc.fits.set_object_altaz(altstr, azstr)
 
             now = Time.now()
             local_sidereal = now.sidereal_time('apparent',
