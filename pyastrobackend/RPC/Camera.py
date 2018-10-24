@@ -32,6 +32,9 @@ class Camera(BaseCamera):
         self.frame_width = None
         self.frame_height = None
 
+    def has_chooser(self):
+        return False
+
     def show_chooser(self, last_choice):
         logging.warngin('RPC Camera Backend: no show_chooser()!')
         return None
