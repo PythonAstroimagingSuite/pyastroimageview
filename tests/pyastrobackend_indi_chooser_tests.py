@@ -32,7 +32,7 @@ def monitor_queue(indiclient):
         time.sleep(0.25)
 
 if __name__ == '__main__':
-    logging.basicConfig(filename='pyastrobackend_indi_mount_tests.log',
+    logging.basicConfig(filename='pyastrobackend_indi_chooser_tests.log',
                         filemode='w',
                         level=logging.DEBUG,
                         format='%(asctime)s %(levelname)-8s %(message)s',
@@ -46,7 +46,7 @@ if __name__ == '__main__':
     CH.setFormatter(formatter)
     LOG.addHandler(CH)
 
-    logging.info(f'pyastrobackend_indi_mount_tests starting')
+    logging.info(f'pyastrobackend_indi_chooser_tests starting')
 
     logging.info('connecting to indi server')
     backend = INDIBackend.DeviceBackend()

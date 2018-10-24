@@ -337,7 +337,7 @@ def findDeviceInterfaces(indidevice):
     return interfaces
 
 def findDeviceName(indidevice):
-    return indidevice.getDriverName()
+    return indidevice.getDeviceName()
 
 def findDevices(indiclient, timeout=2):
     devs = indiclient.getDevices()
