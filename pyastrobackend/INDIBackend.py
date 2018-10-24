@@ -168,7 +168,7 @@ class DeviceBackend(BaseDeviceBackend):
         for d in devs:
             interfaces = self.findDeviceInterfaces(d)
             if device_class in interfaces:
-                matches.append(d.getDriverName())
+                matches.append(d.getDeviceName())
         return matches
 
 class Camera(BaseCamera):
