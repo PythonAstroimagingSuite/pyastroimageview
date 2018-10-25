@@ -67,6 +67,8 @@ class CameraSetROIDialog(QtWidgets.QDialog):
 
     def run(self, roi, settings):
 
+        self.roi = roi
+
         self.maxx = int(settings.frame_width/settings.binning)
         self.maxy = int(settings.frame_height/settings.binning)
 
