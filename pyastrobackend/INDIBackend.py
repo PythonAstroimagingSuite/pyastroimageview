@@ -477,6 +477,7 @@ class Camera(BaseCamera):
             return False
         num_binx.value = binx
         num_biny.value = biny
+        self.backend.indiclient.sendNewNumber(ccd_bin)
         return True
 
     def get_max_binning(self):
