@@ -104,15 +104,7 @@ class MainWindow(QtGui.QMainWindow):
 
         # start HFR Server
         self.hfr_server = MeasureHFRServer()
-
-        logging.warning('------------------------')
-        logging.warning('------------------------')
-        logging.warning('REENABLE STARTING HFR SERVER!!!!')
-        logging.warning('------------------------')
-        logging.warning('------------------------')
-
-
-#        self.hfr_server.start()
+        self.hfr_server.start()
         self.hfr_cur_widget = None # when doing a calc set to where result should go
 
         self.resize(960, 740)

@@ -80,7 +80,7 @@ class ImageSequence:
 
         tmp_name = re.sub('\{tempc\}', f'{tempc_prefix}{abs(tempc):.1f}C', tmp_name)
         tmp_name = re.sub('\{temps\}', f'{temps_prefix}{abs(temps):.0f}C', tmp_name)
-        tmp_name = re.sub('\{bin\}', f'bin_{binx}', tmp_name)
+        tmp_name = re.sub('\{bin\}', f'bin_{int(binx)}', tmp_name)
 
         # put in filter only if type  'Light'
         # also only put on base name too
