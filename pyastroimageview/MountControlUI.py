@@ -1,3 +1,5 @@
+import logging
+
 from astropy import units as u
 from astropy.coordinates import AltAz
 from astropy.coordinates import SkyCoord

@@ -46,9 +46,11 @@ def getfindSwitchState(device, propname, swname):
 def setfindSwitchState(indiclient, device, propname, swname, onoff):
     sw_prop = getSwitch(device, propname)
     if sw_prop is None:
+        #print('sw_prop = None')
         return False
     sw = findSwitch(sw_prop, swname)
     if sw is None:
+        #print('sw is None')
         return False
     if onoff:
         sw.s = PyIndi.ISS_ON
@@ -221,6 +223,14 @@ def connectDevice(indiclient, devicename, timeout=2):
     connected = connect_sw.s == PyIndi.ISS_ON
     if not connected:
         return None
+    indiclient.sendNewSwitch(connect)
+
+    cnt = 0
+    while not device.isConnected() and cnt < (timeout/0.1):
+        time.sleep(0.1)
+        print('W4C')
+        cnt += 1
+
     return device
 
 def strISState(s):

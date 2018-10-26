@@ -228,8 +228,10 @@ class Camera(BaseCamera):
         return False
 
     def disconnect(self):
-        logging.warning('Camera.disconnect() is not implemented for INDI!')
-        return None
+        #logging.warning('Camera.disconnect() is not implemented for INDI!')
+        self.cam = None
+        self.name = None
+        return True
 
     def is_connected(self):
         if self.cam:
@@ -317,8 +319,46 @@ class Camera(BaseCamera):
             return False
 
     def stop_exposure(self):
-        logging.warning('Camera.stop_exposure() is not implemented for INDI!')
-        return None
+        # had trouble using the setfindSwitchState function for some reason!
+        retries = 5
+        i = 0
+        sw_prop = None
+        while i < retries:
+            logging.info('Trying to get CCD_ABORT_EXPOSURE')
+            sw_prop = indihelper.getSwitch(self.cam, 'CCD_ABORT_EXPOSURE')
+            logging.info(f'sw_prop = {sw_prop}')
+            if sw_prop is not None:
+                break
+            time.sleep(0.1)
+            i += 1
+        if sw_prop is None:
+            return False
+
+        sw = None
+        i = 0
+        while i < retries:
+             logging.info('Trying to get ABORT')
+             sw = indihelper.findSwitch(sw_prop, 'ABORT')
+             logging.info(f'sw = {sw}')
+             if sw is not None:
+                 break
+             time.sleep(0.1)
+
+        if sw is None:
+            return False
+
+        sw.s = PyIndi.ISS_ON
+        self.backend.indiclient.sendNewSwitch(sw_prop)
+        return True
+
+#        rc = indihelper.setfindSwitchState(self.backend.indiclient, self.cam,
+#                                          'CCD_ABORT_EXPOURE', 'ABORT',
+#                                           True)
+#        print(rc)
+#        return rc
+
+#        logging.warning('Camera.stop_exposure() is not implemented for INDI!')
+#        return None
 
     def check_exposure(self):
         # FIXME accessing blob event seems like a poor choice
@@ -559,8 +599,10 @@ class Focuser(BaseFocuser):
         return False
 
     def disconnect(self):
-        logging.warning('Focuser.disconnect() is not implemented for INDI!')
-        return None
+        self.focuser = None
+        self.name = None
+        #logging.warning('Focuser.disconnect() is not implemented for INDI!')
+        return True
 
     def is_connected(self):
         if self.focuser:
@@ -644,7 +686,9 @@ class FilterWheel(BaseFilterWheel):
         return False
 
     def disconnect(self):
-        logging.warning('FilterWheel.disconnect() is not implemented for INDI!')
+        self.filterwheel = None
+        self.name = None
+        #logging.warning('FilterWheel.disconnect() is not implemented for INDI!')
         return None
 
     def is_connected(self):
@@ -766,7 +810,9 @@ class Mount(BaseMount):
         return False
 
     def disconnect(self):
-        logging.warning('Mount.disconnect() is not implemented for INDI!')
+        self.mount = None
+        self.name = None
+        #logging.warning('Mount.disconnect() is not implemented for INDI!')
         return None
 
     def is_connected(self):
