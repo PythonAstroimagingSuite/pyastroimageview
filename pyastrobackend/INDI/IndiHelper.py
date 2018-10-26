@@ -318,6 +318,36 @@ def dump_ITextVectorProperty(p):
 
     return s
 
+def dump_ISwitchVectorProperty(p):
+    s = f'device: {p.device}\n'
+    s += f'name: {p.name}\n'
+    s += f'label: {p.label}\n'
+    s += f'group: {p.group}\n'
+    s += f'state: {strIPState(p.s)}\n'
+    s += f'nsp: {p.nsp}\n'
+    for i in range(0, p.nsp):
+        t = p[i]
+        s += f'   {i} {t.name} "{t.s == PyIndi.ISS_ON}"\n'
+
+    return s
+
+def dump_Property(p):
+    s = f'Property {p.getName()}\n'
+    s += f'    Label: {p.getLabel()}\n'
+    s += f'    Type: {p.getType()}\n'
+
+def dump_PropertyVector(pv):
+    print(pv, pv.__dict__)
+    for a in pv:
+        print(a)
+    return ''
+
+def dump_Device(dev):
+    s = 'Device:\n'
+    s += f'    Device name: {dev.getDeviceName()}\n'
+    s += f'    Driver name: {dev.getDriverName()}\n'
+    return s
+
 #
 # from https://github.com/GuLinux/indi-lite-tools/blob/e1f6fa52b59474d5d27eba571c87ae67d2cd1724/pyindi_sequence/device.py
 #

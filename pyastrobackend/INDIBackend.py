@@ -44,14 +44,16 @@ class DeviceBackend(BaseDeviceBackend):
             return self.eventQueue
 
         def newDevice(self, d):
-            print('Device: ',d)
+            logging.info('newDevice: ')
+            logging.info(indihelper.dump_Device(d))
             self.eventQueue.put(d)
 
         def newProperty(self, p):
-#            print('newprop:', p, ' type =', indihelper.strGetType(p))
+            print('newprop:', p.getName(), ' type =', indihelper.strGetType(p))
             self.eventQueue.put(p)
 
         def removeProperty(self, p):
+            print('delprop:', p.getName(), ' type =', indihelper.strGetType(p))
             self.eventQueue.put(p)
 
         def newBLOB(self, bp):
@@ -62,20 +64,26 @@ class DeviceBackend(BaseDeviceBackend):
             self.blobEvent = bp
 
         def newSwitch(self, svp):
+            print('newSwitch:', svp.name)
+            print(indihelper.dump_ISwitchVectorProperty(svp))
             self.eventQueue.put(svp)
 
         def newNumber(self, nvp):
-#            print('num:', nvp.name)
+            print('num:', nvp.name)
+            print(indihelper.dump_INumberVectorProperty(nvp))
             self.eventQueue.put(nvp)
 
         def newText(self, tvp):
+            print('text:', tvp.name)
             self.eventQueue.put(tvp)
 
         def newLight(self, lvp):
+            print('light:', lvp.name)
             print(lvp)
             self.eventQueue.put(lvp)
 
         def newMessage(self, d, m):
+            print('msg:', d, m)
             self.eventQueue.put((d,m))
 
         def serverConnected(self):
