@@ -255,35 +255,43 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if p.getType() == PyIndi.INDI_TEXT:
             tpy = p.getText()
+            readonly = tpy.p == PyIndi.IP_RO
             if tpy is not None:
                 for t in tpy:
-                    #label = QtWidgets.QLabel(f'{pname} {plabel} : TEXT   {t.name}  {t.label} = {t.text}', self)
-                    #hbox.addWidget(label)
-
-                    grid.addWidget(QtWidgets.QLabel(f'{pname}/{plabel}', self), row, 0)
+                    grid.addWidget(QtWidgets.QLabel(plabel, self), row, 0)
                     grid.addWidget(QtWidgets.QLabel(t.label, self), row, 1)
-                    grid.addWidget(QtWidgets.QLabel(t.text, self), row, 2)
+                    hbox = QtWidgets.QHBoxLayout()
+                    text_edit = QtWidgets.QLineEdit()
+                    text_edit.setText(t.text)
+                    text_edit.setReadOnly(readonly)
+                    hbox.addWidget(text_edit)
+                    if not readonly:
+                        set_button = QtWidgets.QPushButton()
+                        set_button.setText('Set')
+                        hbox.addWidget(set_button)
+                    grid.addLayout(hbox, row, 2)
 
-#                    hbox = QtWidgets.QHBoxLayout()
-#                    hbox.addWidget(QtWidgets.QLabel(t.label, self))
-#                    hbox.addWidget(QtWidgets.QLabel(t.text, self))
-#                    grid.addLayout(hbox, row, 1)
                     row += 1
         elif p.getType() == PyIndi.INDI_NUMBER:
             npy = p.getNumber()
+            readonly = npy.p == PyIndi.IP_RO
             if npy is not None:
                 for n in npy:
-#                    hbox = QtWidgets.QHBoxLayout()
-#                    label = QtWidgets.QLabel(f'{pname} {plabel} NUMBER   {n.name}  {n.label} = {n.value}', self)
-#                    hbox.addWidget(label)
-#                    grid.addLayout(hbox, row, 0)
                     grid.addWidget(QtWidgets.QLabel(plabel, self), row, 0)
                     grid.addWidget(QtWidgets.QLabel(n.label, self), row, 1)
-                    grid.addWidget(QtWidgets.QLabel(f'{n.value}', self), row, 2)
-#                    hbox = QtWidgets.QHBoxLayout()
-#                    hbox.addWidget(QtWidgets.QLabel(n.label, self))
-#                    hbox.addWidget(QtWidgets.QLabel(f'{n.value}', self))
-#                    grid.addLayout(hbox, row, 1)
+                    hbox = QtWidgets.QHBoxLayout()
+                    sb = QtWidgets.QDoubleSpinBox(self)
+                    sb.setMaximum(n.max)
+                    sb.setMinimum(n.min)
+                    sb.setValue(n.value)
+                    sb.setSingleStep(n.step)
+                    sb.setReadOnly(readonly)
+                    hbox.addWidget(sb)
+                    if not readonly:
+                        set_button = QtWidgets.QPushButton()
+                        set_button.setText('Set')
+                        hbox.addWidget(set_button)
+                    grid.addLayout(hbox, row, 2)
                     row += 1
         elif p.getType() == PyIndi.INDI_SWITCH:
             spy = p.getSwitch()
@@ -295,7 +303,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 hbox.setSpacing(0)
                 hbox.setStretch(0, 0)
                 for s in spy:
-                    #grid.addWidget(QtWidgets.QLabel(f'{s.label} = {indihelper.strISState(s.s)}', self), row, col)
                     sw = QtWidgets.QToolButton()
                     sw.setText(s.label)
                     sw.setCheckable(True)
@@ -303,9 +310,6 @@ class MainWindow(QtWidgets.QMainWindow):
                         sw.setChecked(True)
                     hbox.addWidget(sw)
                     col += 1
-#                hspacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-#                hbox.addItem(hspacer)
-                #1hbox.addSpacing(500)
                 hhbox = QtWidgets.QHBoxLayout()
                 hhbox.setSpacing(0)
                 hhbox.setStretch(1, 0)
