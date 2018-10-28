@@ -173,17 +173,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # FIXME need better data structures!
         self.device_tabs = {}
+        self.device_props = {}
 
 
         self.indiclient = IndiClient()
         self.indiclient.signals.new_device.connect(self.new_device_cb)
         self.indiclient.signals.new_property.connect(self.new_property_cb)
+        self.indiclient.signals.new_number.connect(self.new_number_cb)
 #        self.indiclient.signals.new_text.connect(self.new_text_cb)
 #        self.indiclient.signals.remove_property.connect(self.remove_property_cb)
 #        self.indiclient.signals.new_switch.connect(self.new_switch_cb)
 #        self.indiclient.signals.new_light.connect(self.new_light_cb)
 #        self.indiclient.signals.new_message.connect(self.new_message_cb)
-#        self.indiclient.signals.new_number.connect(self.new_number_cb)
 
 
         self.indiclient.connect()
@@ -192,10 +193,7 @@ class MainWindow(QtWidgets.QMainWindow):
             sys.exit(1)
 
     def new_device_cb(self, d):
-        print('new device cb: ', d.getDeviceName())
-        hbox = QtWidgets.QHBoxLayout()
-        label = QtWidgets.QLabel(f'new device cb: {d.getDeviceName()}')
-        hbox.addWidget(label)
+        logging.info(f'new device cb: {d.getDeviceName()}')
 
         core_widget = QtWidgets.QWidget(self)
         layout = QtWidgets.QVBoxLayout(core_widget)
@@ -206,13 +204,13 @@ class MainWindow(QtWidgets.QMainWindow):
         scroll_area_contents = QtWidgets.QWidget()
         scroll_area.setWidget(scroll_area_contents)
 
-        vlayout = QtWidgets.QVBoxLayout(scroll_area_contents)
-        vlayout.addLayout(hbox)
+        #vlayout = QtWidgets.QVBoxLayout(scroll_area_contents)
+        grid = QtWidgets.QGridLayout(scroll_area_contents)
 
         tab = self.device_tabwidget.addTab(core_widget, d.getDeviceName())
         dev_tab = self.DeviceTab()
         dev_tab.tab = tab
-        dev_tab.layout = vlayout
+        dev_tab.layout = grid
         self.device_tabs[d.getDeviceName()] = dev_tab
 
     def new_light_cb(self, lvp):
@@ -221,6 +219,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def new_text_cb(self, tvp):
 #        print('new text cb: ', tvp.device, '->', tvp.name)
+#        print('new text cb: ', p.getDeviceName(), '->', p.getName(), ' ', indihelper.strGetType(p))
+#        hbox = QtWidgets.QHBoxLayout()
+#        label = QtWidgets.QLabel(f'new text cb: {p.getDeviceName()}->{p.getName()} {indihelper.strGetType(p)}', self)
+#        hbox.addWidget(label)
+#        #self.vlayout.addLayout(hbox)
+#        tab = self.device_tabs[p.getDeviceName()]
+#        tab.layout.addLayout(hbox)
         pass
 
     def new_switch_cb(self, svp):
@@ -228,7 +233,7 @@ class MainWindow(QtWidgets.QMainWindow):
         pass
 
     def new_number_cb(self, nvp):
-#        print('new number cb: ', nvp.device, '->', nvp.name)
+        print('new number cb: ', nvp.device, '->', nvp.name)
         pass
 
     def new_message_cb(self, d, m):
@@ -236,15 +241,111 @@ class MainWindow(QtWidgets.QMainWindow):
         pass
 
     def new_property_cb(self, p):
-        print('new property cb: ', p.getDeviceName(), '->', p.getName(), ' ', indihelper.strGetType(p))
-        hbox = QtWidgets.QHBoxLayout()
-        label = QtWidgets.QLabel(f'new property cb: {p.getDeviceName()}->{p.getName()} {indihelper.strGetType(p)}', self)
-        hbox.addWidget(label)
-        #self.vlayout.addLayout(hbox)
-        tab = self.device_tabs[p.getDeviceName()]
-        tab.layout.addLayout(hbox)
+        device = p.getDeviceName()
+        pname = p.getName()
+        plabel = p.getLabel()
+        ptype = p.getType()
+        ptype_str = indihelper.strGetType(p)
+        state = p.getState()
+        state_str = indihelper.strIPState(state)
+
+        tab = self.device_tabs[device]
+        grid = tab.layout
+        row = grid.rowCount()
+
+        if p.getType() == PyIndi.INDI_TEXT:
+            tpy = p.getText()
+            if tpy is not None:
+                for t in tpy:
+                    #label = QtWidgets.QLabel(f'{pname} {plabel} : TEXT   {t.name}  {t.label} = {t.text}', self)
+                    #hbox.addWidget(label)
+
+                    grid.addWidget(QtWidgets.QLabel(f'{pname}/{plabel}', self), row, 0)
+                    grid.addWidget(QtWidgets.QLabel(t.label, self), row, 1)
+                    grid.addWidget(QtWidgets.QLabel(t.text, self), row, 2)
+
+#                    hbox = QtWidgets.QHBoxLayout()
+#                    hbox.addWidget(QtWidgets.QLabel(t.label, self))
+#                    hbox.addWidget(QtWidgets.QLabel(t.text, self))
+#                    grid.addLayout(hbox, row, 1)
+                    row += 1
+        elif p.getType() == PyIndi.INDI_NUMBER:
+            npy = p.getNumber()
+            if npy is not None:
+                for n in npy:
+#                    hbox = QtWidgets.QHBoxLayout()
+#                    label = QtWidgets.QLabel(f'{pname} {plabel} NUMBER   {n.name}  {n.label} = {n.value}', self)
+#                    hbox.addWidget(label)
+#                    grid.addLayout(hbox, row, 0)
+                    grid.addWidget(QtWidgets.QLabel(plabel, self), row, 0)
+                    grid.addWidget(QtWidgets.QLabel(n.label, self), row, 1)
+                    grid.addWidget(QtWidgets.QLabel(f'{n.value}', self), row, 2)
+#                    hbox = QtWidgets.QHBoxLayout()
+#                    hbox.addWidget(QtWidgets.QLabel(n.label, self))
+#                    hbox.addWidget(QtWidgets.QLabel(f'{n.value}', self))
+#                    grid.addLayout(hbox, row, 1)
+                    row += 1
+        elif p.getType() == PyIndi.INDI_SWITCH:
+            spy = p.getSwitch()
+            if spy is not None:
+                hbox = QtWidgets.QHBoxLayout()
+                col = 1
+                grid.addWidget(QtWidgets.QLabel(plabel, self), row, 0)
+                hbox = QtWidgets.QHBoxLayout()
+                hbox.setSpacing(0)
+                hbox.setStretch(0, 0)
+                for s in spy:
+                    #grid.addWidget(QtWidgets.QLabel(f'{s.label} = {indihelper.strISState(s.s)}', self), row, col)
+                    sw = QtWidgets.QToolButton()
+                    sw.setText(s.label)
+                    sw.setCheckable(True)
+                    if s.s == PyIndi.ISS_ON:
+                        sw.setChecked(True)
+                    hbox.addWidget(sw)
+                    col += 1
+#                hspacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+#                hbox.addItem(hspacer)
+                #1hbox.addSpacing(500)
+                hhbox = QtWidgets.QHBoxLayout()
+                hhbox.setSpacing(0)
+                hhbox.setStretch(1, 0)
+                hhbox.addLayout(hbox)
+                hhbox.addStretch(0)
+                grid.addLayout(hhbox, row, 1, 1, col)
+                row += 1
+        elif p.getType() == PyIndi.INDI_LIGHT:
+            lpy = p.getLightr()
+            if lpy is not None:
+                for l in lpy:
+                    hbox = QtWidgets.QHBoxLayout()
+                    label = QtWidgets.QLabel(f'{l.label} = {indihelper.strIPState(l.s)}\n', self)
+                    hbox.addWidget(label)
+                    grid.addLayout(hbox, row, 0)
+                    row += 1
+#        elif p.getType() == PyIndi.INDI_BLOB:
+#            s = 'INDI_BLOB:\n'
+#            tpy = p.getBLOB()
+#            if tpy is None:
+#                s += 'None\n'
+#            else:
+#                for t in tpy:
+#                    s += f'   {t.name}  ({t.label}) = BLOB {t.size} bytes\n'
+        else:
+            s = 'UNKNOWN INDI TYPE!'
 
 
+
+#        info_str = f'new property cb: {device} {name} {label} {ptype_str} {state_str}'
+#        logging.info(info_str)
+#        hbox = QtWidgets.QHBoxLayout()
+#        label = QtWidgets.QLabel(info_str, self)
+#        hbox.addWidget(label)
+
+
+
+#        if device in self.device_props:
+#            self.device_props[device].append()
+#        props_list = self.device_props.get(p.getDeviceName(), [])
 
     def remove_property_cb(self, p):
 #        print('remove property cb: ', p.getDeviceName, '->', p.getName(), ' ', indihelper.strGetType(p))
