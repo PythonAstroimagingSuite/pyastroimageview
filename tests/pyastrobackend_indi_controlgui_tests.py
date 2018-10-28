@@ -141,28 +141,14 @@ class IndiClient(PyIndi.BaseClient):
 
 class MainWindow(QtWidgets.QMainWindow):
 
+    # FIXME simple holder for now!
+    class DeviceTab:
+        pass
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.setWindowTitle('controlgui')
-
-#        # scroll area for container
-#        scroll_area = QtWidgets.QScrollArea(self)
-#        scroll_area.setFixedWidth(300)
-#        scroll_area.setWidgetResizable(True)
-#        container = QtWidgets.QWidget()
-#        scroll_area.setWidget(container)
-#
-#        # vlayout to add widgets to
-#        self.vlayout = QtWidgets.QVBoxLayout(container)
-#        self.vlayout.setSpacing(0)
-#        self.vlayout.setContentsMargins(0, 0, 0, 0)
-#        self.vlayout.addStretch(1)
-#
-#        # put scroll_area in a layout
-#        scroll_vlayout = QtWidgets.QVBoxLayout(self)
-#        scroll_vlayout.addWidget(scroll_area)
-#        scroll_vlayout.addStretch(1)
 
         self.central_widget = QtWidgets.QWidget(self)
         layout = QtWidgets.QVBoxLayout(self.central_widget)
@@ -178,32 +164,27 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.setCentralWidget(self.central_widget)
 
-#        hbox = QtWidgets.QHBoxLayout(self.scroll_area_contents)
-#        label = QtWidgets.QLabel('new property cb: {p.getDeviceName()}->{p.getName()} {indihelper.strGetType(p)}',
-#                                 self.scroll_area_contents)
-#        hbox.addWidget(label)
-        #self.vlayout.addLayout(hbox)
-#        for i in range(0, 100):
-#            print(i)
-#            label = QtWidgets.QLabel(f'{i}')
-#            self.vlayout.addWidget(label)
 
-        #self.setLayout(scroll_vlayout)
-        #self.setCentralWidget(scroll_area)
-#        self.setCentralWidget(container)
+        self.device_tabwidget = QtWidgets.QTabWidget(self.scroll_area_contents)
+        self.vlayout.addWidget(self.device_tabwidget)
 
         self.resize(700, 400)
         self.show()
 
+        # FIXME need better data structures!
+        self.device_tabs = {}
+
+
         self.indiclient = IndiClient()
         self.indiclient.signals.new_device.connect(self.new_device_cb)
-#        self.indiclient.signals.new_text.connect(self.new_text_cb)
         self.indiclient.signals.new_property.connect(self.new_property_cb)
+#        self.indiclient.signals.new_text.connect(self.new_text_cb)
 #        self.indiclient.signals.remove_property.connect(self.remove_property_cb)
 #        self.indiclient.signals.new_switch.connect(self.new_switch_cb)
 #        self.indiclient.signals.new_light.connect(self.new_light_cb)
 #        self.indiclient.signals.new_message.connect(self.new_message_cb)
 #        self.indiclient.signals.new_number.connect(self.new_number_cb)
+
 
         self.indiclient.connect()
         if not self.indiclient.connected:
@@ -212,12 +193,26 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def new_device_cb(self, d):
         print('new device cb: ', d.getDeviceName())
-        hbox = QtWidgets.QHBoxLayout(self.scroll_area_contents)
+        hbox = QtWidgets.QHBoxLayout()
         label = QtWidgets.QLabel(f'new device cb: {d.getDeviceName()}')
         hbox.addWidget(label)
         #self.vlayout.addWidget(label)
-        self.vlayout.addLayout(hbox)
-
+        #self.vlayout.addLayout(hbox)
+        print(0)
+        vlayout = QtWidgets.QVBoxLayout()
+        print(0.1)
+        vlayout.addLayout(hbox)
+        print(0.2)
+        widget = QtWidgets.QWidget()
+        print(1)
+        widget.setLayout(vlayout)
+        print(2)
+        tab = self.device_tabwidget.addTab(widget, d.getDeviceName())
+        print(3)
+        dev_tab = self.DeviceTab()
+        dev_tab.tab = tab
+        dev_tab.layout = vlayout
+        self.device_tabs[d.getDeviceName()] = dev_tab
 
     def new_light_cb(self, lvp):
 #        print('new light cb: ', lvp.device, '->', lvp.name)
@@ -244,8 +239,11 @@ class MainWindow(QtWidgets.QMainWindow):
         hbox = QtWidgets.QHBoxLayout(self.scroll_area_contents)
         label = QtWidgets.QLabel(f'new property cb: {p.getDeviceName()}->{p.getName()} {indihelper.strGetType(p)}', self)
         hbox.addWidget(label)
-        self.vlayout.addLayout(hbox)
-        pass
+        #self.vlayout.addLayout(hbox)
+        tab = self.device_tabs[p.getDeviceName()]
+        tab.layout.addLayout(hbox)
+
+
 
     def remove_property_cb(self, p):
 #        print('remove property cb: ', p.getDeviceName, '->', p.getName(), ' ', indihelper.strGetType(p))
