@@ -145,6 +145,9 @@ class MainWindow(QtWidgets.QMainWindow):
     class DeviceTab:
         pass
 
+    class GroupTab:
+        pass
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -173,8 +176,19 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # FIXME need better data structures!
         self.device_tabs = {}
+
+        # store device properties in dict
+        # the key will be device names
+        # the value of each dict entry will be a dict of the property names
+        # for that device
         self.device_props = {}
 
+        # store device groups in dict
+        # the key will be device names
+        # the value of each dict entry will be a dict of the groups names
+        # for that device
+        self.device_groups = {}
+        self.device_group_tabs = {}
 
         self.indiclient = IndiClient()
         self.indiclient.signals.new_device.connect(self.new_device_cb)
@@ -195,23 +209,29 @@ class MainWindow(QtWidgets.QMainWindow):
     def new_device_cb(self, d):
         logging.info(f'new device cb: {d.getDeviceName()}')
 
-        core_widget = QtWidgets.QWidget(self)
-        layout = QtWidgets.QVBoxLayout(core_widget)
-        scroll_area = QtWidgets.QScrollArea(core_widget)
-        scroll_area.setWidgetResizable(True)
-        layout.addWidget(scroll_area)
+#        core_widget = QtWidgets.QWidget(self)
+#        layout = QtWidgets.QVBoxLayout(core_widget)
+#        scroll_area = QtWidgets.QScrollArea(core_widget)
+#        scroll_area.setWidgetResizable(True)
+#        layout.addWidget(scroll_area)
+#
+#        scroll_area_contents = QtWidgets.QWidget()
+#        scroll_area.setWidget(scroll_area_contents)
+#
+#        #vlayout = QtWidgets.QVBoxLayout(scroll_area_contents)
+#        grid = QtWidgets.QGridLayout(scroll_area_contents)
 
-        scroll_area_contents = QtWidgets.QWidget()
-        scroll_area.setWidget(scroll_area_contents)
-
-        #vlayout = QtWidgets.QVBoxLayout(scroll_area_contents)
-        grid = QtWidgets.QGridLayout(scroll_area_contents)
+        core_widget = QtWidgets.QTabWidget()
 
         tab = self.device_tabwidget.addTab(core_widget, d.getDeviceName())
         dev_tab = self.DeviceTab()
         dev_tab.tab = tab
-        dev_tab.layout = grid
+        dev_tab.layout = core_widget
         self.device_tabs[d.getDeviceName()] = dev_tab
+
+        self.device_props[d.getDeviceName()] = {}
+        self.device_groups[d.getDeviceName()] = []
+        self.device_group_tabs[d.getDeviceName()] = {}
 
     def new_light_cb(self, lvp):
 #        print('new light cb: ', lvp.device, '->', lvp.name)
@@ -242,6 +262,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def new_property_cb(self, p):
         device = p.getDeviceName()
+        group = p.getGroupName()
         pname = p.getName()
         plabel = p.getLabel()
         ptype = p.getType()
@@ -249,8 +270,39 @@ class MainWindow(QtWidgets.QMainWindow):
         state = p.getState()
         state_str = indihelper.strIPState(state)
 
-        tab = self.device_tabs[device]
-        grid = tab.layout
+        # see if group already exists
+        print(device, group, pname, self.device_groups[device])
+        #print(group in self.device_groups[device])
+        if group in self.device_groups[device]:
+            print('using existing')
+            tab = self.device_group_tabs[device][group]
+            grid = tab.layout
+        else:
+            print('new group tab')
+            core_widget = QtWidgets.QWidget(self)
+            layout = QtWidgets.QVBoxLayout(core_widget)
+            scroll_area = QtWidgets.QScrollArea(core_widget)
+            scroll_area.setWidgetResizable(True)
+            layout.addWidget(scroll_area)
+
+            scroll_area_contents = QtWidgets.QWidget()
+            scroll_area.setWidget(scroll_area_contents)
+
+            grid = QtWidgets.QGridLayout(scroll_area_contents)
+
+            dev_tab = self.device_tabs[device]
+            group_tabwidget = dev_tab.layout
+
+            tab = group_tabwidget.addTab(core_widget, group)
+            group_tab = self.GroupTab()
+            group_tab.tab = tab
+            group_tab.layout = grid
+            self.device_group_tabs[device][group] = group_tab
+            self.device_groups[device].append(group)
+
+
+#        tab = self.device_tabs[device]
+#        grid = tab.layout
         row = grid.rowCount()
 
         if p.getType() == PyIndi.INDI_TEXT:
