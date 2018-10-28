@@ -196,19 +196,20 @@ class MainWindow(QtWidgets.QMainWindow):
         hbox = QtWidgets.QHBoxLayout()
         label = QtWidgets.QLabel(f'new device cb: {d.getDeviceName()}')
         hbox.addWidget(label)
-        #self.vlayout.addWidget(label)
-        #self.vlayout.addLayout(hbox)
-        print(0)
-        vlayout = QtWidgets.QVBoxLayout()
-        print(0.1)
+
+        core_widget = QtWidgets.QWidget(self)
+        layout = QtWidgets.QVBoxLayout(core_widget)
+        scroll_area = QtWidgets.QScrollArea(core_widget)
+        scroll_area.setWidgetResizable(True)
+        layout.addWidget(scroll_area)
+
+        scroll_area_contents = QtWidgets.QWidget()
+        scroll_area.setWidget(scroll_area_contents)
+
+        vlayout = QtWidgets.QVBoxLayout(scroll_area_contents)
         vlayout.addLayout(hbox)
-        print(0.2)
-        widget = QtWidgets.QWidget()
-        print(1)
-        widget.setLayout(vlayout)
-        print(2)
-        tab = self.device_tabwidget.addTab(widget, d.getDeviceName())
-        print(3)
+
+        tab = self.device_tabwidget.addTab(core_widget, d.getDeviceName())
         dev_tab = self.DeviceTab()
         dev_tab.tab = tab
         dev_tab.layout = vlayout
@@ -236,7 +237,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def new_property_cb(self, p):
         print('new property cb: ', p.getDeviceName(), '->', p.getName(), ' ', indihelper.strGetType(p))
-        hbox = QtWidgets.QHBoxLayout(self.scroll_area_contents)
+        hbox = QtWidgets.QHBoxLayout()
         label = QtWidgets.QLabel(f'new property cb: {p.getDeviceName()}->{p.getName()} {indihelper.strGetType(p)}', self)
         hbox.addWidget(label)
         #self.vlayout.addLayout(hbox)
