@@ -248,11 +248,25 @@ class MainWindow(QtWidgets.QMainWindow):
 #            self.indiclient.sendNewNumber(indi_propvector)
         elif property_type == PyIndi.INDI_SWITCH:
             value = property.value_widget.isChecked()
-            print(property.value_widget, devicename, pvname, pname, value)
+            #print(property.value_widget, devicename, pvname, pname, value)
             device = self.indiclient.getDevice(devicename)
-            indihelper.setfindSwitchState(self.indiclient, device, pvname, pname, value)
+#            indihelper.setfindSwitchState(self.indiclient, device, pvname, pname, value)
             indi_propvector = indihelper.getSwitch(device, pvname)
-            print(indihelper.dump_ISwitchVectorProperty(indi_propvector))
+            prop = indihelper.findSwitch(indi_propvector, pname)
+            prop.s = value
+
+             # depending on rule turn off other buttons
+            if indi_propvector.r != PyIndi.ISR_NOFMANY and value:
+                for i in range(0, indi_propvector.nsp):
+                    s = indi_propvector[i]
+                    #print('scanning for buttons to turn off', s.name, pname)
+                    if s.name != pname:
+                        s.s = PyIndi.ISS_OFF
+            self.indiclient.sendNewSwitch(indi_propvector)
+
+            final_indi_propvector = indihelper.getSwitch(device, pvname)
+
+            print(indihelper.dump_ISwitchVectorProperty(final_indi_propvector))
 
             # depending on rule turn off other buttons
 #            if indi_propvector.r == PyIndi.ISR_ATMOST1 and value:
