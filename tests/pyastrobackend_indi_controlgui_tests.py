@@ -202,9 +202,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.indiclient.signals.new_device.connect(self.new_device_cb)
         self.indiclient.signals.new_property.connect(self.new_property_cb)
         self.indiclient.signals.new_number.connect(self.new_number_cb)
-#        self.indiclient.signals.new_text.connect(self.new_text_cb)
+        self.indiclient.signals.new_text.connect(self.new_text_cb)
+        self.indiclient.signals.new_switch.connect(self.new_switch_cb)
 #        self.indiclient.signals.remove_property.connect(self.remove_property_cb)
-#        self.indiclient.signals.new_switch.connect(self.new_switch_cb)
 #        self.indiclient.signals.new_light.connect(self.new_light_cb)
 #        self.indiclient.signals.new_message.connect(self.new_message_cb)
 
@@ -255,15 +255,14 @@ class MainWindow(QtWidgets.QMainWindow):
             print(indihelper.dump_ISwitchVectorProperty(indi_propvector))
 
             # depending on rule turn off other buttons
-            if indi_propvector.r == PyIndi.ISR_ATMOST1 and value:
-                for b in property.button_group.buttons():
-                    print(b, b.isChecked(), self.device_signal_mapper[devicename].mapping(id))
-                    if b is not self.device_signal_mapper[devicename].mapping(id):
-                        print('turn off')
-                        b.setChecked(False)
-                    else:
-                        print('skip')
-
+#            if indi_propvector.r == PyIndi.ISR_ATMOST1 and value:
+#                for b in property.button_group.buttons():
+#                    print(b, b.isChecked(), self.device_signal_mapper[devicename].mapping(id))
+#                    if b is not self.device_signal_mapper[devicename].mapping(id):
+#                        print('turn off')
+#                        b.setChecked(False)
+#                    else:
+#                        print('skip')
 
     def new_device_cb(self, d):
         logging.info(f'new device cb: {d.getDeviceName()}')
@@ -289,23 +288,26 @@ class MainWindow(QtWidgets.QMainWindow):
         pass
 
     def new_text_cb(self, tvp):
-#        print('new text cb: ', tvp.device, '->', tvp.name)
-#        print('new text cb: ', p.getDeviceName(), '->', p.getName(), ' ', indihelper.strGetType(p))
-#        hbox = QtWidgets.QHBoxLayout()
-#        label = QtWidgets.QLabel(f'new text cb: {p.getDeviceName()}->{p.getName()} {indihelper.strGetType(p)}', self)
-#        hbox.addWidget(label)
-#        #self.vlayout.addLayout(hbox)
-#        tab = self.device_tabs[p.getDeviceName()]
-#        tab.layout.addLayout(hbox)
-        pass
+        for i in range(0, tvp.ntp):
+            n = tvp[i]
+            property = self.device_propvectors[tvp.device][tvp.name].properties[n.name]
+            property.value_widget.setText(n.text)
+            print(n.name, n.text)
 
     def new_switch_cb(self, svp):
-#        print('new switch cb: ', svp.device, '->', svp.name)
-        pass
+        for i in range(0, svp.nsp):
+            n = svp[i]
+            property = self.device_propvectors[svp.device][svp.name].properties[n.name]
+            property.value_widget.setChecked(n.s == PyIndi.ISS_ON)
+            print(n.name, n.s)
 
     def new_number_cb(self, nvp):
         print('new number cb: ', nvp.device, '->', nvp.name)
-        pass
+        for i in range(0, nvp.nnp):
+            n = nvp[i]
+            property = self.device_propvectors[nvp.device][nvp.name].properties[n.name]
+            property.value_widget.setValue(n.value)
+            print(n.name, n.value)
 
     def new_message_cb(self, d, m):
 #        print('new message cb: ', d, m)
@@ -426,7 +428,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 hbox.setStretch(0, 0)
                 print('spy.r', pname, spy.r)
                 sw_group = QtWidgets.QButtonGroup()
-                sw_group.setExclusive(spy.r == PyIndi.ISR_1OFMANY)
+                #sw_group.setExclusive(spy.r == PyIndi.ISR_1OFMANY)
+                sw_group.setExclusive(False)
                 for s in spy:
                     sw = QtWidgets.QToolButton()
                     sw.setText(s.label)
