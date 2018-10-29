@@ -148,6 +148,12 @@ class MainWindow(QtWidgets.QMainWindow):
     class GroupTab:
         pass
 
+    class DevicePropVector:
+        pass
+
+    class DeviceProp:
+        pass
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -181,7 +187,9 @@ class MainWindow(QtWidgets.QMainWindow):
         # the key will be device names
         # the value of each dict entry will be a dict of the property names
         # for that device
-        self.device_props = {}
+        self.device_propvectors = {}
+
+        self.device_signal_mapper = {}
 
         # store device groups in dict
         # the key will be device names
@@ -206,20 +214,59 @@ class MainWindow(QtWidgets.QMainWindow):
             logging.error('Unable to connect to indi server!')
             sys.exit(1)
 
+
+
+    def handle_set_buttons(self, id):
+        print('handle_set_buttons: ', self, id)
+        devicename, pvname, pname = id.split('::')
+
+        property = self.device_propvectors[devicename][pvname].properties[pname]
+        property_type = self.device_propvectors[devicename][pvname].type
+
+        if property_type == PyIndi.INDI_TEXT:
+            value = property.value_widget.text()
+            print(devicename, pvname, pname, value)
+            device = self.indiclient.getDevice(devicename)
+            indihelper.setfindTextText(self.indiclient, device, pvname, pname, value)
+#            device = self.indiclient.getDevice(devicename)
+#            print(device)
+#            indi_propvector = indihelper.getText(device, pvname)
+#            print(indi_propvector)
+#            indi_text = indihelper.findText(indi_propvector, pname)
+#            print(indi_text)
+#            indi_text.value = value
+#            print(indihelper.dump_ITextVectorProperty(indi_propvector))
+#            self.indiclient.sendNewText(indi_propvector)
+        elif property_type == PyIndi.INDI_NUMBER:
+            value = property.value_widget.value()
+            print(devicename, pvname, pname, value)
+            device = self.indiclient.getDevice(devicename)
+            indihelper.setfindNumberValue(self.indiclient, device, pvname, pname, value)
+#            indi_propvector = indihelper.getNumber(device, pvname)
+#            indi_num = indihelper.findNumber(indi_propvector, pname)
+#            indi_num.value = value
+#            self.indiclient.sendNewNumber(indi_propvector)
+        elif property_type == PyIndi.INDI_SWITCH:
+            value = property.value_widget.isChecked()
+            print(property.value_widget, devicename, pvname, pname, value)
+            device = self.indiclient.getDevice(devicename)
+            indihelper.setfindSwitchState(self.indiclient, device, pvname, pname, value)
+            indi_propvector = indihelper.getSwitch(device, pvname)
+            print(indihelper.dump_ISwitchVectorProperty(indi_propvector))
+
+            # depending on rule turn off other buttons
+            if indi_propvector.r == PyIndi.ISR_ATMOST1 and value:
+                for b in property.button_group.buttons():
+                    print(b, b.isChecked(), self.device_signal_mapper[devicename].mapping(id))
+                    if b is not self.device_signal_mapper[devicename].mapping(id):
+                        print('turn off')
+                        b.setChecked(False)
+                    else:
+                        print('skip')
+
+
     def new_device_cb(self, d):
         logging.info(f'new device cb: {d.getDeviceName()}')
-
-#        core_widget = QtWidgets.QWidget(self)
-#        layout = QtWidgets.QVBoxLayout(core_widget)
-#        scroll_area = QtWidgets.QScrollArea(core_widget)
-#        scroll_area.setWidgetResizable(True)
-#        layout.addWidget(scroll_area)
-#
-#        scroll_area_contents = QtWidgets.QWidget()
-#        scroll_area.setWidget(scroll_area_contents)
-#
-#        #vlayout = QtWidgets.QVBoxLayout(scroll_area_contents)
-#        grid = QtWidgets.QGridLayout(scroll_area_contents)
 
         core_widget = QtWidgets.QTabWidget()
 
@@ -229,8 +276,13 @@ class MainWindow(QtWidgets.QMainWindow):
         dev_tab.layout = core_widget
         self.device_tabs[d.getDeviceName()] = dev_tab
 
-        self.device_props[d.getDeviceName()] = {}
+#        self.device_props[d.getDeviceName()] = {}
         self.device_group_tabs[d.getDeviceName()] = {}
+        self.device_propvectors[d.getDeviceName()] = {}
+
+        signal_mapper = QtCore.QSignalMapper(self)
+        signal_mapper.mapped['QString'].connect(self.handle_set_buttons)
+        self.device_signal_mapper[d.getDeviceName()] = signal_mapper
 
     def new_light_cb(self, lvp):
 #        print('new light cb: ', lvp.device, '->', lvp.name)
@@ -294,9 +346,14 @@ class MainWindow(QtWidgets.QMainWindow):
             group_tab.layout = grid
             self.device_group_tabs[device][group] = group_tab
 
+        device_propvector = self.DevicePropVector()
+        device_propvector.name = pname
+        device_propvector.label = plabel
+        device_propvector.group = group
+        device_propvector.device = device
+        device_propvector.type = ptype
+        device_propvector.properties = {}
 
-#        tab = self.device_tabs[device]
-#        grid = tab.layout
         row = grid.rowCount()
 
         if p.getType() == PyIndi.INDI_TEXT:
@@ -315,9 +372,18 @@ class MainWindow(QtWidgets.QMainWindow):
                         set_button = QtWidgets.QPushButton()
                         set_button.setText('Set')
                         hbox.addWidget(set_button)
+                        self.device_signal_mapper[device].setMapping(set_button, f'{device}::{pname}::{t.name}')
+                        set_button.pressed.connect(self.device_signal_mapper[device].map)
+                    else:
+                        set_button = None
                     grid.addLayout(hbox, row, 2)
-
                     row += 1
+                    device_prop = self.DeviceProp()
+                    device_prop.name = t.name
+                    device_prop.readonly = readonly
+                    device_prop.set_button = set_button
+                    device_prop.value_widget = text_edit
+                    device_propvector.properties[t.name] = device_prop
         elif p.getType() == PyIndi.INDI_NUMBER:
             npy = p.getNumber()
             readonly = npy.p == PyIndi.IP_RO
@@ -337,8 +403,18 @@ class MainWindow(QtWidgets.QMainWindow):
                         set_button = QtWidgets.QPushButton()
                         set_button.setText('Set')
                         hbox.addWidget(set_button)
+                        self.device_signal_mapper[device].setMapping(set_button, f'{device}::{pname}::{n.name}')
+                        set_button.pressed.connect(self.device_signal_mapper[device].map)
+                    else:
+                        set_button = None
                     grid.addLayout(hbox, row, 2)
                     row += 1
+                    device_prop = self.DeviceProp()
+                    device_prop.name = n.name
+                    device_prop.readonly = readonly
+                    device_prop.set_button = set_button
+                    device_prop.value_widget = sb
+                    device_propvector.properties[n.name] = device_prop
         elif p.getType() == PyIndi.INDI_SWITCH:
             spy = p.getSwitch()
             if spy is not None:
@@ -348,14 +424,27 @@ class MainWindow(QtWidgets.QMainWindow):
                 hbox = QtWidgets.QHBoxLayout()
                 hbox.setSpacing(0)
                 hbox.setStretch(0, 0)
+                print('spy.r', pname, spy.r)
+                sw_group = QtWidgets.QButtonGroup()
+                sw_group.setExclusive(spy.r == PyIndi.ISR_1OFMANY)
                 for s in spy:
                     sw = QtWidgets.QToolButton()
                     sw.setText(s.label)
                     sw.setCheckable(True)
-                    if s.s == PyIndi.ISS_ON:
-                        sw.setChecked(True)
+                    sw.setChecked(s.s == PyIndi.ISS_ON)
+                    self.device_signal_mapper[device].setMapping(sw, f'{device}::{pname}::{s.name}')
+                    sw.toggled.connect(self.device_signal_mapper[device].map)
+                    sw_group.addButton(sw)
                     hbox.addWidget(sw)
                     col += 1
+                    device_prop = self.DeviceProp()
+                    device_prop.name = s.name
+                    device_prop.readonly = True
+                    device_prop.set_button = None
+                    device_prop.value_widget = sw
+                    # needed to prevent GC??
+                    device_prop.button_group = sw_group
+                    device_propvector.properties[s.name] = device_prop
                 hhbox = QtWidgets.QHBoxLayout()
                 hhbox.setSpacing(0)
                 hhbox.setStretch(1, 0)
@@ -382,7 +471,10 @@ class MainWindow(QtWidgets.QMainWindow):
 #                    s += f'   {t.name}  ({t.label}) = BLOB {t.size} bytes\n'
         else:
             s = 'UNKNOWN INDI TYPE!'
+            device_propvector = None
 
+        if device_propvector is not None:
+            self.device_propvectors[device][pname] = device_propvector
 
 
 #        info_str = f'new property cb: {device} {name} {label} {ptype_str} {state_str}'
