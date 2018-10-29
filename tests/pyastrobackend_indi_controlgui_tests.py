@@ -187,7 +187,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # the key will be device names
         # the value of each dict entry will be a dict of the groups names
         # for that device
-        self.device_groups = {}
+        #self.device_groups = {}
         self.device_group_tabs = {}
 
         self.indiclient = IndiClient()
@@ -230,7 +230,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.device_tabs[d.getDeviceName()] = dev_tab
 
         self.device_props[d.getDeviceName()] = {}
-        self.device_groups[d.getDeviceName()] = []
         self.device_group_tabs[d.getDeviceName()] = {}
 
     def new_light_cb(self, lvp):
@@ -271,14 +270,10 @@ class MainWindow(QtWidgets.QMainWindow):
         state_str = indihelper.strIPState(state)
 
         # see if group already exists
-        print(device, group, pname, self.device_groups[device])
-        #print(group in self.device_groups[device])
-        if group in self.device_groups[device]:
-            print('using existing')
+        if group in self.device_group_tabs[device]:
             tab = self.device_group_tabs[device][group]
             grid = tab.layout
         else:
-            print('new group tab')
             core_widget = QtWidgets.QWidget(self)
             layout = QtWidgets.QVBoxLayout(core_widget)
             scroll_area = QtWidgets.QScrollArea(core_widget)
@@ -298,7 +293,6 @@ class MainWindow(QtWidgets.QMainWindow):
             group_tab.tab = tab
             group_tab.layout = grid
             self.device_group_tabs[device][group] = group_tab
-            self.device_groups[device].append(group)
 
 
 #        tab = self.device_tabs[device]
