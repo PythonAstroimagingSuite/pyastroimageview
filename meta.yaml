@@ -11,15 +11,16 @@ requirements:
    - python
    - setuptools
   run:
-   - python==3.6
+   - python >= 3.6, <3.7
    - numpy >=1.15
    - astropy >=3.0.4
    - configobj >=5.0.6
-   - pystarutils >=0.5
+   - pystarutils >=0.6
    - pyqt >=5.9.2
    - pyqtgraph >=0.10.0
 
 build:
+  python: {{ PY_VER }}
   number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0) }}
   string: {{ 'py' + environ.get('CONDA_PY') + environ.get('GIT_DESCRIBE_HASH', '') + '_' + environ.get('GIT_DESCRIBE_NUMBER', '0')}}
 

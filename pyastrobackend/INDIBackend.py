@@ -69,8 +69,8 @@ class DeviceBackend(BaseDeviceBackend):
             self.eventQueue.put(svp)
 
         def newNumber(self, nvp):
-            print('num:', nvp.name)
-            print(indihelper.dump_INumberVectorProperty(nvp))
+#            print('num:', nvp.name)
+#            print(indihelper.dump_INumberVectorProperty(nvp))
             self.eventQueue.put(nvp)
 
         def newText(self, tvp):
