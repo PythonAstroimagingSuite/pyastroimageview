@@ -637,6 +637,10 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.device_manager.filterwheel.release_lock()
         self.set_startstop_state(True)
 
+        # have sequence restart at current index
+        self.sequence.start_index = self.sequence.current_index
+        self.ui.sequence_start.setValue(self.sequence.start_index)
+
     def set_startstop_state(self, state):
         """Controls start/stop button state"""
         logging.info(f'imagecontrolui: set_startstop_state: {state}')
