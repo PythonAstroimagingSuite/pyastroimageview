@@ -6,7 +6,7 @@ from queue import Queue
 
 import ctypes
 
-import numpy as np
+#import numpy as np
 import astropy.io.fits as pyfits
 
 import PyIndi
@@ -74,16 +74,16 @@ class DeviceBackend(BaseDeviceBackend):
             self.eventQueue.put(nvp)
 
         def newText(self, tvp):
-            print('text:', tvp.name)
+#            print('text:', tvp.name)
             self.eventQueue.put(tvp)
 
         def newLight(self, lvp):
-            print('light:', lvp.name)
-            print(lvp)
+#            print('light:', lvp.name)
+#            print(lvp)
             self.eventQueue.put(lvp)
 
         def newMessage(self, d, m):
-            print('msg:', d, m)
+#            print('msg:', d, m)
             self.eventQueue.put((d,m))
 
         def serverConnected(self):

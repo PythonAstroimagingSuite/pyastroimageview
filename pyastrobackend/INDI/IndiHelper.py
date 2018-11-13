@@ -16,7 +16,7 @@ def getSwitch(device, name, timeout=DEFAULT_TIMEOUT):
     cnt = 0
     while sw is None and cnt < (timeout/0.1):
         time.sleep(0.1)
-        print('S')
+#        print('S')
         sw = device.getSwitch(name)
         cnt += 1
 
@@ -67,7 +67,7 @@ def getNumber(device, name, timeout=DEFAULT_TIMEOUT):
     cnt = 0
     while num is None and cnt < (timeout/0.1):
         time.sleep(0.1)
-        print('N')
+#        print('N')
         num = device.getNumber(name)
         cnt += 1
 
@@ -120,7 +120,7 @@ def getText(device, name, timeout=DEFAULT_TIMEOUT):
     cnt = 0
     while text is None and cnt < (timeout/0.1):
         time.sleep(0.1)
-        print('T')
+#        print('T')
         text = device.getText(name)
         cnt += 1
 
@@ -164,7 +164,7 @@ def getLight(device, name, timeout=DEFAULT_TIMEOUT):
     cnt = 0
     while light is None and cnt < (timeout/0.1):
         time.sleep(0.1)
-        print('L')
+#        print('L')
         light = device.getLight(name)
         cnt += 1
 
