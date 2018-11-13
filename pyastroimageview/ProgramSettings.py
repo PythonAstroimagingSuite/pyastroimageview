@@ -16,6 +16,9 @@ class ProgramSettings:
         self.location_longitude = 0
         self.location_altitude = 0
 
+        # FIXME we don't have a UI for this yet!
+        self.location_tz = 'US/Eastern'
+
         self.observer_notes = ''
 
         # telescope settings

@@ -2,7 +2,10 @@ import logging
 
 from astropy import units as u
 from astropy.coordinates import AltAz
+from astropy.coordinates import EarthLocation
 from astropy.coordinates import SkyCoord
+from astropy.time import Time
+from astropy.time import TimezoneInfo
 
 from PyQt5 import QtCore, QtWidgets
 
@@ -70,17 +73,43 @@ class MountControlUI(QtWidgets.QWidget):
             self.ui.mount_setting_position_dec.setText(decstr)
 
             (alt, az) = self.mount_manager.get_position_altaz()
+
             if alt is not None and az is not None:
                 altaz = AltAz(alt=alt*u.degree, az=az*u.degree)
+#                logging.info(f'altaz from mount is {altaz}')
+            else:
+                # FIXME Add code to compute alt/az when not given by mount
+#                logging.info('Alt/az not available from mount - calculating')
+
+                # FIXME we don't really force user to set lat/lon so this will give
+                #       wrong results by default!
+                site_loc = EarthLocation(lat=self.settings.location_latitude*u.degree,
+                                         lon=self.settings.location_longitude*u.degree,
+                                         height=self.settings.location_altitude*u.meter)
+
+#                logging.info(f'site_loc = {site_loc}')
+#                logging.info(f'timezeon = {self.settings.location_tz}')
+
+                tzinfo = TimezoneInfo(tzname=self.settings.location_tz)
+#                logging.info(f'tzinfo = {tzinfo}')
+
+                time = Time.now()
+                time_local = time.to_datetime(timezone=tzinfo)
+
+#                logging.info(f'time = {time} local = {time_local}')
+
+                altaz = radec.transform_to(AltAz(obstime=time_local, location=site_loc))
+#                logging.info(f'calc altaz is {altaz}')
+
+            # should have valid alt/az by now so display if possible
+            if altaz is not None:
                 altstr = altaz.alt.to_string(alwayssign=True, sep=":", precision=1, pad=True)
                 azstr = altaz.az.to_string(alwayssign=True, sep=":", precision=1, pad=True)
                 self.ui.mount_setting_position_alt.setText(altstr)
                 self.ui.mount_setting_position_az.setText(azstr)
             else:
-                # FIXME Add code to compute alt/az when not given by mount
                 self.ui.mount_setting_position_alt.setText('N/A')
                 self.ui.mount_setting_position_az.setText('N/A')
-
 
     def mount_setup(self):
         if self.settings.mount_driver:
