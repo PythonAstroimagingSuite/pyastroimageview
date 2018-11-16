@@ -625,7 +625,7 @@ class Focuser(BaseFocuser):
         return indihelper.setfindNumberValue(self.backend.indiclient, self.focuser,
                                              'ABS_FOCUS_POSITION',
                                              'FOCUS_ABSOLUTE_POSITION',
-                                             abspos)
+                                             float(abspos))
 
     def get_max_absolute_position(self):
         # Moonlite driver defines max travel
