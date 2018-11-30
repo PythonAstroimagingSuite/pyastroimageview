@@ -331,10 +331,19 @@ def dump_ISwitchVectorProperty(p):
 
     return s
 
+def dump_Number(p):
+    s = f'Number {p.name}\n'
+    s += f'    Min: {p.min}\n'
+    s += f'    Max: {p.max}\n'
+    s += f'   Step: {p.step}\n'
+    s += f'  Value: {p.value}\n'
+    return s
+
 def dump_Property(p):
     s = f'Property {p.getName()}\n'
     s += f'    Label: {p.getLabel()}\n'
     s += f'    Type: {p.getType()}\n'
+    return s
 
 def dump_PropertyVector(pv):
     print(pv, pv.__dict__)

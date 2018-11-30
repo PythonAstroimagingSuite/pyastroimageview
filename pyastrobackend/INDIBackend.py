@@ -372,6 +372,20 @@ class Camera(BaseCamera):
         # FIXME accessing blob event seems like a poor choice
         return self.backend.indiclient.getBlobEvent() != None
 
+    def get_min_max_exposure(self):
+        if self.cam:
+            ccd_exposure = indihelper.getNumber(self.cam, 'CCD_EXPOSURE')
+            if ccd_exposure is None:
+                return None
+
+            ccd_expnum = indihelper.findNumber(ccd_exposure, 'CCD_EXPOSURE_VALUE')
+            if ccd_expnum is None:
+                return None
+
+            return (ccd_expnum.min, ccd_expnum.max)
+        else:
+            return None
+
     def supports_progress(self):
         logging.warning('Camera.supports_progress() is not implemented for INDI!')
         return None
@@ -529,8 +543,23 @@ class Camera(BaseCamera):
         return True
 
     def get_max_binning(self):
-        logging.warning('Camera.get_max_binning() is not implemented for INDI!')
-        return None
+#        logging.warning('Camera.get_max_binning() is not implemented for INDI!')
+#        return None
+        if self.cam:
+            ccd_bin = indihelper.getNumber(self.cam, 'CCD_BINNING')
+            logging.info(f'ccd_bin={ccd_bin}')
+            if ccd_bin is None:
+                return None
+
+            ccd_hbin = indihelper.findNumber(ccd_bin, 'HOR_BIN')
+            logging.info(f'ccd_hbin={indihelper.dump_Number(ccd_hbin)}')
+            if ccd_hbin is None:
+                return None
+
+            return ccd_hbin.max
+        else:
+            return None
+
 
     def get_size(self):
         ccd_info = self.get_info()

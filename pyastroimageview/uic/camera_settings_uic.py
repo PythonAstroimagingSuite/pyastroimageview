@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_camera_settings_widget(object):
     def setupUi(self, camera_settings_widget):
         camera_settings_widget.setObjectName("camera_settings_widget")
-        camera_settings_widget.resize(213, 205)
+        camera_settings_widget.resize(243, 217)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -136,6 +136,7 @@ class Ui_camera_settings_widget(object):
         self.camera_setting_exposure_spinbox.setSizePolicy(sizePolicy)
         self.camera_setting_exposure_spinbox.setMinimumSize(QtCore.QSize(64, 0))
         self.camera_setting_exposure_spinbox.setMaximumSize(QtCore.QSize(64, 16777215))
+        self.camera_setting_exposure_spinbox.setDecimals(3)
         self.camera_setting_exposure_spinbox.setMinimum(0.0)
         self.camera_setting_exposure_spinbox.setMaximum(3600.0)
         self.camera_setting_exposure_spinbox.setProperty("value", 1.0)

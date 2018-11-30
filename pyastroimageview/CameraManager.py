@@ -347,7 +347,9 @@ class CameraManager(Camera):
 #            logging.info(f'camera_manager:get_exposure_progress()  {interval} {remaining}')
             if interval == 0 or remaining < 0:
                 remaining = 0
-            progress = (100.0*(interval-remaining)/interval)
+                progress = 100.0
+            else:
+                progress = (100.0*(interval-remaining)/interval)
             return progress
         else:
             return super().get_exposure_progress()

@@ -156,6 +156,15 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             self.ui.sequence_binning.setValue(settings.binning)
             self.reset_roi()
 
+            exp_range = self.device_manager.camera.get_min_max_exposure()
+            if exp_range is not None:
+                exp_min, exp_max = exp_range
+                logging.info(f'exposure min/max = {exp_min} {exp_max}')
+                self.ui.sequence_exposure.setMinimum(exp_min)
+                self.ui.sequence_exposure.setMaximum(exp_max)
+
+
+
     def filterwheel_lock_handler(self, val):
         logging.info('filterwheel_lock_handler')
 

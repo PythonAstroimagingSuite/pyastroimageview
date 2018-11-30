@@ -53,6 +53,7 @@ class CameraControlUI(QtWidgets.QWidget):
             maxbin = self.camera_managerget_max_binning()
             # FIXME need better way to handle maxbin being unavailable!
             if maxbin is None:
+                logging.info('Forcing max bin to 4')
                 maxbin = 4
             self.ui.camera_setting_binning_spinbox.setMaximum(maxbin)
         else:
@@ -288,6 +289,7 @@ class CameraControlUI(QtWidgets.QWidget):
             maxbin = self.camera_manager.get_max_binning()
             # FIXME need better way to handle maxbin being unavailable!
             if maxbin is None:
+                logging.info('Forcing max bin to 4')
                 maxbin = 4
             self.ui.camera_setting_binning_spinbox.setMaximum(maxbin)
             self.ui.camera_setting_binning_spinbox.setMinimum(1)
@@ -310,6 +312,13 @@ class CameraControlUI(QtWidgets.QWidget):
 
             self.ui.camera_setting_binning_spinbox.setValue(settings.binning)
             self.reset_roi()
+
+            exp_range = self.camera_manager.get_min_max_exposure()
+            if exp_range is not None:
+                exp_min, exp_max = exp_range
+                logging.info(f'exposure min/max = {exp_min} {exp_max}')
+                self.ui.camera_setting_exposure_spinbox.setMinimum(exp_min)
+                self.ui.camera_setting_exposure_spinbox.setMaximum(exp_max)
 
             cooler_state = self.camera_manager.get_cooler_state()
             self.ui.camera_setting_cooleronoff.setChecked(cooler_state)
