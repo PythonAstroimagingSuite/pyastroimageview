@@ -285,6 +285,13 @@ class CameraControlUI(QtWidgets.QWidget):
                 logging.warning('CCUI: camera_connect: could not get lock!')
                 return
 
+            maxbin = self.camera_manager.get_max_binning()
+            # FIXME need better way to handle maxbin being unavailable!
+            if maxbin is None:
+                maxbin = 4
+            self.ui.camera_setting_binning_spinbox.setMaximum(maxbin)
+            self.ui.camera_setting_binning_spinbox.setMinimum(1)
+
             result = self.camera_manager.connect(self.settings.camera_driver)
             if not result:
                 QtWidgets.QMessageBox.critical(None, 'Error', 'Unable to connect to camera!',
@@ -296,6 +303,11 @@ class CameraControlUI(QtWidgets.QWidget):
 
             # setup UI based on camera settings
             settings = self.camera_manager.get_settings()
+
+            logging.info(f'settings={settings}')
+
+            logging.info(f'settings.binning={settings.binning}')
+
             self.ui.camera_setting_binning_spinbox.setValue(settings.binning)
             self.reset_roi()
 
@@ -307,12 +319,6 @@ class CameraControlUI(QtWidgets.QWidget):
                 self.ui.camera_setting_coolersetpt.setValue(int(settemp))
             else:
                 logging.warning('camera_connect: settemp is None!')
-            maxbin = self.camera_manager.get_max_binning()
-            # FIXME need better way to handle maxbin being unavailable!
-            if maxbin is None:
-                maxbin = 4
-            self.ui.camera_setting_binning_spinbox.setMaximum(maxbin)
-            self.ui.camera_setting_binning_spinbox.setMinimum(1)
 
             self.camera_manager.release_lock()
 

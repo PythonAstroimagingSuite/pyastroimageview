@@ -146,6 +146,16 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                 maxbin = 4
             self.ui.sequence_binning.setMaximum(maxbin)
 
+            # setup UI based on camera settings
+            settings = self.device_manager.camera.get_settings()
+
+            logging.info(f'settings={settings}')
+
+            logging.info(f'settings.binning={settings.binning}')
+
+            self.ui.sequence_binning.setValue(settings.binning)
+            self.reset_roi()
+
     def filterwheel_lock_handler(self, val):
         logging.info('filterwheel_lock_handler')
 
