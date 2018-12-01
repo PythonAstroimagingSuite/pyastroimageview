@@ -477,6 +477,51 @@ class Camera(BaseCamera):
         logging.warning('Camera.get_egain() is not implemented for INDI!')
         return None
 
+    def get_camera_gain(self):
+        """ Looks for camera specific gain - only works for ASI afaik"""
+        if self.cam:
+            ccd_controls = indihelper.getNumber(self.cam, 'CCD_CONTROLS')
+            if ccd_controls is None:
+                return None
+
+            ccd_gain = indihelper.findNumber(ccd_controls, 'Gain')
+            if ccd_gain is None:
+                return None
+
+            return ccd_gain.value
+        else:
+            return None
+
+    def get_camera_offset(self):
+        """ Looks for camera specific offset - only works for ASI afaik"""
+        if self.cam:
+            ccd_controls = indihelper.getNumber(self.cam, 'CCD_CONTROLS')
+            if ccd_controls is None:
+                return None
+
+            ccd_offset = indihelper.findNumber(ccd_controls, 'Offset')
+            if ccd_offset is None:
+                return None
+
+            return ccd_offset.value
+        else:
+            return None
+
+    def get_camera_usbbandwidth(self):
+        """ Looks for camera specific usb traffic - only works for ASI afaik"""
+        if self.cam:
+            ccd_controls = indihelper.getNumber(self.cam, 'CCD_CONTROLS')
+            if ccd_controls is None:
+                return None
+
+            ccd_usb = indihelper.findNumber(ccd_controls, 'BandWidth')
+            if ccd_usb is None:
+                return None
+
+            return ccd_usb.value
+        else:
+            return None
+
     def get_current_temperature(self):
         return indihelper.getfindNumberValue(self.cam, 'CCD_TEMPERATURE',
                                              'CCD_TEMPERATURE_VALUE')
@@ -559,7 +604,6 @@ class Camera(BaseCamera):
             return ccd_hbin.max
         else:
             return None
-
 
     def get_size(self):
         ccd_info = self.get_info()

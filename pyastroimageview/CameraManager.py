@@ -200,6 +200,17 @@ class CameraManager(Camera):
                 if egain is not None:
                     fits_image.set_electronic_gain(egain)
 
+                # FIXME not all backends handle this - seems to be ASI specific??
+                ccd_gain = super().get_camera_gain()
+                if ccd_gain is not None:
+                    fits_image.set_header_keyvalue('CCD_GAIN', ccd_gain)
+                ccd_offset = super().get_camera_offset()
+                if ccd_offset is not None:
+                    fits_image.set_header_keyvalue('CCD_OFFSET', ccd_offset)
+                ccd_usb = super().get_camera_usbbandwidth()
+                if ccd_usb is not None:
+                    fits_image.set_header_keyvalue('CCD_USBBANDWIDTH', ccd_usb)
+
                 logging.info('cameramanager: image ready about to clean state vars')
                 self.exposure_start_time = None
                 self.current_exposure_length = None
