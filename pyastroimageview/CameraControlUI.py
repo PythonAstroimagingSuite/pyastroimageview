@@ -317,6 +317,11 @@ class CameraControlUI(QtWidgets.QWidget):
             if exp_range is not None:
                 exp_min, exp_max = exp_range
                 logging.info(f'exposure min/max = {exp_min} {exp_max}')
+
+                # if exp_min isnt 0 but less than 0.001s just set to 0.001s
+                if exp_min > 0 and exp_min < 0.001:
+                    exp_min = 0.001
+                    logging.info(f'Bumping exp_min to {exp_min}')
                 self.ui.camera_setting_exposure_spinbox.setMinimum(exp_min)
                 self.ui.camera_setting_exposure_spinbox.setMaximum(exp_max)
 
