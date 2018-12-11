@@ -12,8 +12,11 @@ class Camera(BaseCamera):
         self.camera_has_progress = None
         self.connected = False
 
+    def has_chooser(self):
+        return False
+
     def show_chooser(self, last_choice):
-        logging.warngin('MaximDL Camera Backend: no show_chooser()!')
+        logging.warning('MaximDL Camera Backend: no show_chooser()!')
         return None
 
     # name is currently ignored

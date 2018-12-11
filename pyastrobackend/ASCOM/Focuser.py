@@ -10,6 +10,9 @@ class Focuser(BaseFocuser):
     def __init__(self):
         self.focus = None
 
+    def has_chooser(self):
+        return True
+
     def show_chooser(self, last_choice):
         pythoncom.CoInitialize()
         chooser = win32com.client.Dispatch("ASCOM.Utilities.Chooser")

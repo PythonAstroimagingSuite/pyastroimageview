@@ -10,6 +10,9 @@ class Camera(BaseCamera):
         self.cam = None
         self.camera_has_progress = None
 
+    def has_chooser(self):
+        return True
+
     def show_chooser(self, last_choice):
         chooser = CreateObject("ASCOM.Utilities.Chooser")
         chooser.DeviceType="Camera"

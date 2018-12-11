@@ -22,12 +22,26 @@ class DeviceBackend(BaseDeviceBackend):
 
     def connect(self):
         self.connected = True
+        return True
 
     def disconnect(self):
         pass
 
     def isConnected(self):
         return self.connected
+
+    def newCamera(self):
+        return Camera(self)
+
+    def newFocuser(self):
+        return Focuser(self)
+
+    def newFilterWheel(self):
+        return FilterWheel(self)
+
+    def newMount(self):
+        return Mount(self)
+
 
 class Camera(BaseCamera):
     def __init__(self):
