@@ -1,4 +1,4 @@
-@echo off
+echo off
 
 REM Find Anaconda3
 
@@ -7,9 +7,10 @@ if exist %HOMEDRIVER%%HOMEPATH%\Anaconda3 (
   echo Found in user path
   set ANACONDA_LOC=%HOMEDRIVE%%HOMEPATH%\Anaconda3
 ) else (
-    if exist %HOMEDRIVE%Anaconda3 (
+    echo Testing %HOMEDRIVE%\Anaconda3
+    if exist %HOMEDRIVE%\Anaconda3 (
        echo Found in root path
-       set ANACONDA_LOC=%HOMEDRIVE%Anaconda3
+       set ANACONDA_LOC=%HOMEDRIVE%\Anaconda3
     ) else (
        start "" /wait cmd /c "echo Cannot find Anaconda3!&echo(&pause"
        exit
