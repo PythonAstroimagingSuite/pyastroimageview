@@ -82,9 +82,9 @@ class ImageSequence:
         tmp_name = re.sub('\{temps\}', f'{temps_prefix}{abs(temps):.0f}C', tmp_name)
         tmp_name = re.sub('\{bin\}', f'bin_{int(binx)}', tmp_name)
 
-        # put in filter only if type  'Light'
+        # put in filter only if type 'Light' or 'Flat'
         # also only put on base name too
-        if self.frame_type == FrameType.LIGHT:
+        if self.frame_type == FrameType.LIGHT or self.frame_type == FrameType.FLAT:
             if self.device_manager.filterwheel.is_connected():
                 filter_name = self.device_manager.filterwheel.get_position_name()
             else:
