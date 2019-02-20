@@ -4,12 +4,14 @@ call C:\Users\msf\Anaconda3\Scripts\activate.bat C:\Users\msf\Anaconda3
 
 echo Running DEBUG mode from git checkout
 
-REM MUST SET THE PROPER ENV HERE
-REM AND UNCOMMENT WARNING!
+REM Expects env on command line
 
-start "" /wait cmd /c "echo SET ENV VAR FIRST!&echo(&pause"
-
-call activate
+if ["%~1"]==[""] (
+  start "" /wait cmd /c "echo Pass ENV name in shortcu!&echo(&pause"
+  exit
+)
+echo Activating %1
+call activate %1
 
 echo PATH=%PATH%
 echo PYTHONPATH=%PYTHONPATH%
