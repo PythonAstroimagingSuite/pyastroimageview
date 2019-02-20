@@ -6,9 +6,10 @@ from comtypes.safearray import safearray_as_ndarray
 from pyastrobackend.BaseBackend import BaseCamera
 
 class Camera(BaseCamera):
-    def __init__(self):
+    def __init__(self, backend):
         self.cam = None
         self.camera_has_progress = None
+        self.backend = backend
 
     def has_chooser(self):
         return True
@@ -115,6 +116,12 @@ class Camera(BaseCamera):
             logging.error('Exception ->', exc_info=True)
             return -1
 
+    def get_min_max_exposure(self):
+        if self.cam:
+            return (self.cam.ExposureMin, self.cam.ExposureMax)
+        else:
+            return None
+
     def get_image_data(self):
         """ Get image data from camera
 
@@ -152,6 +159,15 @@ class Camera(BaseCamera):
     def get_egain(self):
         return self.cam.ElectronsPerADU
 
+    def get_camera_gain(self):
+        return None
+
+    def get_camera_offset(self):
+        return None
+
+    def get_camera_usbbandwidth(self):
+        pass
+
     def get_current_temperature(self):
         return self.cam.CCDTemperature
 
@@ -183,14 +199,16 @@ class Camera(BaseCamera):
             logging.warning('camera.get_cooler_power() failed!')
             logging.error('Exception ->', exc_info=True)
             return 0
-
     def set_binning(self, binx, biny):
         self.cam.BinX = binx
         self.cam.BinY = biny
         return True
 
     def get_max_binning(self):
-        return self.cam.MaxBinX
+        if self.cam is not None:
+            return self.cam.MaxBinX
+        else:
+            return None
 
     def get_size(self):
         return (self.cam.CameraXSize, self.cam.CameraYSize)

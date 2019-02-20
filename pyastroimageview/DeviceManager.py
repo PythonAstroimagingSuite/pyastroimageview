@@ -3,7 +3,8 @@ from pyastroimageview.BackendConfig import get_backend_for_os
 BACKEND = get_backend_for_os()
 
 if BACKEND == 'ASCOM':
-    import pyastrobackend.ASCOMBackend.DeviceBackend as Backend
+    #import pyastrobackend.ASCOMBackend.DeviceBackend as Backend
+    from pyastrobackend.ASCOMBackend import DeviceBackend as Backend
 elif BACKEND == 'INDI':
     from pyastrobackend.INDIBackend import DeviceBackend as Backend
 else:

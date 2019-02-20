@@ -99,6 +99,22 @@ class BaseCamera(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def get_min_max_exposure(self):
+        pass
+
+    @abstractmethod
+    def get_camera_gain(self):
+        pass
+
+    @abstractmethod
+    def get_camera_offset(self):
+        pass
+
+    @abstractmethod
+    def get_camera_usbbandwidth(self):
+        pass
+
+    @abstractmethod
     def get_image_data(self):
         pass
 

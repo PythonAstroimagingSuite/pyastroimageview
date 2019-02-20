@@ -7,8 +7,9 @@ import pythoncom
 import win32com.client
 
 class Focuser(BaseFocuser):
-    def __init__(self):
+    def __init__(self, backend):
         self.focus = None
+        self.backend = backend
 
     def has_chooser(self):
         return True

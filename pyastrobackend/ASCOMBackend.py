@@ -336,8 +336,9 @@ class Focuser(BaseFocuser):
         return self.focus.isMoving
 
 class FilterWheel(BaseFilterWheel):
-    def __init__(self):
+    def __init__(self, backend):
         self.filterwheel = None
+        self.backend = backend
 
     def show_chooser(self, last_choice):
         pythoncom.CoInitialize()
@@ -346,6 +347,9 @@ class FilterWheel(BaseFilterWheel):
         filterwheel = chooser.Choose(last_choice)
         logging.info(f'choice = {filterwheel}')
         return filterwheel
+
+    def has_chooser(self):
+        return True
 
     def connect(self, name):
         pythoncom.CoInitialize()
@@ -444,6 +448,9 @@ class Mount(BaseMount):
         mount = chooser.Choose(last_choice)
         logging.info(f'choice = {mount}')
         return mount
+
+    def has_chooser(self):
+        return True
 
     def connect(self, name):
         pythoncom.CoInitialize()
