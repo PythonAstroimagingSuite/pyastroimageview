@@ -1,0 +1,1 @@
+ PATH=../../pystarutils/scripts/:$PATH PYTHONPATH=../../pystarutils:.. python.exe -u pyastroimageview_main.py
