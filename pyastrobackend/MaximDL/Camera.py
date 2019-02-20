@@ -78,6 +78,9 @@ class Camera(BaseCamera):
         logging.warning('MaximDL Camera get_exposure_progress() not implemented')
         return -1
 
+    def get_min_max_exposure(self):
+        return None
+
     def save_image_data(self, path):
         # FIXME make better temp name
         # FIXME specify cwd as path for file - otherwise not sure where it goes!
@@ -102,6 +105,15 @@ class Camera(BaseCamera):
 
     def get_egain(self):
         logging.warning('RPC Camera get_egain() not implemented!')
+
+    def get_camera_gain(self):
+        return None
+
+    def get_camera_offset(self):
+        return None
+
+    def get_camera_usbbandwidth(self):
+        pass
 
     def get_current_temperature(self):
         logging.warning('RPC Camera get_current_temperature() not implemented!')

@@ -10,7 +10,7 @@ from pyastroimageview.BackendConfig import get_backend_for_os
 BACKEND = get_backend_for_os()
 
 if BACKEND == 'ASCOM':
-    from pyastrobackend import ASCOMBackend as Backend
+    from pyastrobackend.ASCOM.FilterWheel import FilterWheel
 elif BACKEND == 'INDI':
     from pyastrobackend import INDIBackend as Backend
 else:
@@ -26,7 +26,7 @@ class FilterManagerSignals(QtCore.QObject):
     connect = QtCore.pyqtSignal(bool)
     lock = QtCore.pyqtSignal(bool)
 
-class FilterWheelManager(Backend.FilterWheel):
+class FilterWheelManager(FilterWheel):
     def checklock(method):
         @wraps(method)
         def wrapped(self, *args, **kwargs):
