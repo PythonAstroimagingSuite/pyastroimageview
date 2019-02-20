@@ -3,20 +3,21 @@
 REM Find Anaconda3
 
 REM First as user then global
-if exist %HOMEPATH%\Anaconda3 (
+if exist %HOMEDRIVER%%HOMEPATH%\Anaconda3 (
   echo Found in user path
-  set ANACONDA_LOC=%HOMEPATH%\Anaconda3
+  set ANACONDA_LOC=%HOMEDRIVE%%HOMEPATH%\Anaconda3
 ) else (
-    if exist C:\Anaconda3 (
+    if exist %HOMEDRIVE%Anaconda3 (
        echo Found in root path
-       set ANACONDA_LOC="C:\Anaconda3"
+       set ANACONDA_LOC=%HOMEDRIVE%Anaconda3
     ) else (
        start "" /wait cmd /c "echo Cannot find Anaconda3!&echo(&pause"
        exit
     )
 )
 
-call %ANACONDA_LOC%\Scripts\activate.bat C:\Anaconda3
+echo Anaconda location is %ANACONDA_LOC%
+call %ANACONDA_LOC%\Scripts\activate.bat %ANACONDA_LOC%
 
 echo Running DEBUG mode from git checkout
 
