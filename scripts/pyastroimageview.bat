@@ -10,4 +10,4 @@ set PYTHONPATH=../../pystarutils;..;%PYTHONPATH%
 echo PATH=%PATH%
 echo PYTHONPATH=%PYTHONPATH%
 
-python.exe -u pyastroimageview_main.py
+python.exe -u pyastroimageview_main.py %*
