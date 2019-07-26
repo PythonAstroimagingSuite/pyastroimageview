@@ -117,7 +117,7 @@ class RPCServer:
             logging.warning('Received disconnect event for socket that wasnt in list!')
 
     def client_readready_event(self, socket):
-        logging.info(f'RPCServer:client_readready_event - socket = {socket}')
+        #logging.info(f'RPCServer:client_readready_event - socket = {socket}')
 
         while True:
             resp = socket.readLine(2048)

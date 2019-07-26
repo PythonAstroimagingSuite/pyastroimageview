@@ -8,6 +8,7 @@ import os
 import sys
 import math
 import logging
+from datetime import datetime
 
 import numpy as np
 
@@ -103,8 +104,10 @@ class MainWindow(QtGui.QMainWindow):
         #self.observatory_location = EarthLocation(lat=35.75*u.degree, lon=-78.8*u.degree)
 
         # start HFR Server
-        self.hfr_server = MeasureHFRServer()
-        self.hfr_server.start()
+        logging.info('MeasureHFRServer is DISABLED!!!')
+#        self.hfr_server = MeasureHFRServer()
+#        self.hfr_server.start()
+        self.hfr_server = None
         self.hfr_cur_widget = None # when doing a calc set to where result should go
 
         self.resize(960, 740)
@@ -501,10 +504,13 @@ class MainWindow(QtGui.QMainWindow):
 
 
         # FIXME make measure hfr params configurable
-        worker = self.hfr_server.setup_measure_file_thread(filename, maxstars=100)
-        worker.signals.result.connect(self._measure_hfr_result)
-        worker.signals.finished.connect(self._measure_hfr_complete)
-        self.hfr_server.run_measure_file_thread(worker)
+        if self.hfr_server is None:
+            logging.info('MeasureHFRServer is DISABLE so image will not be analyzed!')
+        else:
+            worker = self.hfr_server.setup_measure_file_thread(filename, maxstars=100)
+            worker.signals.result.connect(self._measure_hfr_result)
+            worker.signals.finished.connect(self._measure_hfr_complete)
+            self.hfr_server.run_measure_file_thread(worker)
 
     def _measure_hfr_result(self, result):
 #        if result:
@@ -545,16 +551,26 @@ class DiagnosticStyle(QtWidgets.QProxyStyle):
 
 
 if __name__ == '__main__':
+    log_timestamp = datetime.now()
+    logfilename = 'pyastroimageview-' + log_timestamp.strftime('%Y%m%d%H%M%S') + '.log'
 
-    logging.basicConfig(filename='pyastroimageview.log',
-                        filemode='w',
-                        level=logging.INFO,
-                        format='%(asctime)s %(levelname)-8s %(message)s',
+    #    FORMAT = '%(asctime)s %(levelname)-8s %(message)s'
+    FORMAT = '%(asctime)s [%(filename)20s:%(lineno)3s - %(funcName)20s() ] %(levelname)-8s %(message)s'
+
+    logging.basicConfig(filename=logfilename,
+                        filemode='a',
+                        level=logging.DEBUG,
+                        format=FORMAT,
                         datefmt='%Y-%m-%d %H:%M:%S')
 
     # add to screen as well
     log = logging.getLogger()
-    formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
+
+#    FORMAT = '%(asctime)s %(levelname)-8s %(message)s'
+#    FORMAT = '[%(funcName)20s():%(lineno)4s] %(levelname)-8s %(message)s'
+#    FORMAT = '%(asctime)s [%(funcName)20s():%(lineno)4s] %(message)s'
+    FORMAT = '%(asctime)s [%(filename)20s:%(lineno)3s - %(funcName)20s() ] %(levelname)-8s %(message)s'
+    formatter = logging.Formatter(FORMAT)
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
     ch.setFormatter(formatter)

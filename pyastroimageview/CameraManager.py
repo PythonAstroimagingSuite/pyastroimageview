@@ -269,8 +269,10 @@ class CameraManager(Camera):
 
     @checklock
     def connect(self, driver):
+        logging.info('cameramanager.connect!')
         if not super().is_connected():
             try:
+                logging.info('calling connect')
                 rc = super().connect(driver)
                 if not rc:
                     return False
