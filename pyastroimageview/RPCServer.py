@@ -46,6 +46,10 @@ class RPCServer:
         self.device_manager = AppContainer.find('/dev')
         self.device_manager.camera.signals.exposure_complete.connect(self.camera_exposure_complete)
 
+        # FIXME need better way to represent ongoing exposure!
+        self.exposure_ongoing_method_id = None
+        self.exposure_ongoing_socket = None
+
         # FOR TESTING MAINLY!
 #        self.ping_timer = QtCore.QTimer()
 #        self.ping_timer.timeout.connect(self.ping)
