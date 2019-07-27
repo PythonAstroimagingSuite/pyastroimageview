@@ -274,7 +274,208 @@ class RPCServer:
                         logging.warning('#########################################')
                         from shutil import copyfile
                         copyfile('C:\\Users/msf/Documents/Astronomy/AutoFocus/testdata/20180828_024611/20180828_024611_FINAL_focus_08146.fits', filename)
-                        
+
+                    self.send_method_complete_message(socket, method_id)
+
+                elif method == 'set_cooler_state':
+                    if not self.device_manager.camera.is_connected():
+                        logging.error(f'request {method} - camera not connected!')
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Camera not connected!',
+                                                      msgid=method_id)
+                        continue
+
+                    if 'params' not in j:
+                        logging.info('set_cooler_state - no params provided!')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - missing parameters!')
+                        continue
+
+                    params = j['params']
+
+                    state = params.get('cooler_state', None)
+
+                    logging.debug(f'set_cooler_state: state = {state}')
+
+                    if state is None:
+                        logging.error(f'RPCServer:set_cooler_state method request but need state - recvd {state}')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - state')
+                        continue
+
+                    rc = self.device_manager.camera.set_cooler_state(state)
+                    self.send_method_complete_message(socket, method_id)
+                elif method == 'set_target_temperature':
+                    if not self.device_manager.camera.is_connected():
+                        logging.error(f'request {method} - camera not connected!')
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Camera not connected!',
+                                                      msgid=method_id)
+                        continue
+
+                    if 'params' not in j:
+                        logging.info('set_target_temperature - no params provided!')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - missing parameters!')
+                        continue
+
+                    params = j['params']
+
+                    target = params.get('target_temperature', None)
+
+                    logging.debug(f'set_target_temperature: target = {target}')
+
+                    if target is None:
+                        logging.error(f'RPCServer:set_target_temperature method request but need target - recvd {target}')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - target')
+                        continue
+
+                    rc = self.device_manager.camera.set_target_temperature(target)
+                    self.send_method_complete_message(socket, method_id)
+                elif method == 'set_cooler_state':
+                    if not self.device_manager.camera.is_connected():
+                        logging.error(f'request {method} - camera not connected!')
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Camera not connected!',
+                                                      msgid=method_id)
+                        continue
+
+                    if 'params' not in j:
+                        logging.info('set_cooler_state - no params provided!')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - missing parameters!')
+                        continue
+
+                    params = j['params']
+
+                    state = params.get('cooler_state', None)
+
+                    logging.debug(f'set_cooler_state: state = {state}')
+
+                    if state is None:
+                        logging.error(f'RPCServer:set_cooler_state method request but need state - recvd {state}')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - state')
+                        continue
+
+                    rc = self.device_manager.camera.set_cooler_state(state)
+                    self.send_method_complete_message(socket, method_id)
+                elif method in ['get_current_temperature',
+                                'get_target_temperature',
+                                'get_cooler_state',
+                                'get_cooler_power',
+                                'get_camera_x_pixelsize',
+                                'get_camera_y_pixelsize',
+                                'get_camera_max_binning',
+                                'get_camera_egain',
+                                'get_camera_gain']:
+                    if not self.device_manager.camera.is_connected():
+                        logging.error(f'request {method} - camera not connected!')
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Camera not connected!',
+                                                      msgid=method_id)
+                        continue
+
+                    resdict = {}
+                    resdict['jsonrpc'] = '2.0'
+                    resdict['id'] = method_id
+
+                    camera = self.device_manager.camera
+
+                    func = {
+                            'get_current_temperature' : camera.get_current_temperature,
+                            'get_target_temperature' : camera.get_target_temperature,
+                            'get_cooler_state' : camera.get_cooler_state,
+                            'get_cooler_power' : camera.get_cooler_power,
+                            'get_camera_x_pixelsize' : camera.get_pixelsize,
+                            'get_camera_y_pixelsize' : camera.get_pixelsize,
+                            'get_camera_max_binning' : camera.get_max_binning,
+                            'get_camera_egain' : camera.get_egain,
+                            'get_camera_gain' : camera.get_camera_gain
+                            }
+
+                    # get value
+                    if method == 'get_camera_x_pixelsize':
+                        ret_val = func[method]()
+                        if ret_val is not None:
+                            ret_val = ret_val[0]
+                    elif method == 'get_camera_y_pixelsize':
+                        ret_val = func[method]()
+                        if ret_val is not None:
+                            ret_val = ret_val[1]
+                    else:
+                        ret_val = func[method]()
+
+                    ret_key = {
+                               'get_current_temperature' : 'current_temperature',
+                               'get_target_temperature' : 'target_temperature',
+                               'get_cooler_state' : 'cooler_state',
+                               'get_cooler_power' : 'cooler_power',
+                               'get_camera_x_pixelsize' : 'camera_x_pixelsize',
+                               'get_camera_y_pixelsize' : 'camera_y_pixelsize',
+                               'get_camera_max_binning' : 'camera_max_binning',
+                               'get_camera_egain' : 'camera_egain',
+                               'get_camera_gain' : 'camera_gain'
+                              }
+                    logging.debug(f'method {method} returns {ret_key[method]} = {ret_val}')
+
+                    setdict = {ret_key[method] : ret_val}
+                    resdict['result'] = setdict
+                    self.__send_json_response(socket, resdict)
+
+                elif method in ['focuser_get_absolute_position',
+                                'focuser_get_max_absolute_position',
+                                'focuser_get_current_temperature',
+                                'focuser_is_moving',
+                                'focuser_stop']:
+                    if not self.device_manager.focuser.is_connected():
+                        logging.error(f'request {method} - focuser not connected!')
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Focuser not connected!',
+                                                      msgid=method_id)
+                        continue
+
+                    resdict = {}
+                    resdict['jsonrpc'] = '2.0'
+                    resdict['id'] = method_id
+
+                    focuser = self.device_manager.focuser
+
+                    func = {'focuser_get_absolute_position' : focuser.get_absolute_position,
+                            'focuser_get_max_absolute_position' : focuser.get_max_absolute_position,
+                            'focuser_get_current_temperature' : focuser.get_current_temperature,
+                            'focuser_is_moving' : focuser.is_moving,
+                            'focuser_stop' : focuser.stop}
+
+                    # get value
+                    ret_val = func[method]()
+
+                    # strip 'focuser_' off to get return key
+                    ret_key = {'focuser_get_absolute_position' : 'absolute_position',
+                            'focuser_get_max_absolute_position' : 'max_absolute_position',
+                            'focuser_get_current_temperature' : 'current_temperature',
+                            'focuser_is_moving' : 'is_moving',
+                            'focuser_stop' : 'stop'}
+
+                    logging.debug(f'method {method} returns {ret_key[method]} = {ret_val}')
+
+                    setdict = {ret_key[method] : ret_val}
+                    resdict['result'] = setdict
+                    self.__send_json_response(socket, resdict)
+                elif method == 'focuser_move_absolute_position':
+                    if not self.device_manager.focuser.is_connected():
+                        logging.error(f'request {method} - focuser not connected!')
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Focuser not connected!',
+                                                      msgid=method_id)
+                        continue
+
+                    if 'params' not in j:
+                        logging.info('focuser_move_absolute_position - no params provided!')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - missing parameters!')
+                        continue
+
+                    params = j['params']
+
+                    abspos = params.get('absolute_position', None)
+
+                    logging.debug(f'focuser_move_absolute_position: abspos = {abspos}')
+
+                    if abspos is None:
+                        logging.error('RPCServer:focuser_move_absolute_position method request but need absolute position - recvd {abspos}')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - absolute position')
+                        continue
+
+                    rc = self.device_manager.focuser.move_absolute_position(abspos)
                     self.send_method_complete_message(socket, method_id)
                 else:
                     logging.error(f'RPCServer: unknown JSONRPC method {method}')
@@ -427,7 +628,6 @@ class RPCServer:
 
         setdict = {}
         setdict['complete'] = True
-
         resdict['result'] = setdict
 
         self.__send_json_response(socket, resdict)
