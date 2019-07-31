@@ -1,4 +1,7 @@
 import re
+import time
+import datetime
+import logging
 from enum import Enum
 
 class FrameType(Enum):
@@ -32,10 +35,12 @@ class ImageSequence:
         """Returns True if sequence is of 'Light' frames versus calibration frames"""
         return self.frame_type == FrameType.LIGHT
 
-    def get_filename(self):
+    def get_filename(self, start_time=None):
         """Creates of a filename for files of a sequence
 
         The filename is made from name elements (like filter, frame type, object name, etc).
+
+        start_time is a struct_time object
         """
 
         # FIXME the way we get temperature and filter, etc seems inelegant
@@ -54,6 +59,17 @@ class ImageSequence:
         exposure_str = exposure_str.replace('.', 'p')
 
         tmp_name = re.sub('\{exp\}', exposure_str, tmp_name)
+
+        if start_time is None:
+            time_str = time.strftime('%Y%m%d_%H%M%S')
+        else:
+            try:
+                time_str = time.strftime('%Y%m%d_%H%M%S', start_time)
+            except:
+                logging.error('get_filename: error converting start_time {start_time} to str', exc_info=True)
+                time_str = 'UnknownTime'
+
+        tmp_name = re.sub(r'{time}', time_str, tmp_name)
 
 #        tmp_name = re.sub('\{exp\}', f'{self.exposure}s', tmp_name)
         tmp_name = re.sub('\{ftype\}', self.frame_type.pretty_name(), tmp_name)

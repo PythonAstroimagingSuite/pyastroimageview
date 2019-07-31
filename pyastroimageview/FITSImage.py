@@ -1,4 +1,5 @@
 import time
+import logging
 from astropy.io import fits
 
 class FITSImage:
@@ -30,6 +31,9 @@ class FITSImage:
     def set_header_keyvalue(self, key, val):
         self.hdulist[0].header[key] = val
 
+    def get_header_keyvalue(self, key):
+        self.hdulist[0].header.get(key, None)
+
     def set_object(self, object):
         self.set_header_keyvalue('OBJECT', object)
 
@@ -41,6 +45,24 @@ class FITSImage:
 
     def set_dateobs(self, dtime):
         self.set_header_keyvalue('DATE-OBS', time.strftime('%Y-%m-%dT%H:%M:%S'))
+
+    def get_dateobs(self):
+        logging.debug(f'{self.hdulist[0].header}')
+        logging.debug(f'{self.hdulist[0].header["DATE-OBS"]}')
+        if 'DATE-OBS' in self.hdulist[0].header:
+            datestr = self.hdulist[0].header['DATE-OBS']
+        else:
+            return None
+        #datestr = self.get_header_keyvalue('DATE-OBS')
+        logging.debug(f'get_dateobs: datestr = {datestr}')
+#        if datestr is None:
+#            return None
+        try:
+            dateobs = time.strptime(datestr, '%Y-%m-%dT%H:%M:%S')
+            #logging.debug(f'get_dateobs: dateobs = {dateobs}')
+        except:
+            logging.error(f'Unable do convert dateobs {datestr}', exc_info=True)
+        return dateobs
 
     def set_exposure(self, exp):
         self.set_header_keyvalue('EXPOSURE', exp)

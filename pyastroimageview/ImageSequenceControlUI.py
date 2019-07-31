@@ -392,11 +392,13 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                                                QtWidgets.QMessageBox.Ok)
                 sys.exit(-1)
 
-
             # FIXME need better object to send with signal for end of sequence exposure?
             self.handle_new_image(fitsimage)
 
-            outname = os.path.join(self.sequence.target_dir, self.sequence.get_filename())
+            # get start time from FITS if present
+            start_time = fitsimage.get_dateobs()
+            logging.debug(f'start_time = {start_time}')
+            outname = os.path.join(self.sequence.target_dir, self.sequence.get_filename(start_time=start_time))
             overwrite_flag = program_settings.sequence_overwritefiles
             logging.info(f'writing sequence image to {outname}')
             try:
@@ -774,6 +776,15 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         if self.device_manager.camera.is_connected():
             cam_name = self.device_manager.camera.get_camera_name()
             fits_doc.set_instrument(cam_name)
+
+            try:
+                ccd_gain = self.device_manager.camera.get_camera_gain()
+                logging.debug(f'ccd_gain = {ccd_gain}')
+                if ccd_gain is not None:
+                    fits_doc.set_header_keyvalue('CCD_GAIN', ccd_gain)
+            except AttributeError:
+                logging.warning('camera driver does not support get_camera_gain()')
+                pass
 
         if self.device_manager.filterwheel.is_connected():
             logging.info('connected')
