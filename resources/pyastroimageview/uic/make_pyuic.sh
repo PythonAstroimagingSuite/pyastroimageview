@@ -1,18 +1,25 @@
 #!/bin/bash
+
+# Linux
+PYUIC5="pyuic5"
+
+# Windows
+#PYIC5=/c/Users/msf/Anaconda3/Library/bin/pyuic5.bat 
+
 echo "Making uic python files for pyastroimageview"
 for i in 'focuser' 'mount' 'camera' 'filterwheel' 'general' 'sequence' 'phd2'; do
 echo $i
-/c/Users/msf/Anaconda3/Library/bin/pyuic5.bat ${i}_settings.ui > ../../../pyastroimageview/uic/${i}_settings_uic.py
+"$PYUIC5" ${i}_settings.ui > ../../../pyastroimageview/uic/${i}_settings_uic.py
 done
 
 echo "imagearea"
-/c/Users/msf/Anaconda3/Library/bin/pyuic5.bat imagearea_info.ui > ../../../pyastroimageview/uic/imagearea_info_uic.py
+"$PYUIC5"  imagearea_info.ui > ../../../pyastroimageview/uic/imagearea_info_uic.py
 
 echo "cameraroidialog"
-/c/Users/msf/Anaconda3/Library/bin/pyuic5.bat camera_roidialog.ui > ../../../pyastroimageview/uic/camera_roidialog_uic.py
+"$PYUIC5"  camera_roidialog.ui > ../../../pyastroimageview/uic/camera_roidialog_uic.py
 
 echo "phd2settingsdialog"
-/c/Users/msf/Anaconda3/Library/bin/pyuic5.bat phd2_settings_dialog.ui > ../../../pyastroimageview/uic/phd2_settings_dialog_uic.py
+"$PYUIC5"  phd2_settings_dialog.ui > ../../../pyastroimageview/uic/phd2_settings_dialog_uic.py
 
 echo "sequencetitlehelp"
-/c/Users/msf/Anaconda3/Library/bin/pyuic5.bat sequence_title_help.ui > ../../../pyastroimageview/uic/sequence_title_help_uic.py
+"$PYUIC5" sequence_title_help.ui > ../../../pyastroimageview/uic/sequence_title_help_uic.py
