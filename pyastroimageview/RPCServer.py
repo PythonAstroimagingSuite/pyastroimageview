@@ -37,6 +37,7 @@ class RPCServer:
 
         self.exposure_ongoing = False
         self.exposure_ongoing_method_id = None
+        self.exposure_frametype = 'Light'
         self.current_image = None
 
         self.signals = RPCServerSignals()
@@ -134,14 +135,14 @@ class RPCServer:
             try:
                 j = json.loads(resp)
 
-            except json.JSONDecodeError as e:
+            except json.JSONDecodeError:
                 logging.error(f'RPCServer - exception message was {resp}!')
                 logging.error('JSONDecodeError ->', exc_info=True)
 
                 # send error code back to client
                 self.send_json_error_response(socket, JSON_PARSE_ERRCODE, 'JSON Decoder error')
-
-            except Exception as e:
+                continue
+            except Exception:
                 logging.error(f'RPCServer - exception message was {resp}!')
                 logging.error('Exception ->', exc_info=True)
                 continue
@@ -190,26 +191,67 @@ class RPCServer:
 
                     params = j['params']
 
+                    settings = self.device_manager.camera.get_settings()
+                    logging.debug(f'settings = {settings}')
+
                     exposure = params.get('exposure', None)
                     newbin = params.get('binning', 1)
                     newroi = params.get('roi', None)
+                    frametype = params.get('frametype', 'Light')
+
+                    # NOTE: frametype is a possible argument but the pyastrobackend
+                    #       API doesn't have a way to specify the frametype
+                    #       currently when taking an image so it will always
+                    #       by written out as a 'Light' frame for now
 
                     if exposure is None:
                         logging.error('RPCServer:take_image method request but need exposure')
-                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - missing exposure')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
+                                                      'Invalid request - missing exposure')
+                        continue
+                    elif not isinstance(exposure, float) and not isinstance(exposure, int):
+                        logging.error('RPCServer:take_image method request but exposure is not float or int')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
+                                                      'Invalid request - exposure must be float or int')
+                        continue
+
+                    if not isinstance(newbin, int):
+                        logging.error('RPCServer:take_image method request but binning is int')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
+                                                      'Invalid request - binning must be int')
                         continue
 
                     if newroi:
                         settings = self.device_manager.camera.get_settings()
-                        roi_minx = newroi[0]
-                        roi_miny = newroi[1]
-                        roi_maxx = roi_minx + newroi[2]
-                        roi_maxy = roi_miny + newroi[3]
+                        try:
+                            if len(newroi) != 4:
+                                raise ValueError
+
+                            for v in newroi:
+                                if not isinstance(v, int):
+                                    raise ValueError
+
+                            roi_minx = newroi[0]
+                            roi_miny = newroi[1]
+                            roi_maxx = roi_minx + newroi[2]
+                            roi_maxy = roi_miny + newroi[3]
+                        except:
+                            logging.error('RPCServer:take_image method request but roi is invalid')
+                            self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - roi not valid')
+                            continue
 
                         if roi_maxx > settings.frame_width/newbin or roi_maxy > settings.frame_height/newbin:
                             logging.error('RPCServer:take_image method request roi too large for selected binning')
                             self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - roi too large for binning')
                             continue
+
+                    if frametype not in ['Light', 'Bias', 'Dark', 'Flat']:
+                        logging.error(f'RPCServer:take_image method request invalid frame type {frametype}')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
+                                                      'Invalid request - frametype must be Light, Bias, Dark or Flat')
+                        continue
+
+                    self.exposure_frametype = frametype
 
                     if not self.device_manager.camera.get_lock():
                         logging.error('RPCServer: take_image - unable to get camera lock!')
@@ -217,15 +259,19 @@ class RPCServer:
                                                       msgid=method_id)
                         continue
 
-                    logging.info(f'take_image: {exposure} {newbin} {newroi}')
+                    logging.info(f'take_image: {exposure} {newbin} {newroi} {frametype}')
 
-                    settings = CameraSettings()
+                    new_settings = CameraSettings()
                     if newbin:
-                        settings.binning = newbin
-                    if newroi:
-                        settings.roi = newroi
+                        new_settings.binning = newbin
 
-                    self.device_manager.camera.set_settings(settings)
+                    if newroi is not None:
+                        new_settings.roi = newroi
+                    else:
+                        new_settings.roi = (0, 0, settings.frame_width, settings.frame_height)
+                        logging.debug(f'newroi was None set to {new_settings.roi}')
+
+                    self.device_manager.camera.set_settings(new_settings)
                     self.device_manager.camera.start_exposure(exposure)
 
                     # FIXME this is sloppy only works since only one exposure can be going on at a time
@@ -248,7 +294,7 @@ class RPCServer:
 
                     filename = params.get('filename', None)
 
-                    if filename is None:
+                    if filename is None or not isinstance(filename, str):
                         logging.error('RPCServer:save_image method request but need filename {filename}')
                         self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - missing filename')
                         continue
@@ -299,7 +345,7 @@ class RPCServer:
 
                     logging.debug(f'set_cooler_state: state = {state}')
 
-                    if state is None:
+                    if state is None or not isinstance(state, bool):
                         logging.error(f'RPCServer:set_cooler_state method request but need state - recvd {state}')
                         self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - state')
                         continue
@@ -324,38 +370,39 @@ class RPCServer:
 
                     logging.debug(f'set_target_temperature: target = {target}')
 
-                    if target is None:
+                    if target is None or (not isinstance(target, float) and not isinstance(target, int)):
                         logging.error(f'RPCServer:set_target_temperature method request but need target - recvd {target}')
                         self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - target')
                         continue
 
                     rc = self.device_manager.camera.set_target_temperature(target)
                     self.send_method_complete_message(socket, method_id)
-                elif method == 'set_cooler_state':
-                    if not self.device_manager.camera.is_connected():
-                        logging.error(f'request {method} - camera not connected!')
-                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Camera not connected!',
-                                                      msgid=method_id)
-                        continue
-
-                    if 'params' not in j:
-                        logging.info('set_cooler_state - no params provided!')
-                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - missing parameters!')
-                        continue
-
-                    params = j['params']
-
-                    state = params.get('cooler_state', None)
-
-                    logging.debug(f'set_cooler_state: state = {state}')
-
-                    if state is None:
-                        logging.error(f'RPCServer:set_cooler_state method request but need state - recvd {state}')
-                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - state')
-                        continue
-
-                    rc = self.device_manager.camera.set_cooler_state(state)
-                    self.send_method_complete_message(socket, method_id)
+# I think this is duplicated!
+#                elif method == 'set_cooler_state':
+#                    if not self.device_manager.camera.is_connected():
+#                        logging.error(f'request {method} - camera not connected!')
+#                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Camera not connected!',
+#                                                      msgid=method_id)
+#                        continue
+#
+#                    if 'params' not in j:
+#                        logging.info('set_cooler_state - no params provided!')
+#                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - missing parameters!')
+#                        continue
+#
+#                    params = j['params']
+#
+#                    state = params.get('cooler_state', None)
+#
+#                    logging.debug(f'set_cooler_state: state = {state}')
+#
+#                    if state is None:
+#                        logging.error(f'RPCServer:set_cooler_state method request but need state - recvd {state}')
+#                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - state')
+#                        continue
+#
+#                    rc = self.device_manager.camera.set_cooler_state(state)
+#                    self.send_method_complete_message(socket, method_id)
                 elif method in ['get_current_temperature',
                                 'get_target_temperature',
                                 'get_cooler_state',
@@ -414,9 +461,26 @@ class RPCServer:
                               }
                     logging.debug(f'method {method} returns {ret_key[method]} = {ret_val}')
 
+                    # FIXME MSF REMOVE FOR NORMAL OPS!
+                    # inject a different message to confuse json parser on camera endswith
+#                    junkresdict = {}
+#                    junkresdict['jsonrpc'] = '2.0'
+#                    junkresdict['id'] = 123000000
+#                    junkdict = {'testing' : True}
+#                    junkresdict['result'] = junkdict
+#                    self.__send_json_response(socket, junkresdict)
+
+                    # FIXME MSF only for testing clients rejecting invalid
+                    #       result types!
+#                    setdict = {ret_key[method] : 'TEST'}
+
+                    # normal code
                     setdict = {ret_key[method] : ret_val}
+
+                    # rest of it
                     resdict['result'] = setdict
                     self.__send_json_response(socket, resdict)
+
 
                 elif method in ['focuser_get_absolute_position',
                                 'focuser_get_max_absolute_position',
@@ -474,7 +538,7 @@ class RPCServer:
 
                     logging.debug(f'focuser_move_absolute_position: abspos = {abspos}')
 
-                    if abspos is None:
+                    if abspos is None or not isinstance(abspos, int):
                         logging.error('RPCServer:focuser_move_absolute_position method request but need absolute position - recvd {abspos}')
                         self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - absolute position')
                         continue
@@ -603,7 +667,7 @@ class RPCServer:
 
         # controlled by user selection in camera or sequence config
         # FIXME allow client to control frame type
-        fits_doc.set_image_type('Light') #self.sequence.frame_type.pretty_name())
+        fits_doc.set_image_type(self.exposure_frametype) #self.sequence.frame_type.pretty_name())
         fits_doc.set_object('TEST-OBJECT')
 
         # set by application version
@@ -618,9 +682,8 @@ class RPCServer:
 
         try:
             socket.write(bytes(msgstr, encoding='ascii'))
-        except Exception as e:
-            logging.error(f'send_initial_message - exception - msg was {msgstr}!')
-            logging.error('Exception ->', exc_info=True)
+        except Exception:
+            logging.error(f'send_initial_message - exception - msg was {msgstr}!', exc_info=True)
             return False
 
         return True
@@ -646,6 +709,20 @@ class RPCServer:
 #        if not self.connected:
 #            logging.warning('__send_json_command: not connected!')
 #            return False
+
+        # FIXME MSF This is test for robustness of client
+        #           Do not leave enabled for normal use!
+#        import random
+#        try:
+#            rannum = self.sysrandom.randrange(0, 100)
+#        except:
+#            self.sysrandom = random.SystemRandom()
+#            rannum = self.sysrandom.randrange(0, 100)
+#
+#        if rannum < 10:
+#            ranlen =self.sysrandom.randrange(1, len(cmdstr))
+#            cmdstr = cmdstr[:ranlen]
+#            logging.debug(f'truncated cmdstr to {cmdstr}')
 
         try:
             socket.writeData(bytes(cmdstr, encoding='ascii'))
