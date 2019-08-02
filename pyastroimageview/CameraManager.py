@@ -60,11 +60,13 @@ class CameraSettings:
         self.frame_height = None
         self.binning = None
         self.roi = None
+        self.camera_gain = None
 
     def __str__(self):
         return f'size = {self.frame_width} x {self.frame_height} ' + \
                f'bin = {self.binning} ' + \
-               f'roi = {self.roi}\n'
+               f'roi = {self.roi} ' + \
+               f'camera_gain = {self.camera_gain}\n'
 
 class CameraManagerSignals(QtCore.QObject):
     """ Signals for camera state.
@@ -318,6 +320,8 @@ class CameraManager(Camera):
 
         settings.roi = super().get_frame()
 
+        settings.camera_gain = super().get_camera_gain()
+
         return settings
 
     @checklock
@@ -325,6 +329,9 @@ class CameraManager(Camera):
         # NOTE only use X binning!
         super().set_binning(settings.binning, settings.binning)
         super().set_frame(*settings.roi)
+        if settings.camera_gain is not None:
+            logging.debug(f'Setting camera gain to {settings.camera_gain}')
+            super().set_camera_gain(settings.camera_gain)
 
     @checklock
     def start_exposure(self, expose):

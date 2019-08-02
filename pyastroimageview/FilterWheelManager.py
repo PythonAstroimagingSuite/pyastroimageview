@@ -12,7 +12,7 @@ BACKEND = get_backend_for_os()
 if BACKEND == 'ASCOM':
     from pyastrobackend.ASCOM.FilterWheel import FilterWheel
 elif BACKEND == 'INDI':
-    from pyastrobackend import INDIBackend as Backend
+    from pyastrobackend.INDIBackend import FilterWheel
 else:
     raise Exception(f'Unknown backend {BACKEND} - choose ASCOM or INDI in BackendConfig.py')
 

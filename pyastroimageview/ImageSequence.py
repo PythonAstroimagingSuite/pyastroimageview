@@ -26,6 +26,7 @@ class ImageSequence:
         self.frame_type = FrameType.LIGHT
         self.exposure = 5
         self.binning = 1
+        self.camera_gain = None
         self.num_dither = 0
         self.roi = None
         self.device_manager = device_manager
@@ -97,6 +98,11 @@ class ImageSequence:
         tmp_name = re.sub('\{tempc\}', f'{tempc_prefix}{abs(tempc):.1f}C', tmp_name)
         tmp_name = re.sub('\{temps\}', f'{temps_prefix}{abs(temps):.0f}C', tmp_name)
         tmp_name = re.sub('\{bin\}', f'bin_{int(binx)}', tmp_name)
+
+        if self.camera_gain is not None:
+            tmp_name = re.sub(r'{gain}', f'gain_{int(self.camera_gain)}', tmp_name)
+        else:
+            tmp_name = re.sub(r'{gain}', f'GainUnknown', tmp_name)
 
         # put in filter only if type 'Light' or 'Flat'
         # also only put on base name too

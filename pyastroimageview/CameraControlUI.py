@@ -37,6 +37,8 @@ class CameraControlUI(QtWidgets.QWidget):
         self.ui.camera_setting_cooleronoff.clicked.connect(lambda x: logging.info('clicked'))
         self.ui.camera_setting_coolersetpt.valueChanged.connect(self.cooler_setpt_changed)
 
+        self.ui.camera_setting_gain_spinbox.setEnabled(False)
+
         self.camera_manager = AppContainer.find('/dev/camera')
 
         self.camera_manager.signals.status.connect(self.camera_status_poll)
@@ -313,6 +315,12 @@ class CameraControlUI(QtWidgets.QWidget):
             self.ui.camera_setting_binning_spinbox.setValue(settings.binning)
             self.reset_roi()
 
+            if settings.camera_gain is not None:
+                self.ui.camera_setting_gain_spinbox.setValue(settings.camera_gain)
+                self.ui.camera_setting_gain_spinbox.setEnabled(True)
+            else:
+                self.ui.camera_setting_gain_spinbox.setEnabled(False)
+
             exp_range = self.camera_manager.get_min_max_exposure()
             if exp_range is not None:
                 exp_min, exp_max = exp_range
@@ -389,6 +397,11 @@ class CameraControlUI(QtWidgets.QWidget):
         roi_top = int(self.ui.camera_setting_roi_top.text())
 
         settings.roi = (roi_left, roi_top, roi_width, roi_height)
+
+        if self.ui.camera_setting_gain_spinbox.isEnabled():
+            settings.camera_gain = int(self.ui.camera_setting_gain_spinbox.text())
+        else:
+            settings.camera_gain = None
 
         self.camera_manager.set_settings(settings)
 

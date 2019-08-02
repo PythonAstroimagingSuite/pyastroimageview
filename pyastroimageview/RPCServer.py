@@ -173,6 +173,7 @@ class RPCServer:
                     setdict['binning'] = settings.binning
                     setdict['framesize'] = (settings.frame_width, settings.frame_height)
                     setdict['roi'] = settings.roi
+                    setdict['camera_gain'] = settings.camera_gain
 
                     resdict['result'] = setdict
 
@@ -198,6 +199,7 @@ class RPCServer:
                     newbin = params.get('binning', 1)
                     newroi = params.get('roi', None)
                     frametype = params.get('frametype', 'Light')
+                    camera_gain = params.get('camera_gain', None)
 
                     # NOTE: frametype is a possible argument but the pyastrobackend
                     #       API doesn't have a way to specify the frametype
@@ -271,6 +273,7 @@ class RPCServer:
                         new_settings.roi = (0, 0, settings.frame_width, settings.frame_height)
                         logging.debug(f'newroi was None set to {new_settings.roi}')
 
+                    new_settings.camera_gain = camera_gain
                     self.device_manager.camera.set_settings(new_settings)
                     self.device_manager.camera.start_exposure(exposure)
 

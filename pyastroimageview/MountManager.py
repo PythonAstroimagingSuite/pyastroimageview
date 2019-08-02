@@ -7,7 +7,7 @@ BACKEND = get_backend_for_os()
 if BACKEND == 'ASCOM':
     from pyastrobackend.ASCOM.Mount import Mount
 elif BACKEND == 'INDI':
-    from pyastrobackend import INDIBackend as Backend
+    from pyastrobackend.INDIBackend import Mount
 else:
     raise Exception(f'Unknown backend {BACKEND} - choose ASCOM or INDI in BackendConfig.py')
 

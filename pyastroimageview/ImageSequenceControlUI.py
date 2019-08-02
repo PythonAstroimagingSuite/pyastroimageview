@@ -95,6 +95,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
         self.set_widget_states()
 
+        self.ui.sequence_camera_gain.setEnabled(False)
+
         self.title_help = self.HelpWindow()
 
         self.filterwheel_ui_initialized = False
@@ -155,6 +157,12 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
             self.ui.sequence_binning.setValue(settings.binning)
             self.reset_roi()
+
+            if settings.camera_gain is not None:
+                self.ui.sequence_camera_gain.setValue(settings.camera_gain)
+                self.ui.sequence_camera_gain.setEnabled(True)
+            else:
+                self.ui.sequence_camera_gain.setEnabled(False)
 
             exp_range = self.device_manager.camera.get_min_max_exposure()
             if exp_range is not None:
@@ -612,6 +620,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         settings = CameraSettings()
         settings.binning = self.sequence.binning
         settings.roi = self.sequence.roi
+        settings.camera_gain = self.sequence.camera_gain
         self.device_manager.camera.set_settings(settings)
 
         # move filter wheel
@@ -701,6 +710,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                 if req_ftype == ftype.pretty_name():
                     self.sequence.frame_type = ftype
                     break
+        elif self.sender() == self.ui.sequence_camera_gain:
+            self.sequyence.camera_gain = int(self.ui.sequence_camera_gain.value())
         elif self.sender() == self.ui.sequence_targetdir:
             self.sequence.target_dir = self.ui.sequence_targetdir.toPlainText()
         elif self.sender() == self.ui.sequence_filter:
