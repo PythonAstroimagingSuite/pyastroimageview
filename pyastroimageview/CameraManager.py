@@ -321,6 +321,7 @@ class CameraManager(Camera):
         settings.roi = super().get_frame()
 
         settings.camera_gain = super().get_camera_gain()
+        logging.debug(f'get_settings: camera_gain = {settings.camera_gain} {type(settings.camera_gain)}')
 
         return settings
 

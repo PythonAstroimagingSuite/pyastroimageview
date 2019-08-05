@@ -83,6 +83,11 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.ui.sequence_filter.currentIndexChanged.connect(self.values_changed)
         self.ui.sequence_start_stop.pressed.connect(self.start_sequence)
 
+        # FIXME Disabling for now since under ASCOM setting gain for ASI cameras
+        #       does not seem to work reliably
+        logging.warning('Setting gain not enabled!')
+        #self.ui.sequence_camera_gain.valueChanged.connect(self.values_changed)
+
         self.ui.sequence_binning.valueChanged.connect(self.binning_changed)
         self.ui.sequence_roi_set.pressed.connect(self.set_roi)
 
@@ -711,7 +716,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                     self.sequence.frame_type = ftype
                     break
         elif self.sender() == self.ui.sequence_camera_gain:
-            self.sequyence.camera_gain = int(self.ui.sequence_camera_gain.value())
+            self.sequence.camera_gain = int(self.ui.sequence_camera_gain.value())
         elif self.sender() == self.ui.sequence_targetdir:
             self.sequence.target_dir = self.ui.sequence_targetdir.toPlainText()
         elif self.sender() == self.ui.sequence_filter:

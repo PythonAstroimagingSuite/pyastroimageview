@@ -102,7 +102,7 @@ class ImageSequence:
         if self.camera_gain is not None:
             tmp_name = re.sub(r'{gain}', f'gain_{int(self.camera_gain)}', tmp_name)
         else:
-            tmp_name = re.sub(r'{gain}', f'GainUnknown', tmp_name)
+            tmp_name = re.sub(r'{gain}', f'gain_unknown', tmp_name)
 
         # put in filter only if type 'Light' or 'Flat'
         # also only put on base name too

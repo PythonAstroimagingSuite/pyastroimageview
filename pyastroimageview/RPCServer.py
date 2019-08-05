@@ -187,7 +187,9 @@ class RPCServer:
 
                     if 'params' not in j:
                         logging.info('take_image - no params provided!')
-                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - missing parameters!')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
+                                                      'Invalid request - missing parameters!',
+                                                      msgid=method_id)
                         continue
 
                     params = j['params']
@@ -209,48 +211,57 @@ class RPCServer:
                     if exposure is None:
                         logging.error('RPCServer:take_image method request but need exposure')
                         self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
-                                                      'Invalid request - missing exposure')
+                                                      'Invalid request - missing exposure',
+                                                      msgid=method_id)
                         continue
                     elif not isinstance(exposure, float) and not isinstance(exposure, int):
                         logging.error('RPCServer:take_image method request but exposure is not float or int')
                         self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
-                                                      'Invalid request - exposure must be float or int')
+                                                      'Invalid request - exposure must be float or int',
+                                                      msgid=method_id)
                         continue
 
                     if not isinstance(newbin, int):
                         logging.error('RPCServer:take_image method request but binning is int')
                         self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
-                                                      'Invalid request - binning must be int')
+                                                      'Invalid request - binning must be int',
+                                                      msgid=method_id)
                         continue
 
                     if newroi:
                         settings = self.device_manager.camera.get_settings()
                         try:
                             if len(newroi) != 4:
-                                raise ValueError
+                                raise ValueError('roi must be a tuple of length 4')
 
                             for v in newroi:
-                                if not isinstance(v, int):
-                                    raise ValueError
+                                logging.debug(f'newroi {v} is type {type(v)}')
+                                if not isinstance(v, int) and not isinstance(v, float):
+                                    raise ValueError('roi tuple elements must be int or float')
 
                             roi_minx = newroi[0]
                             roi_miny = newroi[1]
                             roi_maxx = roi_minx + newroi[2]
                             roi_maxy = roi_miny + newroi[3]
                         except:
-                            logging.error('RPCServer:take_image method request but roi is invalid')
-                            self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - roi not valid')
+                            logging.error('RPCServer:take_image method request but roi is invalid', exc_info=True)
+                            self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
+                                                          'Invalid request - roi not valid',
+                                                          msgid=method_id)
                             continue
 
                         if roi_maxx > settings.frame_width/newbin or roi_maxy > settings.frame_height/newbin:
                             logging.error('RPCServer:take_image method request roi too large for selected binning')
-                            self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - roi too large for binning')
+                            self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
+                                                          'Invalid request - roi too large for binning',
+                                                          msgid=method_id)
                             continue
 
                     if frametype not in ['Light', 'Bias', 'Dark', 'Flat']:
                         logging.error(f'RPCServer:take_image method request invalid frame type {frametype}')
                         self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
-                                                      'Invalid request - frametype must be Light, Bias, Dark or Flat')
+                                                      'Invalid request - frametype must be Light, Bias, Dark or Flat',
+                                                      msgid=method_id)
                         continue
 
                     self.exposure_frametype = frametype
@@ -290,7 +301,9 @@ class RPCServer:
 
                     if 'params' not in j:
                         logging.info('save_image - no params provided!')
-                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - missing parameters!')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
+                                                      'Invalid request - missing parameters!',
+                                                      msgid=method_id)
                         continue
 
                     params = j['params']
@@ -299,7 +312,9 @@ class RPCServer:
 
                     if filename is None or not isinstance(filename, str):
                         logging.error('RPCServer:save_image method request but need filename {filename}')
-                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - missing filename')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
+                                                      'Invalid request - missing filename',
+                                                      msgid=method_id)
                         continue
 
                     program_settings = AppContainer.find('/program_settings')
@@ -313,7 +328,7 @@ class RPCServer:
                     logging.info(f'writing image to {filename}')
                     try:
                         self.current_image.save_to_file(filename, overwrite=overwrite_flag)
-                    except Exception  as e:
+                    except Exception:
                         logging.error('RPCServer: Exception ->', exc_info=True)
                         self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Error writing image',
                                                       msgid=method_id)
@@ -330,6 +345,44 @@ class RPCServer:
 
                     self.send_method_complete_message(socket, method_id)
 
+                elif method == 'set_camera_gain':
+                    # FIXME Currently setting camera gain is disbled due to issues
+                    #       setting gain using ASCOM ASI driver
+                    logging.error(f'RPCServer: set_camera_gain currently unsupported')
+                    self.send_json_error_response(socket, JSON_BADMETHOD_ERRCODE,
+                                                  'set_camera_gain currently unsupported',
+                                                  msgid=method_id)
+                    return
+
+                    if not self.device_manager.camera.is_connected():
+                        logging.error(f'request {method} - camera not connected!')
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Camera not connected!',
+                                                      msgid=method_id)
+                        continue
+
+                    if 'params' not in j:
+                        logging.info('set_camera_gain - no params provided!')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
+                                                      'Invalid request - missing parameters!',
+                                                      msgid=method_id)
+                        continue
+
+                    params = j['params']
+
+                    camera_gain = params.get('camera_gain', None)
+
+                    logging.debug(f'set_camera_gain: gain = {camera_gain}')
+
+                    if camera_gain is None or (not isinstance(camera_gain, int) and not isinstance(camera_gain, float)):
+                        logging.error(f'RPCServer:set_camera_gain method request but need gain - recvd {camera_gain}')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
+                                                      'Invalid request - camera_gain',
+                                                      msgid=method_id)
+                        continue
+
+                    rc = self.device_manager.camera.set_camera_gain(camera_gain)
+                    self.send_method_complete_message(socket, method_id)
+
                 elif method == 'set_cooler_state':
                     if not self.device_manager.camera.is_connected():
                         logging.error(f'request {method} - camera not connected!')
@@ -339,7 +392,9 @@ class RPCServer:
 
                     if 'params' not in j:
                         logging.info('set_cooler_state - no params provided!')
-                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - missing parameters!')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
+                                                      'Invalid request - missing parameters!',
+                                                      msgid=method_id)
                         continue
 
                     params = j['params']
@@ -350,7 +405,9 @@ class RPCServer:
 
                     if state is None or not isinstance(state, bool):
                         logging.error(f'RPCServer:set_cooler_state method request but need state - recvd {state}')
-                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - state')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
+                                                      'Invalid request - state',
+                                                      msgid=method_id)
                         continue
 
                     rc = self.device_manager.camera.set_cooler_state(state)
@@ -364,7 +421,9 @@ class RPCServer:
 
                     if 'params' not in j:
                         logging.info('set_target_temperature - no params provided!')
-                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - missing parameters!')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
+                                                      'Invalid request - missing parameters!',
+                                                      msgid=method_id)
                         continue
 
                     params = j['params']
@@ -375,7 +434,9 @@ class RPCServer:
 
                     if target is None or (not isinstance(target, float) and not isinstance(target, int)):
                         logging.error(f'RPCServer:set_target_temperature method request but need target - recvd {target}')
-                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - target')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
+                                                      'Invalid request - target',
+                                                      msgid=method_id)
                         continue
 
                     rc = self.device_manager.camera.set_target_temperature(target)
@@ -532,7 +593,9 @@ class RPCServer:
 
                     if 'params' not in j:
                         logging.info('focuser_move_absolute_position - no params provided!')
-                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - missing parameters!')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
+                                                      'Invalid request - missing parameters!',
+                                                      msgid=method_id)
                         continue
 
                     params = j['params']
@@ -543,14 +606,18 @@ class RPCServer:
 
                     if abspos is None or not isinstance(abspos, int):
                         logging.error('RPCServer:focuser_move_absolute_position method request but need absolute position - recvd {abspos}')
-                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE, 'Invalid request - absolute position')
+                        self.send_json_error_response(socket,
+                                                      JSON_INVALID_ERRCODE, 'Invalid request - absolute position',
+                                                      msgid=method_id)
                         continue
 
                     rc = self.device_manager.focuser.move_absolute_position(abspos)
                     self.send_method_complete_message(socket, method_id)
                 else:
                     logging.error(f'RPCServer: unknown JSONRPC method {method}')
-                    self.send_json_error_response(socket, JSON_BADMETHOD_ERRCODE, 'Unknown method')
+                    self.send_json_error_response(socket, JSON_BADMETHOD_ERRCODE,
+                                                  'Unknown method',
+                                                  msgid=method_id)
 
         return
 
