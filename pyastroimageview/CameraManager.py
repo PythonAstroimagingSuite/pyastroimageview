@@ -279,7 +279,7 @@ class CameraManager(Camera):
                 if not rc:
                     return False
 
-            except Exception as e:
+            except Exception:
                 logging.error('CameraManager:connect() Exception ->', exc_info=True)
                 return False
 
@@ -305,7 +305,7 @@ class CameraManager(Camera):
 
         return status
 
-    def get_settings(self):
+    def get_camera_settings(self):
         settings = CameraSettings()
 
         # NOTE only use X binning!
@@ -321,7 +321,7 @@ class CameraManager(Camera):
         settings.roi = super().get_frame()
 
         settings.camera_gain = super().get_camera_gain()
-        logging.debug(f'get_settings: camera_gain = {settings.camera_gain} {type(settings.camera_gain)}')
+        logging.debug(f'get_camera_settings: camera_gain = {settings.camera_gain} {type(settings.camera_gain)}')
 
         return settings
 
@@ -348,7 +348,7 @@ class CameraManager(Camera):
             self.watch_for_exposure_end = True
             self.exposure_start_time = None
             self.current_exposure_length = expose
-            self.exposure_camera_settings = self.get_settings()
+            self.exposure_camera_settings = self.get_camera_settings()
             logging.info(f'exposure_camera_settings = {self.exposure_camera_settings}')
             self.signals.exposure_start.emit(False)
 

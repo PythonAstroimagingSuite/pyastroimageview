@@ -168,12 +168,15 @@ class RPCServer:
                     resdict['jsonrpc'] = '2.0'
                     resdict['id'] = method_id
 
-                    settings = self.device_manager.camera.get_settings()
-                    setdict = {}
-                    setdict['binning'] = settings.binning
-                    setdict['framesize'] = (settings.frame_width, settings.frame_height)
-                    setdict['roi'] = settings.roi
-                    setdict['camera_gain'] = settings.camera_gain
+#                    settings = self.device_manager.camera.get_camera_settings()
+#                    setdict = {}
+#                    setdict['binning'] = settings.binning
+#                    setdict['framesize'] = (settings.frame_width, settings.frame_height)
+#                    setdict['roi'] = settings.roi
+#                    setdict['camera_gain'] = settings.camera_gain
+
+                    # new style pyastrobackend call to get a dict
+                    setdict = self.device_manager.camera.get_settings()
 
                     resdict['result'] = setdict
 
@@ -194,7 +197,12 @@ class RPCServer:
 
                     params = j['params']
 
-                    settings = self.device_manager.camera.get_settings()
+                    # FIXME - convert get_camera_settings() to get_settings()!
+                    # confusing but get_camera_settings() is a legacy method
+                    # for the CameraManager object while get_settings() is
+                    # a newer Camera object method (which CameraManager inherits)
+                    #
+                    settings = self.device_manager.camera.get_camera_settings()
                     logging.debug(f'settings = {settings}')
 
                     exposure = params.get('exposure', None)
@@ -229,7 +237,7 @@ class RPCServer:
                         continue
 
                     if newroi:
-                        settings = self.device_manager.camera.get_settings()
+                        settings = self.device_manager.camera.get_camera_settings()
                         try:
                             if len(newroi) != 4:
                                 raise ValueError('roi must be a tuple of length 4')

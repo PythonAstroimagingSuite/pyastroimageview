@@ -154,7 +154,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             self.ui.sequence_binning.setMaximum(maxbin)
 
             # setup UI based on camera settings
-            settings = self.device_manager.camera.get_settings()
+            settings = self.device_manager.camera.get_camera_settings()
 
             logging.info(f'settings={settings}')
 
@@ -205,7 +205,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.reset_roi()
 
     def set_roi(self):
-        settings = self.device_manager.camera.get_settings()
+        settings = self.device_manager.camera.get_camera_settings()
         result = CameraSetROIDialog().run(self.sequence.roi, settings)
         if result:
             self.sequence.roi = result
@@ -213,7 +213,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
     def reset_roi(self):
         if self.device_manager.camera.is_connected():
-            settings = self.device_manager.camera.get_settings()
+            settings = self.device_manager.camera.get_camera_settings()
 
             maxx = int(settings.frame_width/settings.binning)
             maxy = int(settings.frame_height/settings.binning)

@@ -239,7 +239,7 @@ class CameraControlUI(QtWidgets.QWidget):
                 self.ui.camera_driver_label.setText(camera_choice)
 
     def set_roi(self):
-        settings = self.camera_manager.get_settings()
+        settings = self.camera_manager.get_camera_settings()
         result = CameraSetROIDialog().run(self.roi, settings)
         if result:
             self.roi = result
@@ -254,7 +254,7 @@ class CameraControlUI(QtWidgets.QWidget):
 
     def reset_roi(self):
         if self.camera_manager.is_connected():
-            settings = self.camera_manager.get_settings()
+            settings = self.camera_manager.get_camera_settings()
 
             maxx = int(settings.frame_width/settings.binning)
             maxy = int(settings.frame_height/settings.binning)
@@ -306,7 +306,7 @@ class CameraControlUI(QtWidgets.QWidget):
             self.set_widget_states()
 
             # setup UI based on camera settings
-            settings = self.camera_manager.get_settings()
+            settings = self.camera_manager.get_camera_settings()
 
             logging.info(f'settings={settings}')
 
