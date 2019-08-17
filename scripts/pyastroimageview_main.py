@@ -4,8 +4,14 @@
 #
 # Copyright 2018 Michael Fulbright <mike.fulbright@pobox.com>
 #
-import os
+
+# for now need to run with Python 3.6.  Using Python 3.7 there are some
+# issues with accessing the image data from the camera!
+
 import sys
+assert sys.version_info.major == 3 and sys.version_info.minor == 6
+
+import os
 import math
 import logging
 from datetime import datetime
@@ -20,7 +26,9 @@ from astropy.coordinates import SkyCoord
 
 from PyQt5 import QtCore, QtWidgets, QtGui
 
-from pystarutils.measurehfrserver import MeasureHFRServer
+# not using pystarutils to measure stars any more
+# need to work out a better solution using HFD code in hfdfocus?
+#from pystarutils.measurehfrserver import MeasureHFRServer
 
 from pyastroimageview.DeviceManager import DeviceManager
 from pyastroimageview.ImageWindowSTF import ImageWindowSTF
