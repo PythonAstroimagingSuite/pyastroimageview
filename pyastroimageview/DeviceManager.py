@@ -1,3 +1,6 @@
+import os
+import logging
+
 from pyastroimageview.BackendConfig import get_backend_for_os
 
 BACKEND = get_backend_for_os()
@@ -10,6 +13,7 @@ elif BACKEND == 'INDI':
 else:
     raise Exception(f'Unknown backend {BACKEND} - choose ASCOM or INDI in BackendConfig.py')
 
+from pyastrobackend.AlpacaBackend import DeviceBackend as AlpacaBackend
 
 from pyastroimageview.CameraManager import CameraManager, CameraState, CameraSettings
 from pyastroimageview.FilterWheelManager import FilterWheelManager
@@ -21,7 +25,18 @@ from pyastroimageview.ApplicationContainer import AppContainer
 class DeviceManager:
     def __init__(self):
         self.backend = Backend()
-        self.camera = CameraManager(self.backend)
+        #self.camera = CameraManager(self.backend)
+
+        # Alpaca camera env override!!
+        alpaca_camera_flag = os.environ.get('ALPACA_CAMERA')
+        print(f'alpaca_camera_flag = {alpaca_camera_flag}')
+        if alpaca_camera_flag == '1':
+            logging.debug('Using ALPACA CAMERA DRIVER!')
+            camera_backend = AlpacaBackend('127.0.0.1', 11111)
+            self.camera = CameraManager(camera_backend)
+        else:
+            self.camera = CameraManager(self.backend)
+
         self.focuser = FocuserManager(self.backend)
         self.filterwheel = FilterWheelManager(self.backend)
         self.mount = MountManager(self.backend)

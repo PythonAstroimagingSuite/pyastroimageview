@@ -11,12 +11,21 @@ from PyQt5 import QtCore
 # all source files for hw managers reference contrete backend class this way
 #from pyastrobackend import ASCOMBackend as Backend
 
+# Alpaca camera env override!!
+import os
+alpaca_camera_flag = os.environ.get('ALPACA_CAMERA')
+print(f'CameraManager:alpaca_camera_flag = {alpaca_camera_flag}')
+
 from pyastroimageview.BackendConfig import get_backend_for_os
 
 BACKEND = get_backend_for_os()
 
 if BACKEND == 'ASCOM':
-    from pyastrobackend.ASCOM.Camera import Camera
+    if alpaca_camera_flag != '1':
+        from pyastrobackend.ASCOM.Camera import Camera
+    else:
+        print('CameraManager: Using Alpaca Camera Driver')
+        from pyastrobackend.Alpaca.Camera import Camera
 elif BACKEND == 'INDI':
     from pyastrobackend.INDIBackend import Camera
 else:
@@ -275,7 +284,11 @@ class CameraManager(Camera):
         if not super().is_connected():
             try:
                 logging.info('calling connect')
-                rc = super().connect(driver)
+                if alpaca_camera_flag != '1':
+                    rc = super().connect(driver)
+                else:
+                    logging.info('Connecting to ALPACA:camera:0')
+                    rc = super().connect("ALPACA:camera:0")
                 if not rc:
                     return False
 
