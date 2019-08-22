@@ -332,7 +332,10 @@ class RPCServer:
                                                       msgid=method_id)
                         return False
 
+                    # use settings value for overwrite if not provided
                     overwrite_flag = program_settings.sequence_overwritefiles
+                    overwrite_flag = params.get('overwrite', overwrite_flag)
+
                     logging.info(f'writing image to {filename}')
                     try:
                         self.current_image.save_to_file(filename, overwrite=overwrite_flag)
@@ -621,6 +624,165 @@ class RPCServer:
 
                     rc = self.device_manager.focuser.move_absolute_position(abspos)
                     self.send_method_complete_message(socket, method_id)
+
+                elif method in ['mount_can_park',
+                                'mount_at_park',
+                                'mount_pier_side',
+                                'mount_is_slewing',
+                                'mount_get_tracking']:
+                    if not self.device_manager.mount.is_connected():
+                        logging.error(f'request {method} - mount not connected!')
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Mount not connected!',
+                                                      msgid=method_id)
+                        continue
+
+                    resdict = {}
+                    resdict['jsonrpc'] = '2.0'
+                    resdict['id'] = method_id
+
+                    mount = self.device_manager.mount
+
+                    func = {'mount_can_park' : mount.can_park,
+                            'mount_at_park' : mount.is_parked,
+                            'mount_pier_side' : mount.get_pier_side,
+                            'mount_is_slewing' : mount.is_slewing,
+                            'mount_get_tracking' : mount.get_tracking}
+
+                    # get value
+                    ret_val = func[method]()
+
+                    # strip 'focuser_' off to get return key
+                    ret_key = {'mount_can_park' : 'can_park',
+                            'mount_at_park' : 'at_park',
+                            'mount_pier_side' : 'pier_side',
+                            'mount_is_slewing' : 'is_slewing',
+                            'mount_get_tracking' : 'tracking'}
+
+                    logging.debug(f'method {method} returns {ret_key[method]} = {ret_val}')
+
+                    setdict = {ret_key[method] : ret_val}
+                    resdict['result'] = setdict
+                    self.__send_json_response(socket, resdict)
+                elif method in ['mount_abort_slew', 'mount_unpark', 'mount_park']:
+                    if not self.device_manager.mount.is_connected():
+                        logging.error(f'request {method} - mount not connected!')
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Mount not connected!',
+                                                      msgid=method_id)
+                        continue
+
+                    if method == 'mount_abort_slew':
+                        rc = self.device_manager.mount.abort_slew()
+                    elif method == 'mount_unpark':
+                        rc = self.device_manager.mount.unpark()
+                    elif method == 'mount_park':
+                        rc = self.device_manager.mount.park()
+
+                    self.send_method_complete_message(socket, method_id)
+
+                elif method == 'mount_get_radec':
+                    if not self.device_manager.mount.is_connected():
+                        logging.error(f'request {method} - mount not connected!')
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Mount not connected!',
+                                                      msgid=method_id)
+                        continue
+
+                    ra, dec = self.device_manager.mount.get_position_radec()
+                    setdict = {'ra' : ra, 'dec' : dec}
+                    resdict = {}
+                    resdict['jsonrpc'] = '2.0'
+                    resdict['id'] = method_id
+                    resdict['result'] = setdict
+                    self.__send_json_response(socket, resdict)
+
+                elif method == 'mount_get_altaz':
+                    if not self.device_manager.mount.is_connected():
+                        logging.error(f'request {method} - mount not connected!')
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Mount not connected!',
+                                                      msgid=method_id)
+                        continue
+
+                    alt, az = self.device_manager.mount.get_position_altaz()
+                    setdict = {'alt' : alt, 'az' : az}
+                    resdict = {}
+                    resdict['jsonrpc'] = '2.0'
+                    resdict['id'] = method_id
+                    resdict['result'] = setdict
+                    self.__send_json_response(socket, resdict)
+
+                elif method in ['mount_slew_radec', 'mount_sync_radec']:
+                    if not self.device_manager.mount.is_connected():
+                        logging.error(f'request {method} - mount not connected!')
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Mount not connected!',
+                                                      msgid=method_id)
+                        continue
+
+                    if 'params' not in j:
+                        logging.info(f'method {method} - no params provided!')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
+                                                      'Invalid request - missing parameters!',
+                                                      msgid=method_id)
+                        continue
+
+                    params = j['params']
+
+                    ra = params.get('ra', None)
+                    dec = params.get('dec', None)
+
+                    logging.debug(f'method {method}: ra = {ra} dec = {dec}')
+
+                    ra_problem = ra is None or (not isinstance(ra, int) and not isinstance(ra, float))
+                    dec_problem = dec is None or (not isinstance(dec, int) and not isinstance(dec, float))
+
+                    if ra_problem or dec_problem:
+                        logging.error(f'RPCServer:method {method}: method request but need ra/dec - recvd {ra}/{dec}')
+                        self.send_json_error_response(socket,
+                                                      JSON_INVALID_ERRCODE, f'Invalid request - {method}',
+                                                      msgid=method_id)
+                        continue
+
+                    if method == 'mount_slew_radec':
+                        rc = self.device_manager.mount.slew(ra, dec)
+                    elif method == 'mount_sync_radec':
+                        rc = self.device_manager.mount.slew(ra, dec)
+                    else:
+                        logging.error(f'Unknown method {method}!')
+                        sys.exit(1)
+
+                    self.send_method_complete_message(socket, method_id)
+
+                elif method == 'mount_set_tracking':
+                    if not self.device_manager.mount.is_connected():
+                        logging.error(f'request {method} - mount not connected!')
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Mount not connected!',
+                                                      msgid=method_id)
+                        continue
+
+                    if 'params' not in j:
+                        logging.info(f'method {method} - no params provided!')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
+                                                      'Invalid request - missing parameters!',
+                                                      msgid=method_id)
+                        continue
+
+                    params = j['params']
+
+                    track = params.get('tracking', None)
+
+                    logging.debug(f'method {method}: tracking = {track}')
+
+                    track_problem = track is None or not isinstance(track, bool)
+                    if track_problem:
+                        logging.error(f'RPCServer:method {method}: method request but need tracking - recvd {track}')
+                        self.send_json_error_response(socket,
+                                                      JSON_INVALID_ERRCODE, f'Invalid request - {method}',
+                                                      msgid=method_id)
+                        continue
+
+                    rc = self.device_manager.mount.set_tracking(track)
+
+                    self.send_method_complete_message(socket, method_id)
+
+                # Unknown method requested
                 else:
                     logging.error(f'RPCServer: unknown JSONRPC method {method}')
                     self.send_json_error_response(socket, JSON_BADMETHOD_ERRCODE,

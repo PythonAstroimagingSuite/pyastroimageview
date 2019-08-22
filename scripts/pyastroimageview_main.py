@@ -21,7 +21,19 @@ if BACKEND == 'ASCOM':
 
 import os
 import math
+
+
+# try to disable requests logging DEBUG
+import requests
 import logging
+
+
+for key in logging.Logger.manager.loggerDict:
+    print(key)
+    logging.getLogger(key).setLevel(logging.CRITICAL)
+
+#sys.exit(0)
+
 from datetime import datetime
 
 import numpy as np
@@ -55,6 +67,9 @@ from pyastroimageview.RPCServer import RPCServer
 import pyastroimageview.uic.icons
 
 from pyastroimageview.ApplicationContainer import AppContainer
+
+
+
 
 # FIXME Need better VERSION system
 # this has to match yaml
@@ -585,6 +600,7 @@ if __name__ == '__main__':
 #    FORMAT = '%(asctime)s %(levelname)-8s %(message)s'
 #    FORMAT = '[%(funcName)20s():%(lineno)4s] %(levelname)-8s %(message)s'
 #    FORMAT = '%(asctime)s [%(funcName)20s():%(lineno)4s] %(message)s'
+#    %(pathname)s %(module)s
     FORMAT = '%(asctime)s [%(filename)20s:%(lineno)3s - %(funcName)20s() ] %(levelname)-8s %(message)s'
     formatter = logging.Formatter(FORMAT)
     ch = logging.StreamHandler()
