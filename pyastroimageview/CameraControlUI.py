@@ -283,6 +283,7 @@ class CameraControlUI(QtWidgets.QWidget):
         self.reset_roi()
 
     def camera_connect(self):
+        logging.debug(f'camera_connect: camera_driver = {self.settings.camera_driver}')
         if self.settings.camera_driver:
             if not self.camera_manager.get_lock():
                 logging.warning('CCUI: camera_connect: could not get lock!')

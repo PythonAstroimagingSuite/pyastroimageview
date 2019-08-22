@@ -5,12 +5,14 @@ from PyQt5 import QtCore
 # FIXME this needs to be 'configured' somewhere central as currently
 # all source files for hw managers reference contrete backend class this way
 
-from pyastroimageview.BackendConfig import get_backend_for_os
+from pyastrobackend.BackendConfig import get_backend_for_os
 
 BACKEND = get_backend_for_os()
 
 if BACKEND == 'ASCOM':
     from pyastrobackend.ASCOM.FilterWheel import FilterWheel
+elif BACKEND == 'ALPACA':
+    from pyastrobackend.Alpaca.FilterWheel import FilterWheel
 elif BACKEND == 'INDI':
     from pyastrobackend.INDIBackend import FilterWheel
 else:
@@ -65,7 +67,12 @@ class FilterWheelManager(FilterWheel):
     @checklock
     def connect(self, driver):
         if not super().is_connected():
-            rc = super().connect(driver)
+            if BACKEND == 'ALPACA':
+                device_number = driver.split(':')[1]
+                logging.debug(f'Connecting to ALPACA:filterwheel:{device_number}')
+                rc = super().connect(f'ALPACA:filterwheel:{device_number}')
+            else:
+                rc = super().connect(driver)
             if not rc:
                 return rc
 
@@ -78,6 +85,3 @@ class FilterWheelManager(FilterWheel):
     # override filter names so we can support user names vs name from driver
     def get_names(self):
         return self.user_names
-
-
-

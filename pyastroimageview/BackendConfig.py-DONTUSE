@@ -1,5 +1,7 @@
 # FIXME not best way to control the backend!
 
+assert True, 'Should not use this file!'
+
 #backend = 'ASCOM'
 #BACKEND = 'INDI'
 

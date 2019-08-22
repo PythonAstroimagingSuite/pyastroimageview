@@ -28,6 +28,7 @@ class ProgramSettings:
         self.telescope_focallen = 800
 
         # device settings
+        self.backend = None
         self.camera_driver = ''
         self.focuser_driver = ''
         self.filterwheel_driver = ''

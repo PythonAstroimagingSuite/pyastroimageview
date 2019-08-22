@@ -7,25 +7,14 @@ from enum import Enum, unique
 
 from PyQt5 import QtCore
 
-# FIXME this needs to be 'configured' somewhere central as currently
-# all source files for hw managers reference contrete backend class this way
-#from pyastrobackend import ASCOMBackend as Backend
-
-# Alpaca camera env override!!
-import os
-alpaca_camera_flag = os.environ.get('ALPACA_CAMERA')
-print(f'CameraManager:alpaca_camera_flag = {alpaca_camera_flag}')
-
-from pyastroimageview.BackendConfig import get_backend_for_os
+from pyastrobackend.BackendConfig import get_backend_for_os
 
 BACKEND = get_backend_for_os()
 
 if BACKEND == 'ASCOM':
-    if alpaca_camera_flag != '1':
-        from pyastrobackend.ASCOM.Camera import Camera
-    else:
-        print('CameraManager: Using Alpaca Camera Driver')
-        from pyastrobackend.Alpaca.Camera import Camera
+    from pyastrobackend.ASCOM.Camera import Camera
+elif BACKEND == 'ALPACA':
+    from pyastrobackend.Alpaca.Camera import Camera
 elif BACKEND == 'INDI':
     from pyastrobackend.INDIBackend import Camera
 else:
@@ -284,11 +273,12 @@ class CameraManager(Camera):
         if not super().is_connected():
             try:
                 logging.info('calling connect')
-                if alpaca_camera_flag != '1':
-                    rc = super().connect(driver)
+                if BACKEND == 'ALPACA':
+                    device_number = driver.split(':')[1]
+                    logging.debug(f'Connecting to ALPACA:camera:{device_number}')
+                    rc = super().connect(f'ALPACA:camera:{device_number}')
                 else:
-                    logging.info('Connecting to ALPACA:camera:0')
-                    rc = super().connect("ALPACA:camera:0")
+                    rc = super().connect(driver)
                 if not rc:
                     return False
 

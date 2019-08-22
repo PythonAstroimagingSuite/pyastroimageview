@@ -6,17 +6,20 @@
 #
 
 # for now need to run with Python 3.6.  Using Python 3.7 there are some
-# issues with accessing the image data from the camera!
+# issues with accessing the image data from the camera using ASCOM so must
+# use Alpaca
 
 # Alpaca camera env override!!
-import os
-alpaca_camera_flag = os.environ.get('ALPACA_CAMERA')
-print(f'pyastroimageview_main.py:alpaca_camera_flag = {alpaca_camera_flag}')
 
 import sys
-if not alpaca_camera_flag:
-    assert sys.version_info.major == 3 and sys.version_info.minor == 6
+from pyastrobackend.BackendConfig import get_backend_for_os
+BACKEND = get_backend_for_os()
 
+if BACKEND == 'ASCOM':
+    blacklist = sys.version_info.major == 3 and sys.version_info.minor == 6
+    assert blacklist, 'ASCOM backend should be used with Python 3.6 ONLY'
+
+import os
 import math
 import logging
 from datetime import datetime
