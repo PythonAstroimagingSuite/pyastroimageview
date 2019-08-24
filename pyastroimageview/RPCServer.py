@@ -607,19 +607,6 @@ class RPCServer:
                               }
                     logging.debug(f'method {method} returns {ret_key[method]} = {ret_val}')
 
-                    # FIXME MSF REMOVE FOR NORMAL OPS!
-                    # inject a different message to confuse json parser on camera endswith
-#                    junkresdict = {}
-#                    junkresdict['jsonrpc'] = '2.0'
-#                    junkresdict['id'] = 123000000
-#                    junkdict = {'testing' : True}
-#                    junkresdict['result'] = junkdict
-#                    self.__send_json_response(socket, junkresdict)
-
-                    # FIXME MSF only for testing clients rejecting invalid
-                    #       result types!
-#                    setdict = {ret_key[method] : 'TEST'}
-
                     # normal code
                     setdict = {ret_key[method] : ret_val}
 
@@ -642,9 +629,7 @@ class RPCServer:
                     resdict = {}
                     resdict['jsonrpc'] = '2.0'
                     resdict['id'] = method_id
-
                     focuser = self.device_manager.focuser
-
                     func = {'focuser_get_absolute_position' : focuser.get_absolute_position,
                             'focuser_get_max_absolute_position' : focuser.get_max_absolute_position,
                             'focuser_get_current_temperature' : focuser.get_current_temperature,
@@ -681,11 +666,8 @@ class RPCServer:
                         continue
 
                     params = j['params']
-
                     abspos = params.get('absolute_position', None)
-
                     logging.debug(f'focuser_move_absolute_position: abspos = {abspos}')
-
                     if abspos is None or not isinstance(abspos, int):
                         logging.error('RPCServer:focuser_move_absolute_position method request but need absolute position - recvd {abspos}')
                         self.send_json_error_response(socket,
@@ -710,9 +692,7 @@ class RPCServer:
                     resdict = {}
                     resdict['jsonrpc'] = '2.0'
                     resdict['id'] = method_id
-
                     mount = self.device_manager.mount
-
                     func = {'mount_can_park' : mount.can_park,
                             'mount_at_park' : mount.is_parked,
                             'mount_pier_side' : mount.get_pier_side,
@@ -795,12 +775,9 @@ class RPCServer:
                         continue
 
                     params = j['params']
-
                     ra = params.get('ra', None)
                     dec = params.get('dec', None)
-
                     logging.debug(f'method {method}: ra = {ra} dec = {dec}')
-
                     ra_problem = ra is None or (not isinstance(ra, int) and not isinstance(ra, float))
                     dec_problem = dec is None or (not isinstance(dec, int) and not isinstance(dec, float))
 
@@ -836,9 +813,7 @@ class RPCServer:
                         continue
 
                     params = j['params']
-
                     track = params.get('tracking', None)
-
                     logging.debug(f'method {method}: tracking = {track}')
 
                     track_problem = track is None or not isinstance(track, bool)
@@ -852,6 +827,64 @@ class RPCServer:
                     rc = self.device_manager.mount.set_tracking(track)
 
                     self.send_method_complete_message(socket, method_id)
+
+                elif method == 'filterwheel_move_position':
+                    if not self.device_manager.filterwheel.is_connected():
+                        logging.error(f'request {method} - filter wheel not connected!')
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Filter wheel not connected!',
+                                                      msgid=method_id)
+                        continue
+
+                    if 'params' not in j:
+                        logging.info(f'method {method} - no params provided!')
+                        self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
+                                                      'Invalid request - missing parameters!',
+                                                      msgid=method_id)
+                        continue
+
+                    params = j['params']
+                    pos = int(params.get('filter_position', None))
+                    logging.debug(f'method {method}: filter position = {pos}')
+
+                    pos_problem = pos is None or not isinstance(pos, int)
+                    if pos_problem:
+                        logging.error(f'RPCServer:method {method}: method request but need position - recvd {pos}')
+                        self.send_json_error_response(socket,
+                                                      JSON_INVALID_ERRCODE, f'Invalid request - {method}',
+                                                      msgid=method_id)
+                        continue
+
+                    rc = self.device_manager.filterwheel.set_position(pos)
+
+                    self.send_method_complete_message(socket, method_id)
+
+                elif method in ['filterwheel_get_position', 'filterwheel_get_filter_names']:
+                    if not self.device_manager.filterwheel.is_connected():
+                        logging.error(f'request {method} - filter wheel not connected!')
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Filter wheel not connected!',
+                                                      msgid=method_id)
+                        continue
+
+                    resdict = {}
+                    resdict['jsonrpc'] = '2.0'
+                    resdict['id'] = method_id
+
+                    wheel = self.device_manager.filterwheel
+                    func = {'filterwheel_get_position' : wheel.get_position,
+                            'filterwheel_get_filter_names' : wheel.get_names}
+
+                    # get value
+                    ret_val = func[method]()
+
+                    # strip 'filterwheel_' off to get return key
+                    ret_key = {'filterwheel_get_position' : 'filter_position',
+                            'filterwheel_get_filter_names' : 'filter_names'}
+
+                    logging.debug(f'method {method} returns {ret_key[method]} = {ret_val}')
+
+                    setdict = {ret_key[method] : ret_val}
+                    resdict['result'] = setdict
+                    self.__send_json_response(socket, resdict)
 
                 # Unknown method requested
                 else:
