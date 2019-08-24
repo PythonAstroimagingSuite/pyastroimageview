@@ -68,7 +68,7 @@ class DeviceManager:
             self.settings.backend = BACKEND
             self.clear_device_driver_settings()
 
-        logging.debug('Using backend {BACKEND}')
+        logging.debug(f'Using backend {BACKEND}')
 
         if BACKEND == 'ASCOM':
             self.backend = ASCOMBackend()

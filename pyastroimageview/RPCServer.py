@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import os
 import sys
 import json
 import math
@@ -7,6 +8,7 @@ import logging
 from astropy import units as u
 from astropy.coordinates import AltAz
 from astropy.coordinates import Angle
+from astropy.coordinates import FK5
 from astropy.coordinates import SkyCoord
 from astropy.time import Time
 
@@ -23,11 +25,20 @@ JSON_BADPARAM_ERRCODE = -32602
 JSON_INTERROR_ERRCODE = -32603
 JSON_APP_ERRCODE = -1 # actual application error
 
+# HACK
+# Download DSS
+# Set DSS_CAMERA to '1' and DSS_CAMERA_PIXELSCALE to pixelscale in arcsec/pixel
+if os.environ.get('DSS_CAMERA'):
+    DSS_CAMERA = True
+    DSS_CAMERA_PIXELSCALE = float(os.environ.get('DSS_CAMERA'))
+    print(f'DSS_CAMERA enabled with pixelscale {DSS_CAMERA_PIXELSCALE}')
+else:
+    DSS_CAMERA = False
+
 class RPCServerSignals(QtCore.QObject):
     new_camera_image = QtCore.pyqtSignal(object)
 
 class RPCServer:
-
     def __init__(self, port=8800):
         self.server = None
         self.port = port
@@ -294,12 +305,71 @@ class RPCServer:
 
                     new_settings.camera_gain = camera_gain
                     self.device_manager.camera.set_settings(new_settings)
-                    self.device_manager.camera.start_exposure(exposure)
+
+                    # HACK Don't actually take exposure if doing DSS downloads
+                    if not DSS_CAMERA:
+                        self.device_manager.camera.start_exposure(exposure)
 
                     # FIXME this is sloppy only works since only one exposure can be going on at a time
                     self.exposure_ongoing = True
                     self.exposure_ongoing_method_id = method_id
                     self.exposure_ongoing_socket = socket
+
+                    # if doing DSS download grab image and call exposure complete handler
+                    if DSS_CAMERA:
+                        from astroquery.skyview import SkyView
+                        import astropy.units as u
+
+                        if not self.device_manager.mount.is_connected():
+                            logging.error(f'DSS_CAMERA - mount not connected!')
+                            sys.exit(1)
+
+                        ra, dec = self.device_manager.mount.get_position_radec()
+                        logging.debug(f'mount ra/dec (hour/deg) = {ra} {dec}')
+
+                        # we are assuming mount coordinates are JNOW - need to precess
+                        radec_jnow = SkyCoord(f'{ra} {dec}', unit=(u.hour, u.deg), frame='fk5', equinox=Time.now())
+                        logging.debug(f'mount jnow = {radec_jnow.ra.to_string(u.hour, sep=":")} ' + \
+                                      f'{radec_jnow.dec.to_string(u.deg, sep=":", alwayssign=True)}')
+
+                        radec_j2000 = radec_jnow.transform_to(FK5(equinox='J2000'))
+                        logging.debug(f'mount j2000 = {radec_j2000.ra.to_string(u.hour, sep=":")} ' + \
+                                      f'{radec_j2000.dec.to_string(u.deg, sep=":", alwayssign=True)}')
+
+                        sv = SkyView()
+
+                        posstr = f'{radec_j2000.ra.degree} {radec_j2000.dec.degree}'
+                        pixelstr = f'{int(new_settings.roi[2])}, {int(new_settings.roi[3])}'
+                        width = new_settings.roi[2]*DSS_CAMERA_PIXELSCALE*new_settings.binning/3600.0
+                        height = new_settings.roi[3]*DSS_CAMERA_PIXELSCALE*new_settings.binning/3600.0
+                        logging.debug(f'Loading SkyView with pos={posstr} (J2000)' + \
+                                      f' pixels={pixelstr} ' + \
+                                      f' height={height} ' + \
+                                      f' width={width}')
+                        paths = sv.get_images(position=posstr,
+                                              coordinates='J2000',
+                                              survey=['DSS'],
+                                              pixels=pixelstr,
+                                              width=width*u.degree,
+                                              height=height*u.degree)
+                        logging.debug(f'paths={paths}')
+                        p = paths[0]
+                        p.writeto('a.fits', overwrite=True)
+
+                        from pyastroimageview.FITSImage import FITSImage
+
+                        pri_header = p[0].header
+                        fits_image = FITSImage(p[0].data)
+                        # must be FITS so munge into a FITSImage() object
+                        logging.info('get_image_data() returned a FITS object')
+                        for key, val in pri_header.items():
+                            # Comment/history tends to cause output issues when debugging so just skip
+                            if key in ['COMMENT', 'HISTORY']:
+                                continue
+                            fits_image.set_header_keyvalue(key, val)
+
+                        self.camera_exposure_complete((True, fits_image))
+
                 elif method == 'save_image':
                     if not self.current_image:
                         logging.info('save_image - no image available!')
@@ -339,6 +409,7 @@ class RPCServer:
                     logging.info(f'writing image to {filename}')
                     try:
                         self.current_image.save_to_file(filename, overwrite=overwrite_flag)
+                        self.current_image.save_to_file('save_image.fits', overwrite=True)
                     except Exception:
                         logging.error('RPCServer: Exception ->', exc_info=True)
                         self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Error writing image',
@@ -872,6 +943,10 @@ class RPCServer:
         if self.device_manager.camera.is_connected():
             cam_name = self.device_manager.camera.get_camera_name()
             fits_doc.set_instrument(cam_name)
+
+            if fits_doc.get_header_keyvalue('XBINNING') is None:
+                binx, biny = self.device_manager.camera.get_binning()
+                fits_doc.set_camera_binning(binx, biny)
 
         if self.device_manager.filterwheel.is_connected():
             logging.info('connected')
