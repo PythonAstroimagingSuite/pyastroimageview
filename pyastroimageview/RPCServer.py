@@ -317,6 +317,15 @@ class RPCServer:
 
                     # if doing DSS download grab image and call exposure complete handler
                     if DSS_CAMERA:
+                        MAX_DSS_DOWNLOAD_PIXELS = 1024*1024  # largest # pixels to download
+
+                        if new_settings.roi[2]*new_settings.roi[3] > MAX_DSS_DOWNLOAD_PIXELS:
+                            logging.error('Attempt to SkyView download too large an image!')
+                            logging.error(f'roi = {new_settings.roi}')
+                            logging.error(f'MAX PIX DOWNLOAD = {MAX_DSS_DOWNLOAD_PIXELS}')
+                            sys.exit(1)
+
+
                         from astroquery.skyview import SkyView
                         import astropy.units as u
 
