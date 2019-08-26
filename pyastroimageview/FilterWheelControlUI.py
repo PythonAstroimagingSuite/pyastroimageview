@@ -1,3 +1,4 @@
+import os
 import time
 import logging
 
@@ -112,7 +113,9 @@ class FilterWheelControlUI(QtWidgets.QWidget):
             rc = self.filterwheel_manager.connect(self.settings.filterwheel_driver)
 
             # FIXME add some time so INDI stuff settles sigh
-            time.sleep(5)
+            if os.name == 'posix':
+                time.sleep(5)
+                logging.warning('5 second delay for INDI to settle')
 
             if not rc:
                 QtWidgets.QMessageBox.critical(None, 'Error', 'Unable to connect to filterwheel!',
