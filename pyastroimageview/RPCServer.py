@@ -800,7 +800,7 @@ class RPCServer:
                     if method == 'mount_slew_radec':
                         rc = self.device_manager.mount.slew(ra, dec)
                     elif method == 'mount_sync_radec':
-                        rc = self.device_manager.mount.slew(ra, dec)
+                        rc = self.device_manager.mount.sync(ra, dec)
                     else:
                         logging.error(f'Unknown method {method}!')
                         sys.exit(1)
