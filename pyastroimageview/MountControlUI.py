@@ -124,7 +124,7 @@ class MountControlUI(QtWidgets.QWidget):
                 self.settings.write()
                 self.ui.mount_driver_label.setText(mount_choice)
         else:
-            backend = AppContainer.find('/dev/backend')
+            backend = AppContainer.find('/dev/mount_backend')
 
             choices = backend.getDevicesByClass('telescope')
 

@@ -87,7 +87,7 @@ class FilterWheelControlUI(QtWidgets.QWidget):
                 self.settings.write()
                 self.ui.filterwheel_driver_label.setText(filterwheel_choice)
         else:
-            backend = AppContainer.find('/dev/backend')
+            backend = AppContainer.find('/dev/filterwheel_backend')
 
             choices = backend.getDevicesByClass('filter')
 

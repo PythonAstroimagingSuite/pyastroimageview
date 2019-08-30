@@ -7,18 +7,18 @@ from enum import Enum, unique
 
 from PyQt5 import QtCore
 
-from pyastrobackend.BackendConfig import get_backend_for_os
-
-BACKEND = get_backend_for_os()
-
-if BACKEND == 'ASCOM':
-    from pyastrobackend.ASCOM.Camera import Camera
-elif BACKEND == 'ALPACA':
-    from pyastrobackend.Alpaca.Camera import Camera
-elif BACKEND == 'INDI':
-    from pyastrobackend.INDIBackend import Camera
-else:
-    raise Exception(f'Unknown backend {BACKEND} - choose ASCOM or INDI in BackendConfig.py')
+#from pyastrobackend.BackendConfig import get_backend_for_os
+#
+#BACKEND = get_backend_for_os()
+#
+#if BACKEND == 'ASCOM':
+#    from pyastrobackend.ASCOM.Camera import Camera
+#elif BACKEND == 'ALPACA':
+#    from pyastrobackend.Alpaca.Camera import Camera
+#elif BACKEND == 'INDI':
+#    from pyastrobackend.INDIBackend import Camera
+#else:
+#    raise Exception(f'Unknown backend {BACKEND} - choose ASCOM or INDI in BackendConfig.py')
 
 from pyastroimageview.FITSImage import FITSImage
 
@@ -84,7 +84,7 @@ class CameraManagerSignals(QtCore.QObject):
 
 #class CameraManager(Backend.Camera):
 
-class CameraManager(Camera):
+class CameraManager:
 
     """The CameraManager class acts as an arbiter of requests to the camera device.
 
@@ -273,12 +273,22 @@ class CameraManager(Camera):
         if not super().is_connected():
             try:
                 logging.info('calling connect')
-                if BACKEND == 'ALPACA':
-                    device_number = driver.split(':')[1]
-                    logging.debug(f'Connecting to ALPACA:camera:{device_number}')
-                    rc = super().connect(f'ALPACA:camera:{device_number}')
-                else:
-                    rc = super().connect(driver)
+#                # FIXME Need better way to figure out driver names
+#                #       based on backend!  Alpaca has kludged up
+#                #       handling currently internally
+#                try:
+#                    name = self.backend.name()
+#                except:
+#                    name = ''
+#                if name == 'ALPACA':
+#                    device_number = driver.split(':')[1]
+#                    logging.debug(f'Connecting to ALPACA:camera:{device_number}')
+#                    rc = super().connect(f'ALPACA:camera:{device_number}')
+#                else:
+#                    rc = super().connect(driver)
+
+                rc = super().connect(driver)
+
                 if not rc:
                     return False
 

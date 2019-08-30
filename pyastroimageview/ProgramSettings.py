@@ -28,10 +28,13 @@ class ProgramSettings:
         self.telescope_focallen = 800
 
         # device settings
-        self.backend = None
+        self.camera_backend = None
         self.camera_driver = ''
+        self.focuser_backend = None
         self.focuser_driver = ''
+        self.filterwheel_backend = None
         self.filterwheel_driver = ''
+        self.mount_backend = None
         self.mount_driver = ''
 
         # sequence settings

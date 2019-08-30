@@ -36,14 +36,17 @@ class ApplicationContainer(object):
         if key not in self._values:
             raise AttributeError(f'\'{key}\' is not registered.')
 
+        attribute = self._values[key]
+
+        value = attribute(self) if callable(attribute) else attribute
+
         if self.__debug:
             stack = sys._getframe(1)
             f = traceback.extract_stack(stack)[-1]
-            logging.info(f'AppContainer: key \'{key}\' referenced from {f}')
+            logging.info(f'AppContainer: key \'{key}\' referenced from {f} ' + \
+                         f'and has value {value}')
 
-        attribute = self._values[key]
-
-        return attribute(self) if callable(attribute) else attribute
+        return value
 
     def __setattr__(self, key, value):
         print(key, value)

@@ -11,6 +11,8 @@ from pyastroimageview.CameraSetROIControlUI import CameraSetROIDialog
 
 from pyastroimageview.ApplicationContainer import AppContainer
 
+from pyastroimageview.DeviceConfigurationUI import backend_setup_ui, device_setup_ui
+
 # FIXME Come up with better states for camera
 EXPOSURE_STATE_IDLE=0
 EXPOSURE_STATE_ACTIVE=1
@@ -39,6 +41,33 @@ class CameraControlUI(QtWidgets.QWidget):
 
         self.ui.camera_setting_gain_spinbox.setEnabled(False)
 
+        self.update_camera_manager()
+
+        self.settings = AppContainer.find('/program_settings')
+
+        if self.settings.camera_backend and self.settings.camera_driver:
+            self.set_camera_device_label()
+#            lbl = f'{self.settings.camera_backend}/{self.settings.camera_driver}'
+#            self.ui.camera_driver_label.setText(lbl)
+
+        # some vars we may or may not want here
+        self.xsize = None
+        self.ysize = None
+        self.roi = None
+        self.state = EXPOSURE_STATE_IDLE
+        self.current_exposure = None
+
+        # under INDI it is expensive to check things like
+        # camera temperature
+        # so make it so we do it less frequently
+        self.temperature_poll_interval = 5
+        self.temperature_poll_last = None
+#        self.temperature_current_last = None
+#        self.temperature_target_last = None
+
+        self.set_widget_states()
+
+    def update_camera_manager(self):
         self.camera_manager = AppContainer.find('/dev/camera')
 
         self.camera_manager.signals.status.connect(self.camera_status_poll)
@@ -61,27 +90,6 @@ class CameraControlUI(QtWidgets.QWidget):
         else:
             self.ui.camera_setting_binning_spinbox.setMaximum(1)
 
-        self.settings = AppContainer.find('/program_settings')
-
-        if self.settings.camera_driver:
-            self.ui.camera_driver_label.setText(self.settings.camera_driver)
-
-        # some vars we may or may not want here
-        self.xsize = None
-        self.ysize = None
-        self.roi = None
-        self.state = EXPOSURE_STATE_IDLE
-        self.current_exposure = None
-
-        # under INDI it is expensive to check things like
-        # camera temperature
-        # so make it so we do it less frequently
-        self.temperature_poll_interval = 5
-        self.temperature_poll_last = None
-#        self.temperature_current_last = None
-#        self.temperature_target_last = None
-
-        self.set_widget_states()
 
     def set_widget_states(self):
         connect = self.camera_manager.is_connected()
@@ -204,39 +212,83 @@ class CameraControlUI(QtWidgets.QWidget):
         else:
             self.stop_exposure()
 
+    def set_camera_device_label(self):
+        lbl = f'{self.settings.camera_backend}/{self.settings.camera_driver}'
+        self.ui.camera_driver_label.setText(lbl)
+
     def camera_setup(self):
-        if self.settings.camera_driver:
-            last_choice = self.settings.camera_driver
+        new_backend = backend_setup_ui(self.settings.camera_backend)
+        logging.info(f'camera_setup: new backend = {new_backend}')
+
+        if new_backend != self.settings.camera_backend:
+            old_backend = self.settings.camera_backend
+            backend_changed = True
+            self.settings.camera_backend = new_backend
+            device_manager = AppContainer.find('/dev')
+            device_manager.set_camera_backend(new_backend)
+            self.settings.camera_driver = ''
+            self.settings.write()
         else:
-            last_choice = ''
+            backend_changed = False
 
-        if self.camera_manager.has_chooser():
-            camera_choice = self.camera_manager.show_chooser(last_choice)
-            if len(camera_choice) > 0:
-                self.settings.camera_driver = camera_choice
-                self.settings.write()
-                self.ui.camera_driver_label.setText(camera_choice)
-        else:
-            backend = AppContainer.find('/dev/backend')
+        # if backend changed call to set_camera_backend() above
+        # will change /dev/camera_backend
+        backend = AppContainer.find('/dev/camera_backend')
+        logging.debug(f'camera_setup: backend = {backend}')
 
-            choices = backend.getDevicesByClass('ccd')
+        # update internal data structures to reflect changes
+        # at device manager level
+        self.update_camera_manager()
 
-            if len(choices) < 1:
-                QtWidgets.QMessageBox.critical(None, 'Error', 'No cameras available!',
-                                               QtWidgets.QMessageBox.Ok)
-                return
+        new_choice = device_setup_ui(backend,
+                                     self.camera_manager,
+                                     self.settings.camera_driver,
+                                     'ccd')
 
-            if last_choice in choices:
-                selection = choices.index(last_choice)
-            else:
-                selection = 0
+        if new_choice is not None:
+            self.settings.camera_driver = new_choice
+            self.settings.write()
+            self.set_camera_device_label()
 
-            camera_choice, ok = QtWidgets.QInputDialog.getItem(None, 'Choose Camera Driver',
-                                                               'Driver', choices, selection)
-            if ok:
-                self.settings.camera_driver = camera_choice
-                self.settings.write()
-                self.ui.camera_driver_label.setText(camera_choice)
+
+#            logging.info(f'Camera backend chanaged from {self.settings.camera_backend} ' + \
+#                         f'to {new_backend}')
+#            QtWidgets.QMessageBox.critical(None, 'Error', 'Backend changed - recommend restarting!',
+#                                           QtWidgets.QMessageBox.Ok)
+
+
+#        if self.settings.camera_driver:
+#            last_choice = self.settings.camera_driver
+#        else:
+#            last_choice = ''
+#
+#        if self.camera_manager.has_chooser():
+#            camera_choice = self.camera_manager.show_chooser(last_choice)
+#            if len(camera_choice) > 0:
+#                self.settings.camera_driver = camera_choice
+#                self.settings.write()
+#                self.ui.camera_driver_label.setText(camera_choice)
+#        else:
+#            backend = AppContainer.find('/dev/camera_backend')
+#
+#            choices = backend.getDevicesByClass('ccd')
+#
+#            if len(choices) < 1:
+#                QtWidgets.QMessageBox.critical(None, 'Error', 'No cameras available!',
+#                                               QtWidgets.QMessageBox.Ok)
+#                return
+#
+#            if last_choice in choices:
+#                selection = choices.index(last_choice)
+#            else:
+#                selection = 0
+#
+#            camera_choice, ok = QtWidgets.QInputDialog.getItem(None, 'Choose Camera Driver',
+#                                                               'Driver', choices, selection)
+#            if ok:
+#                self.settings.camera_driver = camera_choice
+#                self.settings.write()
+#                self.ui.camera_driver_label.setText(camera_choice)
 
     def set_roi(self):
         settings = self.camera_manager.get_camera_settings()

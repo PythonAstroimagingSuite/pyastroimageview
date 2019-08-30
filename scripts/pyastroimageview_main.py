@@ -15,9 +15,9 @@ import sys
 from pyastrobackend.BackendConfig import get_backend_for_os
 BACKEND = get_backend_for_os()
 
-if BACKEND == 'ASCOM':
-    blacklist = sys.version_info.major == 3 and sys.version_info.minor == 6
-    assert blacklist, 'ASCOM backend should be used with Python 3.6 ONLY'
+#if BACKEND == 'ASCOM':
+#    blacklist = sys.version_info.major == 3 and sys.version_info.minor == 6
+#    assert blacklist, 'ASCOM backend should be used with Python 3.6 ONLY'
 
 import os
 import math
@@ -161,7 +161,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.device_manager = DeviceManager()
         logging.info('Connecting to backend')
-        rc = self.device_manager.backend.connect()
+        rc = self.device_manager.connect_backends()
         if not rc:
             logging.error('Failed to connect to backend!')
             sys.exit(-1)
@@ -602,6 +602,7 @@ if __name__ == '__main__':
 #    FORMAT = '%(asctime)s [%(funcName)20s():%(lineno)4s] %(message)s'
 #    %(pathname)s %(module)s
     FORMAT = '%(asctime)s [%(filename)20s:%(lineno)3s - %(funcName)20s() ] %(levelname)-8s %(message)s'
+#    FORMAT = '%(asctime)s [%(pathname)s %(module)s %(filename)20s:%(lineno)3s - %(funcName)20s() ] %(levelname)-8s %(message)s'
     formatter = logging.Formatter(FORMAT)
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)

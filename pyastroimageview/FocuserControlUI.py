@@ -109,7 +109,7 @@ class FocuserControlUI(QtWidgets.QWidget):
                 self.settings.write()
                 self.ui.focuser_driver_label.setText(focuser_choice)
         else:
-            backend = AppContainer.find('/dev/backend')
+            backend = AppContainer.find('/dev/focuser_backend')
 
             choices = backend.getDevicesByClass('focuser')
 
