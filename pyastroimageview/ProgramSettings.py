@@ -55,6 +55,12 @@ class ProgramSettings:
         self.phd2_starttime = 5
         self.phd2_threshold = 0.5
 
+    def get_key(self, key):
+        return self.__getattr__(key)
+
+    def set_key(self, key, value):
+        return self.__setattr__(key, value)
+
     # FIXME This will break HORRIBLY unless passed an attribute already
     #       in the ConfigObj dictionary
     #

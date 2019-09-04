@@ -7,16 +7,16 @@ from PyQt5 import QtCore
 
 from pyastrobackend.BackendConfig import get_backend_for_os
 
-BACKEND = get_backend_for_os()
-
-if BACKEND == 'ASCOM':
-    from pyastrobackend.ASCOM.FilterWheel import FilterWheel
-elif BACKEND == 'ALPACA':
-    from pyastrobackend.Alpaca.FilterWheel import FilterWheel
-elif BACKEND == 'INDI':
-    from pyastrobackend.INDIBackend import FilterWheel
-else:
-    raise Exception(f'Unknown backend {BACKEND} - choose ASCOM or INDI in BackendConfig.py')
+#BACKEND = get_backend_for_os()
+#
+#if BACKEND == 'ASCOM':
+#    from pyastrobackend.ASCOM.FilterWheel import FilterWheel
+#elif BACKEND == 'ALPACA':
+#    from pyastrobackend.Alpaca.FilterWheel import FilterWheel
+#elif BACKEND == 'INDI':
+#    from pyastrobackend.INDIBackend import FilterWheel
+#else:
+#    raise Exception(f'Unknown backend {BACKEND} - choose ASCOM or INDI in BackendConfig.py')
 
 
 class FilterManagerSignals(QtCore.QObject):
@@ -28,7 +28,8 @@ class FilterManagerSignals(QtCore.QObject):
     connect = QtCore.pyqtSignal(bool)
     lock = QtCore.pyqtSignal(bool)
 
-class FilterWheelManager(FilterWheel):
+#class FilterWheelManager(FilterWheel):
+class FilterWheelManager:
     def checklock(method):
         @wraps(method)
         def wrapped(self, *args, **kwargs):
@@ -67,12 +68,15 @@ class FilterWheelManager(FilterWheel):
     @checklock
     def connect(self, driver):
         if not super().is_connected():
-            if BACKEND == 'ALPACA':
-                device_number = driver.split(':')[1]
-                logging.debug(f'Connecting to ALPACA:filterwheel:{device_number}')
-                rc = super().connect(f'ALPACA:filterwheel:{device_number}')
-            else:
-                rc = super().connect(driver)
+#            if BACKEND == 'ALPACA':
+#                device_number = driver.split(':')[1]
+#                logging.debug(f'Connecting to ALPACA:filterwheel:{device_number}')
+#                rc = super().connect(f'ALPACA:filterwheel:{device_number}')
+#            else:
+#                rc = super().connect(driver)
+
+            rc = super().connect(driver)
+
             if not rc:
                 return rc
 

@@ -11,7 +11,7 @@ from pyastroimageview.CameraSetROIControlUI import CameraSetROIDialog
 
 from pyastroimageview.ApplicationContainer import AppContainer
 
-from pyastroimageview.DeviceConfigurationUI import backend_setup_ui, device_setup_ui
+from pyastroimageview.DeviceConfigurationUI import device_setup_ui
 
 # FIXME Come up with better states for camera
 EXPOSURE_STATE_IDLE=0
@@ -41,14 +41,12 @@ class CameraControlUI(QtWidgets.QWidget):
 
         self.ui.camera_setting_gain_spinbox.setEnabled(False)
 
-        self.update_camera_manager()
+        self.update_manager()
 
         self.settings = AppContainer.find('/program_settings')
 
         if self.settings.camera_backend and self.settings.camera_driver:
-            self.set_camera_device_label()
-#            lbl = f'{self.settings.camera_backend}/{self.settings.camera_driver}'
-#            self.ui.camera_driver_label.setText(lbl)
+            self.set_device_label()
 
         # some vars we may or may not want here
         self.xsize = None
@@ -67,12 +65,10 @@ class CameraControlUI(QtWidgets.QWidget):
 
         self.set_widget_states()
 
-    def update_camera_manager(self):
+    def update_manager(self):
         self.camera_manager = AppContainer.find('/dev/camera')
-
         self.camera_manager.signals.status.connect(self.camera_status_poll)
         self.camera_manager.signals.exposure_complete.connect(self.camera_exposure_complete)
-
         if self.camera_manager.is_connected():
             cooler_state = self.camera_manager.get_cooler_state()
             self.ui.camera_setting_cooleronoff.setChecked(cooler_state)
@@ -89,7 +85,6 @@ class CameraControlUI(QtWidgets.QWidget):
             self.ui.camera_setting_binning_spinbox.setMaximum(maxbin)
         else:
             self.ui.camera_setting_binning_spinbox.setMaximum(1)
-
 
     def set_widget_states(self):
         connect = self.camera_manager.is_connected()
@@ -212,43 +207,48 @@ class CameraControlUI(QtWidgets.QWidget):
         else:
             self.stop_exposure()
 
-    def set_camera_device_label(self):
+    def set_device_label(self):
         lbl = f'{self.settings.camera_backend}/{self.settings.camera_driver}'
         self.ui.camera_driver_label.setText(lbl)
 
     def camera_setup(self):
-        new_backend = backend_setup_ui(self.settings.camera_backend)
-        logging.info(f'camera_setup: new backend = {new_backend}')
 
-        if new_backend != self.settings.camera_backend:
-            old_backend = self.settings.camera_backend
-            backend_changed = True
-            self.settings.camera_backend = new_backend
-            device_manager = AppContainer.find('/dev')
-            device_manager.set_camera_backend(new_backend)
-            self.settings.camera_driver = ''
-            self.settings.write()
-        else:
-            backend_changed = False
+        device_setup_ui(self, 'camera')
+        return
 
-        # if backend changed call to set_camera_backend() above
-        # will change /dev/camera_backend
-        backend = AppContainer.find('/dev/camera_backend')
-        logging.debug(f'camera_setup: backend = {backend}')
-
-        # update internal data structures to reflect changes
-        # at device manager level
-        self.update_camera_manager()
-
-        new_choice = device_setup_ui(backend,
-                                     self.camera_manager,
-                                     self.settings.camera_driver,
-                                     'ccd')
-
-        if new_choice is not None:
-            self.settings.camera_driver = new_choice
-            self.settings.write()
-            self.set_camera_device_label()
+#
+#        new_backend = backend_setup_ui(self.settings.camera_backend)
+#        logging.info(f'camera_setup: new backend = {new_backend}')
+#
+#        if new_backend != self.settings.camera_backend:
+#            old_backend = self.settings.camera_backend
+#            backend_changed = True
+#            self.settings.camera_backend = new_backend
+#            device_manager = AppContainer.find('/dev')
+#            device_manager.set_camera_backend(new_backend)
+#            self.settings.camera_driver = ''
+#            self.settings.write()
+#        else:
+#            backend_changed = False
+#
+#        # if backend changed call to set_camera_backend() above
+#        # will change /dev/camera_backend
+#        backend = AppContainer.find('/dev/camera_backend')
+#        logging.debug(f'camera_setup: backend = {backend}')
+#
+#        # update internal data structures to reflect changes
+#        # at device manager level
+#        self.update_camera_manager()
+#
+#        new_choice = device_setup_ui(backend,
+#                                     self.camera_manager,
+#                                     self.settings.camera_driver,
+#                                     'ccd')
+#
+#        if new_choice is not None:
+#            self.settings.camera_driver = new_choice
+#            self.settings.write()
+#            self.set_camera_device_label()
 
 
 #            logging.info(f'Camera backend chanaged from {self.settings.camera_backend} ' + \
