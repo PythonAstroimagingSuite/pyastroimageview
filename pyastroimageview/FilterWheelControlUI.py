@@ -5,8 +5,8 @@ import logging
 from PyQt5 import QtCore, QtWidgets
 
 from pyastroimageview.uic.filterwheel_settings_uic import Ui_filterwheel_settings_widget
-
 from pyastroimageview.ApplicationContainer import AppContainer
+from pyastroimageview.DeviceConfigurationUI import device_setup_ui
 
 
 class FilterWheelControlUI(QtWidgets.QWidget):
@@ -25,13 +25,10 @@ class FilterWheelControlUI(QtWidgets.QWidget):
 
         self.filterwheel_manager = AppContainer.find('/dev/filterwheel')
 
-        # for DEBUG - should be None normally
-        #self.filterwheel_driver = 'ASCOM.Simulator.FilterWheel'
-
         self.settings = AppContainer.find('/program_settings')
 
         if self.settings.filterwheel_driver:
-            self.ui.filterwheel_driver_label.setText(self.settings.filterwheel_driver)
+            self.set_device_label()
 
         self.set_widget_states()
 
@@ -74,39 +71,13 @@ class FilterWheelControlUI(QtWidgets.QWidget):
                 posstr += f' {self.names[pos]}'
             self.ui.filterwheel_setting_position.setText(posstr)
 
+    def set_device_label(self):
+        lbl = f'{self.settings.filterwheel_backend}/{self.settings.filterwheel_driver}'
+        self.ui.filterwheel_driver_label.setText(lbl)
+
     def filterwheel_setup(self):
-        if self.settings.filterwheel_driver:
-            last_choice = self.settings.filterwheel_driver
-        else:
-            last_choice = ''
-
-        if self.filterwheel_manager.has_chooser():
-            filterwheel_choice = self.filterwheel_manager.show_chooser(last_choice)
-            if len(filterwheel_choice) > 0:
-                self.settings.filterwheel_driver = filterwheel_choice
-                self.settings.write()
-                self.ui.filterwheel_driver_label.setText(filterwheel_choice)
-        else:
-            backend = AppContainer.find('/dev/filterwheel_backend')
-
-            choices = backend.getDevicesByClass('filter')
-
-            if len(choices) < 1:
-                QtWidgets.QMessageBox.critical(None, 'Error', 'No filterwheels available!',
-                                               QtWidgets.QMessageBox.Ok)
-                return
-
-            if last_choice in choices:
-                selection = choices.index(last_choice)
-            else:
-                selection = 0
-
-            filterwheel_choice, ok = QtWidgets.QInputDialog.getItem(None, 'Choose FilterWheel Driver',
-                                                               'Driver', choices, selection)
-            if ok:
-                self.settings.filterwheel_driver = filterwheel_choice
-                self.settings.write()
-                self.ui.filterwheel_driver_label.setText(filterwheel_choice)
+        device_setup_ui(self, 'filterwheel')
+        return
 
     def filterwheel_connect(self):
         if self.settings.filterwheel_driver:

@@ -4,13 +4,9 @@ import logging
 from PyQt5 import QtCore, QtWidgets
 
 from pyastroimageview.CameraManager import CameraState, CameraSettings
-
 from pyastroimageview.uic.camera_settings_uic import Ui_camera_settings_widget
-
 from pyastroimageview.CameraSetROIControlUI import CameraSetROIDialog
-
 from pyastroimageview.ApplicationContainer import AppContainer
-
 from pyastroimageview.DeviceConfigurationUI import device_setup_ui
 
 # FIXME Come up with better states for camera
@@ -212,83 +208,8 @@ class CameraControlUI(QtWidgets.QWidget):
         self.ui.camera_driver_label.setText(lbl)
 
     def camera_setup(self):
-
         device_setup_ui(self, 'camera')
         return
-
-#
-#        new_backend = backend_setup_ui(self.settings.camera_backend)
-#        logging.info(f'camera_setup: new backend = {new_backend}')
-#
-#        if new_backend != self.settings.camera_backend:
-#            old_backend = self.settings.camera_backend
-#            backend_changed = True
-#            self.settings.camera_backend = new_backend
-#            device_manager = AppContainer.find('/dev')
-#            device_manager.set_camera_backend(new_backend)
-#            self.settings.camera_driver = ''
-#            self.settings.write()
-#        else:
-#            backend_changed = False
-#
-#        # if backend changed call to set_camera_backend() above
-#        # will change /dev/camera_backend
-#        backend = AppContainer.find('/dev/camera_backend')
-#        logging.debug(f'camera_setup: backend = {backend}')
-#
-#        # update internal data structures to reflect changes
-#        # at device manager level
-#        self.update_camera_manager()
-#
-#        new_choice = device_setup_ui(backend,
-#                                     self.camera_manager,
-#                                     self.settings.camera_driver,
-#                                     'ccd')
-#
-#        if new_choice is not None:
-#            self.settings.camera_driver = new_choice
-#            self.settings.write()
-#            self.set_camera_device_label()
-
-
-#            logging.info(f'Camera backend chanaged from {self.settings.camera_backend} ' + \
-#                         f'to {new_backend}')
-#            QtWidgets.QMessageBox.critical(None, 'Error', 'Backend changed - recommend restarting!',
-#                                           QtWidgets.QMessageBox.Ok)
-
-
-#        if self.settings.camera_driver:
-#            last_choice = self.settings.camera_driver
-#        else:
-#            last_choice = ''
-#
-#        if self.camera_manager.has_chooser():
-#            camera_choice = self.camera_manager.show_chooser(last_choice)
-#            if len(camera_choice) > 0:
-#                self.settings.camera_driver = camera_choice
-#                self.settings.write()
-#                self.ui.camera_driver_label.setText(camera_choice)
-#        else:
-#            backend = AppContainer.find('/dev/camera_backend')
-#
-#            choices = backend.getDevicesByClass('ccd')
-#
-#            if len(choices) < 1:
-#                QtWidgets.QMessageBox.critical(None, 'Error', 'No cameras available!',
-#                                               QtWidgets.QMessageBox.Ok)
-#                return
-#
-#            if last_choice in choices:
-#                selection = choices.index(last_choice)
-#            else:
-#                selection = 0
-#
-#            camera_choice, ok = QtWidgets.QInputDialog.getItem(None, 'Choose Camera Driver',
-#                                                               'Driver', choices, selection)
-#            if ok:
-#                self.settings.camera_driver = camera_choice
-#                self.settings.write()
-#                self.ui.camera_driver_label.setText(camera_choice)
 
     def set_roi(self):
         settings = self.camera_manager.get_camera_settings()

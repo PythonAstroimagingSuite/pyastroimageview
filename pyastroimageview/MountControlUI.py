@@ -10,8 +10,8 @@ from astropy.time import TimezoneInfo
 from PyQt5 import QtCore, QtWidgets
 
 from pyastroimageview.uic.mount_settings_uic import Ui_mount_settings_widget
-
 from pyastroimageview.ApplicationContainer import AppContainer
+from pyastroimageview.DeviceConfigurationUI import device_setup_ui
 
 class MountControlUI(QtWidgets.QWidget):
 
@@ -34,7 +34,7 @@ class MountControlUI(QtWidgets.QWidget):
         #self.mount_driver =
 
         if self.settings.mount_driver:
-            self.ui.mount_driver_label.setText(self.settings.mount_driver)
+            self.set_device_label()
 
         self.set_widget_states()
 
@@ -111,39 +111,13 @@ class MountControlUI(QtWidgets.QWidget):
                 self.ui.mount_setting_position_alt.setText('N/A')
                 self.ui.mount_setting_position_az.setText('N/A')
 
+    def set_device_label(self):
+        lbl = f'{self.settings.mount_backend}/{self.settings.mount_driver}'
+        self.ui.mount_driver_label.setText(lbl)
+
     def mount_setup(self):
-        if self.settings.mount_driver:
-            last_choice = self.settings.mount_driver
-        else:
-            last_choice = ''
-
-        if self.mount_manager.has_chooser():
-            mount_choice = self.mount_manager.show_chooser(last_choice)
-            if len(mount_choice) > 0:
-                self.settings.mount_driver = mount_choice
-                self.settings.write()
-                self.ui.mount_driver_label.setText(mount_choice)
-        else:
-            backend = AppContainer.find('/dev/mount_backend')
-
-            choices = backend.getDevicesByClass('telescope')
-
-            if len(choices) < 1:
-                QtWidgets.QMessageBox.critical(None, 'Error', 'No mounts available!',
-                                               QtWidgets.QMessageBox.Ok)
-                return
-
-            if last_choice in choices:
-                selection = choices.index(last_choice)
-            else:
-                selection = 0
-
-            mount_choice, ok = QtWidgets.QInputDialog.getItem(None, 'Choose Mount Driver',
-                                                               'Driver', choices, selection)
-            if ok:
-                self.settings.mount_driver = mount_choice
-                self.settings.write()
-                self.ui.mount_driver_label.setText(mount_choice)
+        device_setup_ui(self, 'mount')
+        return
 
     def mount_connect(self):
         if self.settings.mount_driver:

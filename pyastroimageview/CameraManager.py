@@ -7,19 +7,6 @@ from enum import Enum, unique
 
 from PyQt5 import QtCore
 
-#from pyastrobackend.BackendConfig import get_backend_for_os
-#
-#BACKEND = get_backend_for_os()
-#
-#if BACKEND == 'ASCOM':
-#    from pyastrobackend.ASCOM.Camera import Camera
-#elif BACKEND == 'ALPACA':
-#    from pyastrobackend.Alpaca.Camera import Camera
-#elif BACKEND == 'INDI':
-#    from pyastrobackend.INDIBackend import Camera
-#else:
-#    raise Exception(f'Unknown backend {BACKEND} - choose ASCOM or INDI in BackendConfig.py')
-
 from pyastroimageview.FITSImage import FITSImage
 
 @unique
@@ -111,9 +98,6 @@ class CameraManager:
     def __init__(self, backend):
         super().__init__(backend)
 
-        # device backend
-        #self.backendClient = DeviceBackend.DeviceBackendASCOM(mainThread=True)
-#        self.camera = backend.Camera()
         self.lock = QtCore.QSemaphore(1)
         self.signals = CameraManagerSignals()
 
@@ -272,21 +256,6 @@ class CameraManager:
         logging.info('cameramanager.connect!')
         if not super().is_connected():
             try:
-                logging.info('calling connect')
-#                # FIXME Need better way to figure out driver names
-#                #       based on backend!  Alpaca has kludged up
-#                #       handling currently internally
-#                try:
-#                    name = self.backend.name()
-#                except:
-#                    name = ''
-#                if name == 'ALPACA':
-#                    device_number = driver.split(':')[1]
-#                    logging.debug(f'Connecting to ALPACA:camera:{device_number}')
-#                    rc = super().connect(f'ALPACA:camera:{device_number}')
-#                else:
-#                    rc = super().connect(driver)
-
                 rc = super().connect(driver)
 
                 if not rc:
@@ -313,9 +282,6 @@ class CameraManager:
             if status.state.exposure_in_progress():
                 status.exposure_progress = self.get_exposure_progress()
             status.image_ready = super().check_exposure()
-
-#       logging.info(f'status: {status}')
-
         return status
 
     def get_camera_settings(self):

@@ -183,8 +183,8 @@ class MainWindow(QtGui.QMainWindow):
         self.device_control_ui.add_ui_element(self.camera_control_ui, 'Camera Control')
         self.device_control_ui.add_ui_element(self.filterwheel_control_ui, 'Filter Wheel Control')
         self.device_control_ui.add_ui_element(self.focuser_control_ui, 'Focuser Control')
-        self.device_control_ui.add_ui_element(self.phd2_control_ui, 'PHD2 Control')
         self.device_control_ui.add_ui_element(self.mount_control_ui, 'Mount Control')
+        self.device_control_ui.add_ui_element(self.phd2_control_ui, 'PHD2 Control')
 
         self.sequence_control_ui = ImageSequnceControlUI()
         self.sequence_control_ui.new_sequence_image.connect(self.new_sequence_image)
