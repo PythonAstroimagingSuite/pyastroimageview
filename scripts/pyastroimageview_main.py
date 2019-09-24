@@ -404,7 +404,12 @@ class MainWindow(QtGui.QMainWindow):
         # and have method to expose raw image data than using an attribute
         imgdoc.fits = fits_doc
         imgdoc.image_data = fits_doc.image_data()
-        imgdoc.median = np.median(imgdoc.image_data)
+
+        try:
+            imgdoc.median = np.median(imgdoc.image_data)
+        except:
+            logging.error(f'Error computing media!', exc_info=True)
+            imgdoc.median = 0
 
 #        logging.info(f'{imgdoc.image_data.shape}  {fits_doc.image_data().shape}')
 
