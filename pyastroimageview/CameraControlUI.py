@@ -124,6 +124,9 @@ class CameraControlUI(QtWidgets.QWidget):
 #                status_string += ' READY'
 #            else:
 #                status_string += ' NOT READY'
+
+            #logging.info(f'camera_status_poll {status}')
+
             if self.state != EXPOSURE_STATE_IDLE:
                 if status.state is CameraState.EXPOSING:
                     perc = min(100, status.exposure_progress)
@@ -132,6 +135,11 @@ class CameraControlUI(QtWidgets.QWidget):
                     perc_string = f'{status.state.pretty_name()}'
             else:
                 perc_string = f'{status.state.pretty_name()}'
+
+                # 2019/10/07 MSF test to see if we can enable 'STOP'
+                #                for exposures started by RPC
+                exposing = status.state is CameraState.EXPOSING
+                self.set_exposestop_state(exposing)
 
             self.ui.camera_setting_progress.setText(perc_string)
 
@@ -183,6 +191,8 @@ class CameraControlUI(QtWidgets.QWidget):
 
     def set_exposestop_state(self, state):
         """Controls connect/disconnect button state"""
+
+        #logging.info(f'set_exposestop_state state={state}')
 
         self.ui.camera_setting_expose.setChecked(state)
 
@@ -391,8 +401,13 @@ class CameraControlUI(QtWidgets.QWidget):
     def stop_exposure(self):
         logging.info('stop exposure')
         if self.state == EXPOSURE_STATE_IDLE:
-            logging.warning('stop_exposure called but no exposure ongoing!')
-            return
+            logging.warning('stop_exposure called but no exposure ongoing assuming RPC exposure!')
+            #return
 
-        self.state = EXPOSURE_STATE_CANCEL
-        self.camera_manager.stop_exposure()
+            # assume it is RPC started exposure so we cheat and don't
+            # set internal state to cancel!
+            self.camera_manager.stop_exposure()
+
+        else:
+            self.state = EXPOSURE_STATE_CANCEL
+            self.camera_manager.stop_exposure()

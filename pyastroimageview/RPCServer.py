@@ -378,7 +378,11 @@ class RPCServer:
                             fits_image.set_header_keyvalue(key, val)
 
                         self.camera_exposure_complete((True, fits_image))
-
+                elif method == 'abort_image':
+                    # 2019/10/07 MSF Added to allow RPC stop of exposure
+                    logging.info('RPC - aborting current exposure (if any)')
+                    self.device_manager.camera.stop_exposure()
+                    self.send_method_complete_message(socket, method_id)
                 elif method == 'save_image':
                     if not self.current_image:
                         logging.info('save_image - no image available!')
@@ -914,11 +918,11 @@ class RPCServer:
             logging.warning('RPC:cam_exp_comp: ignoring as no exposure was active!')
             return
 
-        self.device_manager.camera.release_lock()
-
         if not self.exposure_ongoing:
             logging.warning('RPCServer():cam_exp_comp - no exposure was ongoing! Ignoring...')
             return
+
+        self.device_manager.camera.release_lock()
 
         self.exposure_ongoing = False
 
@@ -928,6 +932,15 @@ class RPCServer:
             return False
 
         complete_status, fitsimage = result
+
+        if not complete_status:
+            logging.warning('exposure completed with False status!')
+
+            self.current_image = None
+
+            # FIXME prob need to return an error message not complete message!
+            self.send_method_complete_message(self.exposure_ongoing_socket, self.exposure_ongoing_method_id)
+            return
 
         self.handle_new_image(fitsimage)
 
