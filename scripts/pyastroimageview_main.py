@@ -141,7 +141,7 @@ class MainWindow(QtGui.QMainWindow):
         self.hfr_server = None
         self.hfr_cur_widget = None # when doing a calc set to where result should go
 
-        self.resize(960, 740)
+        self.resize(560, 380)
         self.show()
 
         # container (or global variable in uglier terms) for stuff we want to reference all over
@@ -202,6 +202,10 @@ class MainWindow(QtGui.QMainWindow):
         self.RPC_Server_Instance.signals.new_camera_image.connect(self.new_camera_image)
 
     def focus_window_changed(self, win):
+        logging.debug('focus_window_changed: ignoring event')
+        return
+
+
 #        logging.info(f'focus win changed {win} {self.last_win_focus}')
 
         # is it one of ours?
