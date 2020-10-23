@@ -5,12 +5,19 @@
 # Copyright 2018 Michael Fulbright <mike.fulbright@pobox.com>
 #
 
-# for now need to run with Python 3.6.  Using Python 3.7 there are some
-# issues with accessing the image data from the camera using ASCOM so must
-# use Alpaca
+import logging
+
+# try to disable requests logging DEBUG
+import requests
+
+# for key in logging.Logger.manager.loggerDict:
+#     #print(key)
+#     logging.getLogger(key).setLevel(logging.CRITICAL)
+
 
 # Alpaca camera env override!!
-
+import os
+import math
 import sys
 from pyastrobackend.BackendConfig import get_backend_for_os
 BACKEND = get_backend_for_os()
@@ -19,20 +26,6 @@ BACKEND = get_backend_for_os()
 #    blacklist = sys.version_info.major == 3 and sys.version_info.minor == 6
 #    assert blacklist, 'ASCOM backend should be used with Python 3.6 ONLY'
 
-import os
-import math
-
-
-# try to disable requests logging DEBUG
-import requests
-import logging
-
-
-for key in logging.Logger.manager.loggerDict:
-    print(key)
-    logging.getLogger(key).setLevel(logging.CRITICAL)
-
-#sys.exit(0)
 
 from datetime import datetime
 
@@ -73,9 +66,6 @@ from pyastroimageview.RPCServer import RPCServer
 import pyastroimageview.uic.icons
 
 from pyastroimageview.ApplicationContainer import AppContainer
-
-
-
 
 # FIXME Need better VERSION system
 # this has to match yaml
@@ -154,7 +144,11 @@ class MainWindow(QtGui.QMainWindow):
 
         # program settings
         self.settings = ProgramSettings()
-        self.settings.read()
+        settings_ok = self.settings.read()
+
+        if not settings_ok:
+            logging.error('No settings found!')
+            sys.exit(0)
 
         AppContainer.register('/program_settings', self.settings)
 
@@ -593,7 +587,8 @@ class DiagnosticStyle(QtWidgets.QProxyStyle):
             translucentBrush = QtGui.QBrush(QtGui.QColor(255, 246, 240, 100))
             painter.fillRect(widget.rect(), translucentBrush)
             painter.setPen(QtGui.QColor("darkblue"))
-            painter.drawText(widget.rect(), QtCore.Qt.AlignHCenter | QtCore.Qt.AlignVCenter, widget.metaObject().className())
+            painter.drawText(widget.rect(), QtCore.Qt.AlignHCenter
+                             | QtCore.Qt.AlignVCenter, widget.metaObject().className())
 
 
 if __name__ == '__main__':
@@ -601,7 +596,8 @@ if __name__ == '__main__':
     logfilename = 'pyastroimageview-' + log_timestamp.strftime('%Y%m%d%H%M%S') + '.log'
 
     #    FORMAT = '%(asctime)s %(levelname)-8s %(message)s'
-    FORMAT = '%(asctime)s.%(msecs)03d [%(filename)20s:%(lineno)3s - %(funcName)20s() ] %(levelname)-8s %(message)s'
+    FORMAT = '%(asctime)s.%(msecs)03d [%(filename)20s:%(lineno)3s - ' \
+             '%(funcName)20s() ] %(levelname)-8s %(message)s'
 
     logging.basicConfig(filename=logfilename,
                         filemode='a',
@@ -617,7 +613,8 @@ if __name__ == '__main__':
 #    FORMAT = '%(asctime)s [%(funcName)20s():%(lineno)4s] %(message)s'
 #    %(pathname)s %(module)s
     FORMAT = '%(asctime)s [%(filename)20s:%(lineno)3s - %(funcName)20s() ] %(levelname)-8s %(message)s'
-#    FORMAT = '%(asctime)s [%(pathname)s %(module)s %(filename)20s:%(lineno)3s - %(funcName)20s() ] %(levelname)-8s %(message)s'
+#    FORMAT = '%(asctime)s [%(pathname)s %(module)s %(filename)20s:%(lineno)3s - ' \
+#             '%(funcName)20s() ] %(levelname)-8s %(message)s'
     formatter = logging.Formatter(FORMAT)
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
@@ -627,7 +624,7 @@ if __name__ == '__main__':
     logging.info(f'pyastroimageview {VERSION} starting')
 
     app = QtGui.QApplication(sys.argv)
-  #  app.setStyleSheet("QWidget {background-color: #9faeaa}")
+#    app.setStyleSheet("QWidget {background-color: #9faeaa}")
 #    app.setStyle(DiagnosticStyle())
 
     mainwin = MainWindow()
