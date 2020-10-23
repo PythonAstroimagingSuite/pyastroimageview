@@ -2,9 +2,12 @@ import os
 import logging
 from configobj import ConfigObj
 
+from pyastrobackend.BackendConfig import get_backend_for_os
+
 
 class ProgramSettings:
     """Stores program settings which can be saved persistently"""
+
     def __init__(self):
         """Set some defaults for program settings"""
         self._config = ConfigObj(unrepr=True, file_error=True, raise_errors=True)
@@ -113,8 +116,25 @@ class ProgramSettings:
         logging.info(f'read config = {config}')
 
         if config is None:
-            logging.error('failed to read config file!')
-            return False
+            logging.warning('failed to read config file!')
+            logging.info('creating blank config')
+            self.guess_settings()
+            #return False
+        else:
+            self._config.merge(config)
 
-        self._config.merge(config)
         return True
+
+    def guess_settings(self):
+        """
+        Tries to fill in settings if none are available.
+
+        """
+        guess_backend = get_backend_for_os()
+
+        logging.debug(f'Detected backend {guess_backend}')
+
+        self.camera_backend = guess_backend
+        self.focuser_backend = guess_backend
+        self.filterwheel_backend = guess_backend
+        self.mount_backend = guess_backend
