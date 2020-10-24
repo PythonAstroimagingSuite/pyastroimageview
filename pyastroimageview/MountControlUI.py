@@ -1,5 +1,12 @@
 import logging
 
+# work in offline mode for now get timeouts for IERS
+print("MountControlUI.py: DISABLED IERS AGE CHECK!")
+from astropy.utils import iers
+#conf.iers_auto_url = "https://datacenter.iers.org/data/9/finals2000A.all"
+iers.conf.iers_auto_url = "ftp://cddis.gsfc.nasa.gov/pub/products/iers/finals2000A.all"
+iers.conf.remote_timeout = 999
+
 from astropy import units as u
 from astropy.coordinates import AltAz
 from astropy.coordinates import EarthLocation

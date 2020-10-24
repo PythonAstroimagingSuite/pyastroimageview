@@ -31,11 +31,12 @@ from datetime import datetime
 
 import numpy as np
 
+import astropy
 print("pyastroimageview_main.py: DISABLED IERS AGE CHECK!")
-from astropy.utils.iers import conf
+from astropy.utils import iers
 #conf.iers_auto_url = "https://datacenter.iers.org/data/9/finals2000A.all"
-conf.iers_auto_url = "ftp://cddis.gsfc.nasa.gov/pub/products/iers/finals2000A.all"
-conf.auto_max_age = None
+iers.conf.iers_auto_url = "ftp://cddis.gsfc.nasa.gov/pub/products/iers/finals2000A.all"
+iers.conf.remote_timeout = 999
 
 from astropy.time import Time
 from astropy import units as u
