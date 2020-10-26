@@ -1,3 +1,22 @@
+#
+# Image viewing area
+#
+# Copyright 2019 Michael Fulbright
+#
+#
+#    pyastroimageview is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 import logging
 import astropy.io.fits as pyfits
 import numpy as np
@@ -20,13 +39,13 @@ class StarObj(QtWidgets.QGraphicsObject):
         p.drawRect(self.boundingRect())
 
         font = p.font()
-        text_zoom = p.transform().m11() # assume aspect doesnt change!
-        font_size = 12.0/text_zoom
+        text_zoom = p.transform().m11()  # assume aspect doesnt change!
+        font_size = 12.0 / text_zoom
         final_font_size = int(max(3, font_size))
         font.setPixelSize(final_font_size)
         p.setFont(font)
 
-        pre_bbox = QtCore.QRect(-40, min(-25, -20/text_zoom), 80, max(50, 40/text_zoom))
+        pre_bbox = QtCore.QRect(-40, min(-25, -20 / text_zoom), 80, max(50, 40/text_zoom))
 
         text_str = ''
         if self.num:
@@ -39,8 +58,8 @@ class StarObj(QtWidgets.QGraphicsObject):
 
     def boundingRect(self):
         # make a box proportinal to HFR of star
-        r_fact = 3*self.r
-        return QtCore.QRectF(-r_fact, -r_fact, 2*r_fact, 2*r_fact)
+        r_fact = 3 * self.r
+        return QtCore.QRectF(-r_fact, -r_fact, 2 * r_fact, 2 * r_fact)
 
 #    def hoverEvent(self, evt):
 #        logging.info(f'hoverEvent: {evt}')
@@ -88,7 +107,7 @@ class ImageWindowSTF(pg.GraphicsLayoutWidget):
         self.mtf_slider_win = pg.GraphicsLayout()
         self.mtf_slider_win.setBorder('w')
         self.mtf_win.addItem(self.mtf_slider_win)
-        gradient_image = np.tile(np.arange(0, 65535, 65535.0/1000), [100, 1])
+        gradient_image = np.tile(np.arange(0, 65535, 65535.0 / 1000), [100, 1])
         self.gradient_view = self.addViewBox()
         self.gradient_image_item = pg.ImageItem()
         self.gradient_image_item.setImage(gradient_image, autoLevels=False,
@@ -127,10 +146,12 @@ class ImageWindowSTF(pg.GraphicsLayoutWidget):
         self.image_data = None
 
         # follow mouse position
-        self.mouse_proxy = pg.SignalProxy(self.image_item.scene().sigMouseMoved, rateLimit=60, slot=self.image_item_mouse_moved_event)
+        self.mouse_proxy = pg.SignalProxy(self.image_item.scene().sigMouseMoved,
+                                          rateLimit=60,
+                                          slot=self.image_item_mouse_moved_event)
 
     def image_item_mouse_moved_event(self, evt):
-        pos = evt[0]  ## using signal proxy turns original arguments into a tuple
+        pos = evt[0]  # using signal proxy turns original arguments into a tuple
 #        logging.info(f'mouse_moved: {mousePoint.x()}, {mousePoint.y()}')
 
         if self.image_item.sceneBoundingRect().contains(pos):
@@ -163,8 +184,8 @@ class ImageWindowSTF(pg.GraphicsLayoutWidget):
         Filename of FITS file.
         """
 
-        logging.info(f'show_image: {image_file}')
-        logging.info('Removing star obj')
+        logging.debug(f'show_image: {image_file}')
+        logging.debug('Removing star obj')
 
         # remove any existing star labels
         for item in self.star_items:
@@ -172,13 +193,14 @@ class ImageWindowSTF(pg.GraphicsLayoutWidget):
 
         self.star_items = []
 
-        logging.info('loading fits file')
+        logging.debug('loading fits file')
 
         self.image_data = pyfits.getdata(image_file)
 
-        logging.info('setting image data')
+        logging.debug('setting image data')
 
-        self.image_item.setImage(self.image_data, autoLevels=False, levels=(0, 65535), autoRange=False)
+        self.image_item.setImage(self.image_data, autoLevels=False,
+                                 levels=(0, 65535), autoRange=False)
 
     def show_data(self, image_data):
         # remove any existing star labels
@@ -191,8 +213,8 @@ class ImageWindowSTF(pg.GraphicsLayoutWidget):
 
 #        logging.info(f'show_data shape = {image_data.shape}')
 
-        self.image_item.setImage(self.image_data, autoLevels=False, levels=(0, 65535), autoRange=False)
-
+        self.image_item.setImage(self.image_data, autoLevels=False,
+                                 levels=(0, 65535), autoRange=False)
 
     def set_mtf(self, sc, mc, hc):
         """ Computes and applies LUT for image based on sc, mc, hc.
@@ -217,18 +239,18 @@ class ImageWindowSTF(pg.GraphicsLayoutWidget):
             elif x > hc:
                 return 1.0
             else:
-                y = (x-sc)/(hc-sc)
-                a = ((mc-1.0)*y)
-                b = ((2.0*mc-1.0)*y-mc)
-                r = a/b
+                y = (x - sc) / (hc - sc)
+                a = ((mc - 1.0) * y)
+                b = ((2.0 * mc - 1.0) * y - mc)
+                r = a / b
                 v = r
                 return v
 
-        logging.info(f'set_mtf: {sc} {mc} {hc}')
+        logging.debug(f'set_mtf: {sc} {mc} {hc}')
 
         lut = []
-        for x in np.arange(0, 1, 1/65535):
-            val = min(255, 255*compute_mtf(x, sc, mc, hc))
+        for x in np.arange(0, 1, 1 / 65535):
+            val = min(255, 255 * compute_mtf(x, sc, mc, hc))
             lut.append(int(val))
 
         if lut[-1] < 255:
@@ -246,21 +268,21 @@ class ImageWindowSTF(pg.GraphicsLayoutWidget):
         """Based on http://pixinsight.com/doc/docs/XISF-1.0-spec/XISF-1.0-spec.html#__XISF_Data_Objects_:_XISF_Image_:_Adaptive_Display_Function_Algorithm__"""
 
         def compute_mtf(x, m):
-            return ((m-1.0)*x)/((2.0*m-1.0)*x-m)
+            return ((m - 1.0) * x) / ((2.0 * m - 1.0) * x - m)
 
         # normalize image
-        norm_image = self.image_data/65535.0
+        norm_image = self.image_data / 65535.0
 
         image_median = np.median(norm_image)
 
         # eq 24
-        mad = 1.4826*np.median(np.abs(norm_image - image_median))
+        mad = 1.4826 * np.median(np.abs(norm_image - image_median))
 
         # clipping pt
         clip_pt = -2.8
         target_bg = 0.25
 
-        logging.info(f'autostretch: med={image_median} mad={mad}')
+        logging.debug(f'autostretch: med={image_median} mad={mad}')
 
         if image_median < 0.5:
             ac = 0
@@ -270,20 +292,20 @@ class ImageWindowSTF(pg.GraphicsLayoutWidget):
         if ac == 1 or mad < 1e-6:
             sc = 0
         else:
-            sc = min(1.0, max(0, image_median + clip_pt*mad))
+            sc = min(1.0, max(0, image_median + clip_pt * mad))
 
         if ac == 0 or mad < 1e-6:
             hc = 1
         else:
-            hc = min(1.0, max(0, image_median - clip_pt*mad))
+            hc = min(1.0, max(0, image_median - clip_pt * mad))
 
         if ac == 0:
             mc = compute_mtf(image_median - sc, target_bg)
         else:
             mc = compute_mtf(target_bg, hc - image_median)
 
-        logging.info(f'autostretch: clip_pt={clip_pt} target_bg={target_bg} ' + \
-                     f'ac={ac} sc={sc} hc={hc} mc={mc}')
+        logging.debug(f'autostretch: clip_pt={clip_pt} target_bg={target_bg} '
+                      f'ac={ac} sc={sc} hc={hc} mc={mc}')
 
         return (sc, mc, hc)
 
@@ -315,9 +337,10 @@ class ImageWindowSTF(pg.GraphicsLayoutWidget):
             max_cut = np.inf
 
         logging.info(f'overlay_stars min_cut={min_cut} max_cut={max_cut}')
-        logging.info(f'overlay_stars; min_hfr = {np.min(hfr_result.FWHM_R)} max_hfr={np.max(hfr_result.FWHM_R)}')
+        logging.info(f'overlay_stars; min_hfr = {np.min(hfr_result.FWHM_R)} '
+                     f'max_hfr={np.max(hfr_result.FWHM_R)}')
 
-        idx = range(1, len(hfr_result.FWHM_X)+1)
+        idx = range(1, len(hfr_result.FWHM_X) + 1)
         ndrawn = 0
         for i, x, y, r in zip(idx, hfr_result.FWHM_X, hfr_result.FWHM_Y, hfr_result.FWHM_R):
 #            logging.info(f'Star #{i} x/r/r -> {x}, {y}, {r}')
@@ -391,7 +414,7 @@ class STFSlider(MTFSliderItem):
         self.midtone = mc
         black = sc
         white = hc
-        mid = sc + (hc-sc)*mc
+        mid = sc + (hc - sc) * mc
 
         self.setTickValues(black, mid, white)
 
@@ -414,13 +437,14 @@ class STFSlider(MTFSliderItem):
             elif mid > white:
                 mid = white
 
-            self.midtone = (mid-black)*(white-black)
+            self.midtone = (mid - black) * (white - black)
 
         # if mid wasnt move then adjust to new position of either black or white
         if tick is not self.tick_mid:
-            mid = black+self.midtone*(white-black)
+            mid = black + self.midtone * (white - black)
 
-        logging.info(f'tickmovefinished: corrected tick values -> {black} {mid} {white}')
+        logging.info(f'tickmovefinished: corrected tick values -> '
+                     f'{black} {mid} {white}')
         logging.info(f'tickmovefinished: midpt = {self.midtone}')
 
         # reflect adjusted values in sliders
@@ -429,10 +453,10 @@ class STFSlider(MTFSliderItem):
         # send 'STF' values out
         self.slider_changed.emit(black, self.midtone, white)
 
+
 if __name__ == '__main__':
 
     logging.basicConfig(level=logging.DEBUG)
-
 
     app = QtGui.QApplication([])
 

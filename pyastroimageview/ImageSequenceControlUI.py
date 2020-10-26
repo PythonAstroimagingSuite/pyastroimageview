@@ -1,3 +1,22 @@
+#
+# Image sequence UI
+#
+# Copyright 2019 Michael Fulbright
+#
+#
+#    pyastroimageview is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 import sys
 import logging
 import math
@@ -38,7 +57,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         def show_help(self):
             self.show()
 
-    def __init__(self): #, device_manager, settings):
+    def __init__(self):
         super().__init__()
 
         self.ui = Ui_SequenceSettingsUI()
@@ -47,7 +66,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.ui.sequence_elements_help.toggled.connect(self.help_toggle)
         self.ui.sequence_select_targetdir.pressed.connect(self.select_targetdir)
 
-        self.device_manager = AppContainer.find('/dev') #device_manager
+        self.device_manager = AppContainer.find('/dev')
 
         self.phd2_manager = AppContainer.find('/dev/phd2')
         self.phd2_manager.signals.starlost.connect(self.phd2_starlost_event)
@@ -123,7 +142,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
         val = camok and filtok
 
-        logging.info(f'imgcontrolUI: set_widget_states: {camok} {filtok}')
+        logging.debug(f'imgcontrolUI: set_widget_states: {camok} {filtok}')
 
         self.ui.sequence_name.setEnabled(val)
         self.ui.sequence_elements.setEnabled(val)
@@ -139,11 +158,10 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.ui.sequence_filter.setEnabled(val)
 
     def camera_lock_handler(self, val):
-#        logging.info('camera_lock_handler')
-        pass
+        logging.debug('camera_lock_handler')
 
     def camera_connect_handler(self, val):
-        logging.info(f'ImageSequenceControlUI:camera_connect_handler: val={val}')
+        logging.debug(f'ImageSequenceControlUI:camera_connect_handler: val={val}')
         self.set_widget_states()
 
         if val:
@@ -156,9 +174,9 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             # setup UI based on camera settings
             settings = self.device_manager.camera.get_camera_settings()
 
-            logging.info(f'settings={settings}')
+            logging.debug(f'settings={settings}')
 
-            logging.info(f'settings.binning={settings.binning}')
+            logging.debug(f'settings.binning={settings.binning}')
 
             self.ui.sequence_binning.setValue(settings.binning)
             self.reset_roi()
@@ -172,21 +190,21 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             exp_range = self.device_manager.camera.get_min_max_exposure()
             if exp_range is not None:
                 exp_min, exp_max = exp_range
-                logging.info(f'exposure min/max = {exp_min} {exp_max}')
+                logging.debug(f'exposure min/max = {exp_min} {exp_max}')
+
                 # if exp_min isnt 0 but less than 0.001s just set to 0.001s
                 if exp_min > 0 and exp_min < 0.001:
                     exp_min = 0.001
-                    logging.info(f'Bumping exp_min to {exp_min}')
+                    logging.debug(f'Bumping exp_min to {exp_min}')
                 self.ui.sequence_exposure.setMinimum(exp_min)
                 self.ui.sequence_exposure.setMaximum(exp_max)
 
-
-
     def filterwheel_lock_handler(self, val):
-        logging.info('filterwheel_lock_handler')
+        logging.debug('filterwheel_lock_handler')
 
     def filterwheel_connect_handler(self, val):
-        logging.info(f'ImageSequenceControlUI:filterwheel_connect_handler: val={val}')
+        logging.debug('ImageSequenceControlUI:filterwheel_connect_handler: '
+                      f'val={val}')
         self.set_widget_states()
 
         if val:
@@ -215,8 +233,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         if self.device_manager.camera.is_connected():
             settings = self.device_manager.camera.get_camera_settings()
 
-            maxx = int(settings.frame_width/settings.binning)
-            maxy = int(settings.frame_height/settings.binning)
+            maxx = int(settings.frame_width / settings.binning)
+            maxy = int(settings.frame_height / settings.binning)
 
             self.sequence.roi = (0, 0, maxx, maxy)
 
@@ -244,7 +262,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
     # ripped from cameracontrolUI
     def camera_status_poll(self, status):
 
-#        logging.info(f'imagesequencecontrol poll={status}')
+        # logging.info(f'imagesequencecontrol poll={status}')
         # FIXME Need a better way to get updates on CONNECT status!
         if status.connected:
             if self.sequence.roi is None:
@@ -255,17 +273,13 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             status_string += 'CONNECTED'
         else:
             status_string += 'DISCONNECTED'
-#        status_string += f' {status.state}'
         if status.connected:
-            # FIXME should probably use camera exposure status from 'status' var?
-#            if status.image_ready:
-#                status_string += ' READY'
-#            else:
-#                status_string += ' NOT READY'
             if self.exposure_ongoing:
                 if status.state is CameraState.EXPOSING:
                     perc = min(100, status.exposure_progress)
-                    perc_string = f'EXPOSING {perc:.0f}% {perc/100.0 * self.sequence.exposure:.2f}s of {self.sequence.exposure}s'
+                    perc_string = f'EXPOSING {perc:.0f}% ' \
+                                  + f'{perc/100.0 * self.sequence.exposure:.2f}s ' \
+                                  + f'of {self.sequence.exposure}s'
                 else:
                     perc_string = f'{status.state.pretty_name()}'
             else:
@@ -291,7 +305,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         program_settings = AppContainer.find('/program_settings')
         if program_settings is None:
             logging.error('phd2_starlost_event: cannot retrieve program settings!')
-            QtWidgets.QMessageBox.critical(None, 'Error', 'Unknown error reading program settings - aborting!',
+            QtWidgets.QMessageBox.critical(None, 'Error',
+                                           'Unknown error reading program settings - aborting!',
                                            QtWidgets.QMessageBox.Ok)
             self.end_sequence(abort=True)
             return
@@ -316,7 +331,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         program_settings = AppContainer.find('/program_settings')
         if program_settings is None:
             logging.error('phd2_guiding_stop_event: cannot retrieve program settings!')
-            QtWidgets.QMessageBox.critical(None, 'Error', 'Unknown error reading program settings - aborting!',
+            QtWidgets.QMessageBox.critical(None, 'Error',
+                                           'Unknown error reading program settings - aborting!',
                                            QtWidgets.QMessageBox.Ok)
             self.end_sequence(abort=True)
             return
@@ -352,7 +368,9 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         program_settings = AppContainer.find('/program_settings')
         if program_settings is None:
             logging.error('phd2_dither_timeout_event: cannot retrieve program settings!')
-            QtWidgets.QMessageBox.critical(None, 'Error', 'Unknown error reading program settings in phd2_dither_timeout_event - aborting!',
+            QtWidgets.QMessageBox.critical(None, 'Error',
+                                           'Unknown error reading program settings in '
+                                           'phd2_dither_timeout_event - aborting!',
                                            QtWidgets.QMessageBox.Ok)
             self.end_sequence(abort=True)
             return
@@ -360,7 +378,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         if program_settings.sequence_phd2_stop_ditherfail:
             logging.error('phd2_dither_timeout_event: dither timed out - aborting')
             QtWidgets.QMessageBox.critical(None,
-                                           'PHD2 Dither Failed', 'PHD2 dither operation did not settle in time - aborting sequence!',
+                                           'PHD2 Dither Failed', 'PHD2 dither operation '
+                                           'did not settle in time - aborting sequence!',
                                            QtWidgets.QMessageBox.Ok)
             self.end_sequence(abort=True)
             return
@@ -368,7 +387,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
              logging.error('phd2_dither_timeout_event: ignoring based on program settings')
 
     def end_sequence(self, abort=False):
-        logging.info(f'end_sequence: abort = {abort}')
+        logging.debug(f'end_sequence: abort = {abort}')
         self.exposure_ongoing = False
         self.device_manager.camera.release_lock()
         self.device_manager.filterwheel.release_lock()
@@ -378,7 +397,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         self.ui.sequence_start.setValue(self.sequence.current_index)
 
         if abort:
-            logging.info('end_sequence: stopping expsoure!')
+            logging.debug('end_sequence: stopping expsoure!')
             self.device_manager.camera.stop_exposure()
 
     # ripped from cameracontrolUI
@@ -386,7 +405,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
         # result will contain (bool, FITSImage)
         # bool will be True if image successful
-        logging.info(f'ImageSequenceControlUI:cam_exp_comp: result={result}')
+        logging.debug(f'ImageSequenceControlUI:cam_exp_comp: result={result}')
 
         if self.exposure_ongoing:
 
@@ -398,10 +417,12 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
             program_settings = AppContainer.find('/program_settings')
             if program_settings is None:
-                logging.error('ImageSequenceControlUI:cam_exp_comp: cannot retrieve program settings!')
+                logging.error('ImageSequenceControlUI:cam_exp_comp: cannot '
+                              'retrieve program settings!')
                 QtWidgets.QMessageBox.critical(None,
                                                'Error',
-                                               'Unknown error reading program settings in cam_exp_comp - exiting!',
+                                               'Unknown error reading program '
+                                               'settings in cam_exp_comp - exiting!',
                                                QtWidgets.QMessageBox.Ok)
                 sys.exit(-1)
 
@@ -411,30 +432,34 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             # get start time from FITS if present
             start_time = fitsimage.get_dateobs()
             logging.debug(f'start_time = {start_time}')
-            outname = os.path.join(self.sequence.target_dir, self.sequence.get_filename(start_time=start_time))
+            outname = os.path.join(self.sequence.target_dir,
+                                   self.sequence.get_filename(start_time=start_time))
             overwrite_flag = program_settings.sequence_overwritefiles
             logging.info(f'writing sequence image to {outname}')
             try:
                 fitsimage.save_to_file(outname, overwrite=overwrite_flag)
-            except Exception  as e:
+            except Exception as e:
                 # FIXME Doesnt stop current sequence on this error!
                 logging.error('CameraManager:connect() Exception ->', exc_info=True)
                 QtWidgets.QMessageBox.critical(None, 'Error',
-                                               'Unable to save sequence image:\n\n' + \
-                                               f'{outname}\n\n' + \
-                                               f'Error -> {str(e)}\n\n' + \
-                                               'Check if file already exists and overwrite set to False\n\n' + \
+                                               'Unable to save sequence image:\n\n'
+                                               f'{outname}\n\n'
+                                               f'Error -> {str(e)}\n\n'
+                                               'Check if file already exists and '
+                                               'overwrite set to False\n\n'
                                                'Sequence aborted!',
                                                QtWidgets.QMessageBox.Ok)
-                logging.info('Sequence ended due to error!')
+                logging.error('Sequence ended due to error!')
                 self.end_sequence(abort=True)
                 return
 
-            self.new_sequence_image.emit((fitsimage, self.sequence.target_dir, self.sequence.get_filename()))
+            self.new_sequence_image.emit((fitsimage, self.sequence.target_dir,
+                                          self.sequence.get_filename()))
 
             stop_idx = self.sequence.start_index + self.sequence.number_frames
             self.sequence.current_index += 1
-            logging.warning(f'new cur idx={self.sequence.current_index} stop at {stop_idx}')
+            logging.warning(f'new cur idx={self.sequence.current_index} '
+                            f'stop at {stop_idx}')
             if self.sequence.current_index >= stop_idx:
                 logging.info('Sequence Complete')
                 self.end_sequence()
@@ -449,12 +474,15 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             # then the dithering may not work out correctly but for a sequenentially
             # numbered sequence of frames it will do what we want and that is almost
             # always the use case!
-            logging.info(f'ImageSequenceControlUI:cam_exp_comp -> num_dither = {self.sequence.num_dither}')
+            logging.debug(f'ImageSequenceControlUI:cam_exp_comp -> num_dither = '
+                         f'{self.sequence.num_dither}')
             if self.sequence.is_light_frames() and self.sequence.num_dither > 0:
                 num_frames = self.sequence.current_index - self.sequence.start_index
                 num_left = self.sequence.start_index + self.sequence.number_frames - self.sequence.current_index
-                logging.info(f'num_frames={num_frames} num_left={num_left} ' + \
-                             f'curidx={self.sequence.current_index} num_dither={self.sequence.num_dither}')
+                logging.info(f'num_frames={num_frames} num_left={num_left} '
+                             f'curidx={self.sequence.current_index} '
+                             f'num_dither={self.sequence.num_dither}')
+
                 if self.sequence.num_dither == 1:
                     dither_now = True
                 elif num_frames > 1 and num_left >= self.sequence.num_dither:
@@ -465,30 +493,37 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                 if dither_now:
                     logging.info('sequence: time to dither!')
 
-
-                    logging.info(f'ImageSequenceControlUI:cam_exp_comp: dither: {program_settings.phd2_scale} ' + \
-                                 f'{program_settings.phd2_threshold}' + \
-                                 f'{program_settings.phd2_starttime} ' + \
-                                 f'{program_settings.phd2_settledtime} ' + \
-                                 f'{program_settings.phd2_settletimeout} ')
+                    logging.debug(f'ImageSequenceControlUI:cam_exp_comp: '
+                                  f'dither: {program_settings.phd2_scale} '
+                                  f'{program_settings.phd2_threshold}'
+                                  f'{program_settings.phd2_starttime} '
+                                  f'{program_settings.phd2_settledtime} '
+                                  f'{program_settings.phd2_settletimeout} ')
 
                     rc = self.phd2_manager.dither(program_settings.phd2_scale,
-                                             program_settings.phd2_threshold,
-                                             program_settings.phd2_starttime,
-                                             program_settings.phd2_settledtime,
-                                             program_settings.phd2_settletimeout)
+                                                  program_settings.phd2_threshold,
+                                                  program_settings.phd2_starttime,
+                                                  program_settings.phd2_settledtime,
+                                                  program_settings.phd2_settletimeout)
 
                     if not rc:
-                        # failed to get PHD2 to dither - just fall through and start next frame after notifying user
-                        # FIXME what is best case here?  Use the dither fail checkbox from general settings to guide
+                        # failed to get PHD2 to dither - just fall through and
+                        # start next frame after notifying user
+                        #
+                        # FIXME what is best case here?  Use the dither fail
+                        #       checkbox from general settings to guide
+                        #
                         # how to handle?
-                        logging.error('ImageSequenceControlUI:cam_exp_comp: Could not communicate with PHD2 to start a dither op')
+                        logging.error('ImageSequenceControlUI:cam_exp_comp: '
+                                      'Could not communicate with PHD2 to start a dither op')
                         QtWidgets.QMessageBox.critical(None,
                                                    'Error',
-                                                   'PHD2 failed to respond to dither request - dither aborted!',
+                                                   'PHD2 failed to respond to '
+                                                   'dither request - dither aborted!',
                                                    QtWidgets.QMessageBox.Ok)
                     else:
-                        logging.info('ImageSequenceControlUI:cam_exp_comp: Dither command sent to PHD2 successfully')
+                        logging.info('ImageSequenceControlUI:cam_exp_comp: '
+                                     'Dither command sent to PHD2 successfully')
 
                         # now the 'SettleDone' event should come in from PHD2 and it will be handled
                         # and next frame started unless we get a settle timeout event instead
@@ -499,7 +534,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             # start next exposure
             self.device_manager.camera.start_exposure(self.sequence.exposure)
         else:
-            logging.warning('ImageSequenceControlUI:cam_exp_comp: no exposure was ongoing!')
+            logging.warning('ImageSequenceControlUI:cam_exp_comp: no '
+                            'exposure was ongoing!')
 
     def start_sequence(self):
         # FIXME this sequence would probably be MUCH NICER using a lock/semaphore
@@ -509,14 +545,16 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         # make sure camera connected
         if not self.device_manager.camera.is_connected():
             logging.error('start_sequence: camera is not connected!')
-            QtWidgets.QMessageBox.critical(None, 'Error', 'Please connect camera first',
+            QtWidgets.QMessageBox.critical(None, 'Error',
+                                           'Please connect camera first',
                                            QtWidgets.QMessageBox.Ok)
             return
 
         # make sure filter wheel is connected
         if not self.device_manager.filterwheel.is_connected():
             logging.error('start_sequence: filter is not connected!')
-            QtWidgets.QMessageBox.critical(None, 'Error', 'Please connect filter first',
+            QtWidgets.QMessageBox.critical(None, 'Error',
+                                           'Please connect filter first',
                                            QtWidgets.QMessageBox.Ok)
             return
 
@@ -546,7 +584,9 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         if not os.path.isdir(self.sequence.target_dir):
             logging.error('start_sequence: target dir doesnt exist!')
             QtWidgets.QMessageBox.critical(None, 'Error',
-                                           f'Targer directory {self.sequence.target_dir} does not exist!',
+                                           f'Targer directory '
+                                           f'{self.sequence.target_dir} does '
+                                           'not exist!',
                                            QtWidgets.QMessageBox.Ok)
             self.device_manager.camera.release_lock()
             self.device_manager.filterwheel.release_lock()
@@ -557,7 +597,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         program_settings = AppContainer.find('/program_settings')
         if program_settings is None:
             logging.error('start_sequence: cannot retrieve program settings!')
-            QtWidgets.QMessageBox.critical(None, 'Error', 'Unknown error reading program settings - aborting!',
+            QtWidgets.QMessageBox.critical(None, 'Error',
+                                           'Unknown error reading program settings - aborting!',
                                            QtWidgets.QMessageBox.Ok)
             return
 
@@ -565,14 +606,16 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             if self.phd2_manager is None or not self.phd2_manager.is_connected():
                 logging.error('start_sequence: phd2 not connected')
                 choice = QtWidgets.QMessageBox.question(None, 'PHD2 Not Connected',
-                                                        'PHD2 is not connected - proceed with sequence?',
+                                                        'PHD2 is not connected - '
+                                                        'proceed with sequence?',
                                                         QtWidgets.QMessageBox.Yes|QtWidgets.QMessageBox.No)
                 if choice == QtWidgets.QMessageBox.No:
                     self.device_manager.camera.release_lock()
                     self.device_manager.filterwheel.release_lock()
                     return
                 else:
-                    logging.info('start_sequence: User choose to start sequence without PHD2 connected.')
+                    logging.info('start_sequence: User choose to start sequence '
+                                 'without PHD2 connected.')
 
         # FIXME if they chose to start without PHD2 then need to ignore PHD2 for this sequence including
         # losing guiding and star events!
@@ -580,7 +623,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             if not self.phd2_manager.is_guiding():
                 logging.error('start_sequence: phd2 not guiding')
                 choice = QtWidgets.QMessageBox.critical(None, 'PHD2 Not Guiding',
-                                                        'PHD2 is not guiding - cannot start sequence.  Change '
+                                                        'PHD2 is not guiding - '
+                                                        'cannot start sequence.  Change '
                                                         'settings to avoid this error.',
                                                         QtWidgets.QMessageBox.Ok)
                 self.device_manager.camera.release_lock()
@@ -591,37 +635,42 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             if not self.device_manager.mount.is_connected():
                 logging.error('start_sequence: mount not connected')
                 choice = QtWidgets.QMessageBox.question(None, 'Mount Not Connected',
-                                                        'Mount is not connected - proceed with sequence?',
+                                                        'Mount is not connected - '
+                                                        'proceed with sequence?',
                                                         QtWidgets.QMessageBox.Yes|QtWidgets.QMessageBox.No)
                 if choice == QtWidgets.QMessageBox.No:
                     self.device_manager.camera.release_lock()
                     self.device_manager.filterwheel.release_lock()
                     return
                 else:
-                    logging.info('start_sequence: User choose to start sequence without mount connected.')
+                    logging.info('start_sequence: User choose to start sequence '
+                                 'without mount connected.')
 
         if program_settings.sequence_warn_coolertemp:
             set_temp = self.device_manager.camera.get_target_temperature()
             cur_temp = self.device_manager.camera.get_current_temperature()
             # FIXME Should delta temp be hard coded
             # FIXME INDI might not have target set unless we've explicitely done it
-            if set_temp is None or abs(set_temp-cur_temp) > 2:
+            if set_temp is None or abs(set_temp - cur_temp) > 2:
                 logging.info(f'start_sequence: target T = {set_temp} current T = {cur_temp}')
                 choice = QtWidgets.QMessageBox.question(None, 'Cooler Temperature',
-                                                        f'The current camera temperature is {cur_temp} but the ' + \
-                                                        f'target temperature is {set_temp}.\n\nProceed with sequence?',
+                                                        f'The current camera temperature '
+                                                        f'is {cur_temp} but the '
+                                                        f'target temperature is {set_temp}.'
+                                                        '\n\nProceed with sequence?',
                                                         QtWidgets.QMessageBox.Yes|QtWidgets.QMessageBox.No)
                 if choice == QtWidgets.QMessageBox.No:
                     self.device_manager.camera.release_lock()
                     self.device_manager.filterwheel.release_lock()
                     return
                 else:
-                    logging.info('start_sequence: User choose to start sequence with cooler temperature not close to target')
+                    logging.info('start_sequence: User choose to start sequence '
+                                 'with cooler temperature not close to target')
 
         # we're committed now
         self.set_startstop_state(False)
 
-       # setup camera
+        # setup camera
         settings = CameraSettings()
         settings.binning = self.sequence.binning
         settings.roi = self.sequence.roi
@@ -631,7 +680,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         # move filter wheel
         if not self.device_manager.filterwheel.set_position_name(self.sequence.filter):
             logging.error('start_sequence: unable to move filter wheel!')
-            QtWidgets.QMessageBox.critical(None, 'Error', 'Filter wheel not responding',
+            QtWidgets.QMessageBox.critical(None, 'Error',
+                                           'Filter wheel not responding',
                                            QtWidgets.QMessageBox.Ok)
             self.device_manager.camera.release_lock()
             self.device_manager.filterwheel.release_lock()
@@ -648,7 +698,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
         if not filter_ok:
             logging.error('start_sequence: unable to move filter wheel!')
-            QtWidgets.QMessageBox.critical(None, 'Error', 'Filter wheel not responding - kept moving',
+            QtWidgets.QMessageBox.critical(None, 'Error',
+                                           'Filter wheel not responding - kept moving',
                                            QtWidgets.QMessageBox.Ok)
             self.device_manager.camera.release_lock()
             self.device_manager.filterwheel.release_lock()
@@ -682,7 +733,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
     def set_startstop_state(self, state):
         """Controls start/stop button state"""
-        logging.info(f'imagecontrolui: set_startstop_state: {state}')
+        logging.debug(f'imagecontrolui: set_startstop_state: {state}')
         if state:
             self.ui.sequence_start_stop.setText('Start')
             self.ui.sequence_start_stop.pressed.disconnect(self.stop_sequence)
@@ -706,8 +757,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             self.sequence.exposure = self.ui.sequence_exposure.value()
         elif self.sender() == self.ui.sequence_start:
             self.sequence.start_index = self.ui.sequence_start.value()
-            logging.info(f'start indx set to {self.sequence.start_index}')
-        elif self.sender()== self.ui.sequence_number:
+            logging.debug(f'start indx set to {self.sequence.start_index}')
+        elif self.sender() == self.ui.sequence_number:
             self.sequence.number_frames = self.ui.sequence_number.value()
         elif self.sender() == self.ui.sequence_frametype:
             req_ftype = self.ui.sequence_frametype.itemText(self.ui.sequence_frametype.currentIndex())
@@ -725,7 +776,6 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             self.sequence.num_dither = self.ui.sequence_dither.value()
         else:
             logging.error('Unknown sender is update_sequence!')
-
 
     def update_ui(self):
         self.ui.sequence_name.setPlainText(self.sequence.name)
@@ -772,7 +822,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         # FIXME maybe best handled somewhere else - it relies on lots of 'globals'
         settings = AppContainer.find('/program_settings')
         if settings is None:
-            logging.error('ImageSequenceControlUI:handle_new_image: unable to access program settings!')
+            logging.error('ImageSequenceControlUI:handle_new_image: unable to '
+                          'access program settings!')
             return False
 
         fits_doc.set_notes(settings.observer_notes)
@@ -780,7 +831,8 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         fits_doc.set_focal_length(settings.telescope_focallen)
         aper_diam = settings.telescope_aperture
         aper_obst = settings.telescope_obstruction
-        aper_area = math.pi*(aper_diam/2.0*aper_diam/2.0)*(1-aper_obst*aper_obst/100.0/100.0)
+        aper_area = math.pi * (aper_diam / 2.0 * aper_diam / 2.0) \
+                            * (1-aper_obst*aper_obst / 100.0 / 100.0)
         fits_doc.set_aperture_diameter(aper_diam)
         fits_doc.set_aperture_area(aper_area)
 
@@ -803,7 +855,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
                 pass
 
         if self.device_manager.filterwheel.is_connected():
-            logging.info('connected')
+            logging.debug('connected')
             cur_name = self.device_manager.filterwheel.get_position_name()
 
             fits_doc.set_filter(cur_name)
@@ -811,7 +863,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         if self.device_manager.mount.is_connected():
             ra, dec = self.device_manager.mount.get_position_radec()
 
-            radec = SkyCoord(ra=ra*u.hour, dec=dec*u.degree, frame='fk5')
+            radec = SkyCoord(ra=ra * u.hour, dec=dec * u.degree, frame='fk5')
             rastr = radec.ra.to_string(u.hour, sep=" ", pad=True)
             decstr = radec.dec.to_string(alwayssign=True, sep=" ", pad=True)
             fits_doc.set_object_radec(rastr, decstr)
@@ -820,7 +872,7 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
             if alt is None or az is None:
                 logging.warning('imagesequi: alt/az are None!')
             else:
-                altaz = AltAz(alt=alt*u.degree, az=az*u.degree)
+                altaz = AltAz(alt=alt * u.degree, az=az * u.degree)
     #            altstr = altaz.alt.to_string(alwayssign=True, sep=":", pad=True)
     #            azstr = altaz.az.to_string(alwayssign=True, sep=":", pad=True)
                 altstr = f'{altaz.alt.degree}'
@@ -829,15 +881,15 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
 
             now = Time.now()
             local_sidereal = now.sidereal_time('apparent',
-                                               longitude=settings.location_longitude*u.degree)
+                                               longitude=settings.location_longitude * u.degree)
             hour_angle = local_sidereal - radec.ra
-            logging.info(f'locsid = {local_sidereal} HA={hour_angle}')
+            logging.debug(f'locsid = {local_sidereal} HA={hour_angle}')
             if hour_angle.hour > 12:
-                hour_angle = (hour_angle.hour - 24.0)*u.hourangle
+                hour_angle = (hour_angle.hour - 24.0) * u.hourangle
 
 #            hastr = Angle(hour_angle).to_string(u.hour, sep=":", pad=True)
             hastr = f'{Angle(hour_angle).hour}'
-            logging.info(f'HA={hour_angle} HASTR={hastr} {type(hour_angle)}')
+            logging.debug(f'HA={hour_angle} HASTR={hastr} {type(hour_angle)}')
             fits_doc.set_object_hourangle(hastr)
 
         # controlled by user selection in camera or sequence config
@@ -845,4 +897,4 @@ class ImageSequnceControlUI(QtWidgets.QWidget):
         fits_doc.set_object('TEST-OBJECT')
 
         # set by application version
-        fits_doc.set_software_info('pyastroview TEST')
+        fits_doc.set_software_info('pyastroimageview TEST')

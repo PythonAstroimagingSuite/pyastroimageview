@@ -1,18 +1,24 @@
-# FIXME this needs to be 'configured' somewhere central as currently
-# all source files for hw managers reference contrete backend class this way
-from pyastrobackend.BackendConfig import get_backend_for_os
-
+#
+# Focuser manager
+#
+# Copyright 2019 Michael Fulbright
+#
+#
+#    pyastroimageview is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 import logging
 
-#BACKEND = get_backend_for_os()
-#if BACKEND == 'ASCOM':
-#    from pyastrobackend.ASCOM.Focuser import Focuser
-#elif BACKEND == 'ALPACA':
-#    from pyastrobackend.Alpaca.Focuser import Focuser
-#elif BACKEND == 'INDI':
-#    from pyastrobackend.INDIBackend import Focuser
-#else:
-#    raise Exception(f'Unknown backend {BACKEND} - choose ASCOM or INDI in BackendConfig.py')
 
 class FocuserManager:
     def __init__(self, backend):
@@ -21,20 +27,13 @@ class FocuserManager:
     def connect(self, driver):
         if not super().is_connected():
             try:
-#                logging.info('calling connect')
-#                if BACKEND == 'ALPACA':
-#                    device_number = driver.split(':')[1]
-#                    logging.debug(f'Connecting to ALPACA:focuser:{device_number}')
-#                    rc = super().connect(f'ALPACA:focuser:{device_number}')
-#                else:
-#                    rc = super().connect(driver)
-
                 rc = super().connect(driver)
 
                 if not rc:
                     return False
 
             except Exception:
+                # FIXME need more specific exception
                 logging.error('FocuserManager:connect() Exception ->', exc_info=True)
                 return False
 

@@ -1,3 +1,22 @@
+#
+# General settings dialog UI
+#
+# Copyright 2019 Michael Fulbright
+#
+#
+#    pyastroimageview is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 import logging
 
 from astropy import units as u
@@ -22,7 +41,7 @@ class GeneralSettingsDialog(QtWidgets.QDialog):
                                                                 cur_target_dir,
                                                                 QtWidgets.QFileDialog.ShowDirsOnly)
 
-        logging.info(f'select target_dir: {target_dir}')
+        logging.debug(f'select target_dir: {target_dir}')
 
         if len(target_dir) < 1:
             return
@@ -38,19 +57,18 @@ class GeneralSettingsDialog(QtWidgets.QDialog):
         self.ui.telescope_obstruction.setValue(settings.telescope_obstruction)
         self.ui.telescope_focallen.setValue(settings.telescope_focallen)
 
-        lat_dms = Angle(settings.location_latitude*u.degree).signed_dms
-        lon_dms = Angle(settings.location_longitude*u.degree).signed_dms
+        lat_dms = Angle(settings.location_latitude * u.degree).signed_dms
+        lon_dms = Angle(settings.location_longitude * u.degree).signed_dms
 
-        self.ui.location_lat_degrees.setValue(lat_dms[0]*lat_dms[1])
+        self.ui.location_lat_degrees.setValue(lat_dms[0] * lat_dms[1])
         self.ui.location_lat_minutes.setValue(lat_dms[2])
         self.ui.location_lat_seconds.setValue(lat_dms[3])
 
-        self.ui.location_lon_degrees.setValue(lon_dms[0]*lon_dms[1])
+        self.ui.location_lon_degrees.setValue(lon_dms[0] * lon_dms[1])
         self.ui.location_lon_minutes.setValue(lon_dms[2])
         self.ui.location_lon_seconds.setValue(lon_dms[3])
 
         self.ui.location_altitude.setValue(settings.location_altitude)
-
 
         # FIXME seems like we ought to be able to automate alot of this broilerplate
         # code like Kconfig does
@@ -68,9 +86,9 @@ class GeneralSettingsDialog(QtWidgets.QDialog):
 
         if result:
             new_lat = Angle((
-                             self.ui.location_lat_degrees.value(),
-                             self.ui.location_lat_minutes.value(),
-                             self.ui.location_lat_seconds.value()
+                            self.ui.location_lat_degrees.value(),
+                            self.ui.location_lat_minutes.value(),
+                            self.ui.location_lat_seconds.value()
                             ), unit=u.degree)
 
             new_lon = Angle((
@@ -79,7 +97,7 @@ class GeneralSettingsDialog(QtWidgets.QDialog):
                              self.ui.location_lon_seconds.value()
                             ), unit=u.degree)
 
-            logging.info(f'{new_lat} {new_lon}')
+            logging.debug(f'{new_lat} {new_lon}')
 
             settings.location_latitude = new_lat.degree
             settings.location_longitude = new_lon.degree

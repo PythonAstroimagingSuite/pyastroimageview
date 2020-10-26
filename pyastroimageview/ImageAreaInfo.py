@@ -1,3 +1,22 @@
+#
+# Display image information
+#
+# Copyright 2019 Michael Fulbright
+#
+#
+#    pyastroimageview is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 import numpy as np
 import logging
 
@@ -64,7 +83,6 @@ class ImageAreaInfo(QtWidgets.QWidget):
         self.ui.hfr_histogram.plotItem.clear()
         self.ui.pixel_histogram.plotItem.clear()
 
-#    def update_info(self, size=None, binning=None, median=None, hfr_result=None, image_data=None):
     def update_info(self, image_doc):
         """ Update fields in image info area based on info supplied.
 
@@ -83,11 +101,12 @@ class ImageAreaInfo(QtWidgets.QWidget):
                 Result from hfr measurement on frame
         """
 
-        self.ui.image_size_label.setText(f'{image_doc.image_data.shape[1]} x {image_doc.image_data.shape[0]}')
+        self.ui.image_size_label.setText(f'{image_doc.image_data.shape[1]} x '
+                                         f'{image_doc.image_data.shape[0]}')
 
 #        if binning:
 #            self.image_bin_label.setText(f'{binning}')
-        logging.info('update_info: START')
+        logging.debug('update_info: START')
 
         self.ui.image_median_label.setText(f'{image_doc.median:6.1f}')
 
@@ -96,20 +115,22 @@ class ImageAreaInfo(QtWidgets.QWidget):
             self.ui.hfr_out_label.setText(f'{image_doc.hfr_result.hfr_out:4.2f}')
             self.ui.number_stars_label.setText(f'{image_doc.hfr_result.n_tot}')
             self.ui.image_median_label.setText(f'{image_doc.hfr_result.bgest:6.1f}')
-            self.ui.image_size_label.setText(f'{image_doc.hfr_result.width} x {image_doc.hfr_result.height}')
+            self.ui.image_size_label.setText(f'{image_doc.hfr_result.width} x '
+                                             f'{image_doc.hfr_result.height}')
 
             # update histogram plot
-            logging.info('update_info: Start hist calc')
-            hy, hx = np.histogram(image_doc.hfr_result.FWHM_R, range=(0, image_doc.hfr_result.hfr_in*2))
-            logging.info('update_info: End hist calc')
+            logging.debug('update_info: Start hist calc')
+            hy, hx = np.histogram(image_doc.hfr_result.FWHM_R,
+                                  range=(0, image_doc.hfr_result.hfr_in*2))
+            logging.debug('update_info: End hist calc')
             self.ui.hfr_histogram.plotItem.clear()
             #self.hfr_histogram.plotItem.setLogMode(x=True)
-            self.ui.hfr_histogram.plotItem.vb.setXRange(0, image_doc.hfr_result.hfr_in*2)
-            logging.info('update_info: Start hist plot')
+            self.ui.hfr_histogram.plotItem.vb.setXRange(0, image_doc.hfr_result.hfr_in * 2)
+            logging.debug('update_info: Start hist plot')
             curve = pg.PlotCurveItem(hx, hy, stepMode=True, fillLevel=0, brush=(0, 0, 255, 80))
             self.ui.hfr_histogram.plotItem.addItem(curve)
             self.ui.hfr_histogram.autoRange()
-            logging.info('update_info: End hist plotc')
+            logging.debug('update_info: End hist plotc')
 
         if image_doc.image_data is not None:
             logging.info('update_info: Start perc calc')
@@ -134,8 +155,7 @@ class ImageAreaInfo(QtWidgets.QWidget):
             self.ui.pixel_histogram.plotItem.addItem(infline)
             self.ui.pixel_histogram.autoRange()
 
-        logging.info('update_info: DONE')
-
+        logging.debug('update_info: DONE')
 
     # lets hide implementation of views
     def add_view(self, image_widget, name):
@@ -170,7 +190,6 @@ class ImageAreaInfo(QtWidgets.QWidget):
         else:
             tab_index = None
 
-
         return tab_index
 
     def find_view_widget(self, name):
@@ -194,6 +213,5 @@ class ImageAreaInfo(QtWidgets.QWidget):
                 break
         else:
             tab_index = None
-
 
         return tab_index

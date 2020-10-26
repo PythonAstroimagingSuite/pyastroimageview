@@ -1,3 +1,22 @@
+#
+# global application context
+#
+# Copyright 2019 Michael Fulbright
+#
+#
+#    pyastroimageview is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 # this is a simple dependency injector/IOC idea
 # I can't use dbus in windows (easily) and pyro seems like overkill
 # and I don't want to involve networking
@@ -43,7 +62,7 @@ class ApplicationContainer(object):
         if self.__debug:
             stack = sys._getframe(1)
             f = traceback.extract_stack(stack)[-1]
-            logging.info(f'AppContainer: key \'{key}\' referenced from {f} ' + \
+            logging.info(f'AppContainer: key \'{key}\' referenced from {f} '
                          f'and has value {value}')
 
         return value
@@ -60,6 +79,7 @@ class ApplicationContainer(object):
 #            attribute = self._values[key]
 #
 #            return attribute(self) if callable(attribute) else attribute
+
 
 # this is what we use
 AppContainer = ApplicationContainer()

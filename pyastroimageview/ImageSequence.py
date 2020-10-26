@@ -1,6 +1,24 @@
+#
+# Image sequence data structures
+#
+# Copyright 2019 Michael Fulbright
+#
+#
+#    pyastroimageview is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 import re
 import time
-import datetime
 import logging
 from enum import Enum
 
@@ -46,20 +64,20 @@ class ImageSequence:
 
         # FIXME the way we get temperature and filter, etc seems inelegant
         tmp_name = self.name_elements
-        tmp_name = re.sub('\{ftype\}', self.frame_type.pretty_name(), tmp_name)
+        tmp_name = re.sub(r'\{ftype\}', self.frame_type.pretty_name(), tmp_name)
 
         # handle exposure so we don't put a '.' in filename
         # FIXME could probably combine top two cases somehow
         if self.exposure < 0.0009:
             exposure_str = '0s'
-        elif self.exposure < 1.0 or (self.exposure-int(self.exposure) > 0.0009):
+        elif self.exposure < 1.0 or (self.exposure - int(self.exposure) > 0.0009):
             exposure_str = f'{self.exposure:.3f}s'
         else:
             exposure_str = f'{int(self.exposure)}s'
 
         exposure_str = exposure_str.replace('.', 'p')
 
-        tmp_name = re.sub('\{exp\}', exposure_str, tmp_name)
+        tmp_name = re.sub(r'\{exp\}', exposure_str, tmp_name)
 
         if start_time is None:
             time_str = time.strftime('%Y%m%d_%H%M%S')
@@ -67,14 +85,16 @@ class ImageSequence:
             try:
                 time_str = time.strftime('%Y%m%d_%H%M%S', start_time)
             except:
-                logging.error('get_filename: error converting start_time {start_time} to str', exc_info=True)
+                # need more specific exception
+                logging.error('get_filename: error converting start_time '
+                              f'{start_time} to str', exc_info=True)
                 time_str = 'UnknownTime'
 
         tmp_name = re.sub(r'{time}', time_str, tmp_name)
 
 #        tmp_name = re.sub('\{exp\}', f'{self.exposure}s', tmp_name)
-        tmp_name = re.sub('\{ftype\}', self.frame_type.pretty_name(), tmp_name)
-        tmp_name = re.sub('\{idx\}', f'{self.current_index:03d}', tmp_name)
+        tmp_name = re.sub(r'\{ftype\}', self.frame_type.pretty_name(), tmp_name)
+        tmp_name = re.sub(r'\{idx\}', f'{self.current_index:03d}', tmp_name)
         if self.device_manager.camera.is_connected():
             tempc = self.device_manager.camera.get_current_temperature()
             temps = self.device_manager.camera.get_target_temperature()
@@ -95,14 +115,14 @@ class ImageSequence:
         else:
             temps_prefix = ''
 
-        tmp_name = re.sub('\{tempc\}', f'{tempc_prefix}{abs(tempc):.1f}C', tmp_name)
-        tmp_name = re.sub('\{temps\}', f'{temps_prefix}{abs(temps):.0f}C', tmp_name)
-        tmp_name = re.sub('\{bin\}', f'bin_{int(binx)}', tmp_name)
+        tmp_name = re.sub(r'\{tempc\}', f'{tempc_prefix}{abs(tempc):.1f}C', tmp_name)
+        tmp_name = re.sub(r'\{temps\}', f'{temps_prefix}{abs(temps):.0f}C', tmp_name)
+        tmp_name = re.sub(r'\{bin\}', f'bin_{int(binx)}', tmp_name)
 
         if self.camera_gain is not None:
             tmp_name = re.sub(r'{gain}', f'gain_{int(self.camera_gain)}', tmp_name)
         else:
-            tmp_name = re.sub(r'{gain}', f'gain_unknown', tmp_name)
+            tmp_name = re.sub(r'{gain}', 'gain_unknown', tmp_name)
 
         # put in filter only if type 'Light' or 'Flat'
         # also only put on base name too
@@ -112,13 +132,13 @@ class ImageSequence:
             else:
                 filter_name = 'Lum'
 
-            tmp_name = re.sub('\{filter\}', filter_name, tmp_name)
+            tmp_name = re.sub(r'\{filter\}', filter_name, tmp_name)
 
-            tmp_name = re.sub('\{name\}', self.name, tmp_name)
+            tmp_name = re.sub(r'\{name\}', self.name, tmp_name)
         else:
             # FIXME assumes a '-' after name!
-            tmp_name = re.sub('\{filter\}-', '', tmp_name)
-            tmp_name = re.sub('\{name\}-', '', tmp_name)
+            tmp_name = re.sub(r'\{filter\}-', '', tmp_name)
+            tmp_name = re.sub(r'\{name\}-', '', tmp_name)
 
         return tmp_name
 
@@ -138,4 +158,3 @@ class ImageSequence:
             f'target dir = {self.target_dir}\n'
 
         return s
-

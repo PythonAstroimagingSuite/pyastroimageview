@@ -1,4 +1,22 @@
-#!/usr/bin/python
+#
+# RPC server
+#
+# Copyright 2019 Michael Fulbright
+#
+#
+#    pyastroimageview is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 import os
 import sys
 import json
@@ -23,7 +41,7 @@ JSON_INVALID_ERRCODE = -32600
 JSON_BADMETHOD_ERRCODE = -32601
 JSON_BADPARAM_ERRCODE = -32602
 JSON_INTERROR_ERRCODE = -32603
-JSON_APP_ERRCODE = -1 # actual application error
+JSON_APP_ERRCODE = -1  # actual application error
 
 # HACK
 # Download DSS
@@ -194,15 +212,17 @@ class RPCServer:
                     self.__send_json_response(socket, resdict)
                 elif method == 'take_image':
                     if not self.device_manager.camera.is_connected():
-                        logging.info('take_image - camera not connected!')
-                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Camera not connected!',
+                        logging.error('take_image - camera not connected!')
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE,
+                                                      'Camera not connected!',
                                                       msgid=method_id)
                         continue
 
                     if 'params' not in j:
-                        logging.info('take_image - no params provided!')
+                        logging.error('take_image - no params provided!')
                         self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
-                                                      'Invalid request - missing parameters!',
+                                                      'Invalid request - '
+                                                      'missing parameters!',
                                                       msgid=method_id)
                         continue
 
@@ -263,31 +283,38 @@ class RPCServer:
                             roi_maxx = roi_minx + newroi[2]
                             roi_maxy = roi_miny + newroi[3]
                         except:
-                            logging.error('RPCServer:take_image method request but roi is invalid', exc_info=True)
+                            logging.error('RPCServer:take_image method request '
+                                          'but roi is invalid', exc_info=True)
                             self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
                                                           'Invalid request - roi not valid',
                                                           msgid=method_id)
                             continue
 
                         if roi_maxx > settings.frame_width/newbin or roi_maxy > settings.frame_height/newbin:
-                            logging.error('RPCServer:take_image method request roi too large for selected binning')
+                            logging.error('RPCServer:take_image method request roi '
+                                          'too large for selected binning')
                             self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
-                                                          'Invalid request - roi too large for binning',
+                                                          'Invalid request - roi '
+                                                          'too large for binning',
                                                           msgid=method_id)
                             continue
 
                     if frametype not in ['Light', 'Bias', 'Dark', 'Flat']:
-                        logging.error(f'RPCServer:take_image method request invalid frame type {frametype}')
+                        logging.error(f'RPCServer:take_image method request invalid ]'
+                                      f'frame type {frametype}')
                         self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
-                                                      'Invalid request - frametype must be Light, Bias, Dark or Flat',
+                                                      'Invalid request - frametype '
+                                                      'must be Light, Bias, Dark or Flat',
                                                       msgid=method_id)
                         continue
 
                     self.exposure_frametype = frametype
 
                     if not self.device_manager.camera.get_lock():
-                        logging.error('RPCServer: take_image - unable to get camera lock!')
-                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Could not lock camera',
+                        logging.error('RPCServer: take_image - unable to get '
+                                      'camera lock!')
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE,
+                                                      'Could not lock camera',
                                                       msgid=method_id)
                         continue
 
@@ -300,7 +327,10 @@ class RPCServer:
                     if newroi is not None:
                         new_settings.roi = newroi
                     else:
-                        new_settings.roi = (0, 0, settings.frame_width, settings.frame_height)
+                        new_settings.roi = (0,
+                                            0,
+                                            settings.frame_width,
+                                            settings.frame_height)
                         logging.debug(f'newroi was None set to {new_settings.roi}')
 
                     new_settings.camera_gain = camera_gain
@@ -317,14 +347,13 @@ class RPCServer:
 
                     # if doing DSS download grab image and call exposure complete handler
                     if DSS_CAMERA:
-                        MAX_DSS_DOWNLOAD_PIXELS = 1024*1024  # largest # pixels to download
+                        MAX_DSS_DOWNLOAD_PIXELS = 1024 * 1024  # largest # pixels to download
 
-                        if new_settings.roi[2]*new_settings.roi[3] > MAX_DSS_DOWNLOAD_PIXELS:
+                        if new_settings.roi[2] * new_settings.roi[3] > MAX_DSS_DOWNLOAD_PIXELS:
                             logging.error('Attempt to SkyView download too large an image!')
                             logging.error(f'roi = {new_settings.roi}')
                             logging.error(f'MAX PIX DOWNLOAD = {MAX_DSS_DOWNLOAD_PIXELS}')
                             sys.exit(1)
-
 
                         from astroquery.skyview import SkyView
                         import astropy.units as u
@@ -338,29 +367,29 @@ class RPCServer:
 
                         # we are assuming mount coordinates are JNOW - need to precess
                         radec_jnow = SkyCoord(f'{ra} {dec}', unit=(u.hour, u.deg), frame='fk5', equinox=Time.now())
-                        logging.debug(f'mount jnow = {radec_jnow.ra.to_string(u.hour, sep=":")} ' + \
+                        logging.debug(f'mount jnow = {radec_jnow.ra.to_string(u.hour, sep=":")} '
                                       f'{radec_jnow.dec.to_string(u.deg, sep=":", alwayssign=True)}')
 
                         radec_j2000 = radec_jnow.transform_to(FK5(equinox='J2000'))
-                        logging.debug(f'mount j2000 = {radec_j2000.ra.to_string(u.hour, sep=":")} ' + \
+                        logging.debug(f'mount j2000 = {radec_j2000.ra.to_string(u.hour, sep=":")} '
                                       f'{radec_j2000.dec.to_string(u.deg, sep=":", alwayssign=True)}')
 
                         sv = SkyView()
 
                         posstr = f'{radec_j2000.ra.degree} {radec_j2000.dec.degree}'
                         pixelstr = f'{int(new_settings.roi[2])}, {int(new_settings.roi[3])}'
-                        width = new_settings.roi[2]*DSS_CAMERA_PIXELSCALE*new_settings.binning/3600.0
-                        height = new_settings.roi[3]*DSS_CAMERA_PIXELSCALE*new_settings.binning/3600.0
-                        logging.debug(f'Loading SkyView with pos={posstr} (J2000)' + \
-                                      f' pixels={pixelstr} ' + \
-                                      f' height={height} ' + \
+                        width = new_settings.roi[2] * DSS_CAMERA_PIXELSCALE * new_settings.binning / 3600.0
+                        height = new_settings.roi[3] * DSS_CAMERA_PIXELSCALE * new_settings.binning / 3600.0
+                        logging.debug(f'Loading SkyView with pos={posstr} (J2000)'
+                                      f' pixels={pixelstr} '
+                                      f' height={height} '
                                       f' width={width}')
                         paths = sv.get_images(position=posstr,
                                               coordinates='J2000',
                                               survey=['DSS'],
                                               pixels=pixelstr,
-                                              width=width*u.degree,
-                                              height=height*u.degree)
+                                              width=width * u.degree,
+                                              height=height * u.degree)
                         logging.debug(f'paths={paths}')
                         p = paths[0]
                         p.writeto('a.fits', overwrite=True)
@@ -370,7 +399,7 @@ class RPCServer:
                         pri_header = p[0].header
                         fits_image = FITSImage(p[0].data)
                         # must be FITS so munge into a FITSImage() object
-                        logging.info('get_image_data() returned a FITS object')
+                        logging.debug('get_image_data() returned a FITS object')
                         for key, val in pri_header.items():
                             # Comment/history tends to cause output issues when debugging so just skip
                             if key in ['COMMENT', 'HISTORY']:
@@ -386,14 +415,16 @@ class RPCServer:
                 elif method == 'save_image':
                     if not self.current_image:
                         logging.info('save_image - no image available!')
-                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'No image available!',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE,
+                                                      'No image available!',
                                                       msgid=method_id)
                         continue
 
                     if 'params' not in j:
                         logging.info('save_image - no params provided!')
                         self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
-                                                      'Invalid request - missing parameters!',
+                                                      'Invalid request - '
+                                                      'missing parameters!',
                                                       msgid=method_id)
                         continue
 
@@ -402,16 +433,20 @@ class RPCServer:
                     filename = params.get('filename', None)
 
                     if filename is None or not isinstance(filename, str):
-                        logging.error('RPCServer:save_image method request but need filename {filename}')
+                        logging.error('RPCServer:save_image method request '
+                                      'but need filename {filename}')
                         self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
-                                                      'Invalid request - missing filename',
+                                                      'Invalid request - '
+                                                      'missing filename',
                                                       msgid=method_id)
                         continue
 
                     program_settings = AppContainer.find('/program_settings')
                     if program_settings is None:
-                        logging.error('RPCServer():cam_exp_comp: unable to access program settings!')
-                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Error getting program settings',
+                        logging.error('RPCServer():cam_exp_comp: unable to '
+                                      'access program settings!')
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE,
+                                                      'Error getting program settings',
                                                       msgid=method_id)
                         return False
 
@@ -425,18 +460,19 @@ class RPCServer:
                         self.current_image.save_to_file('save_image.fits', overwrite=True)
                     except Exception:
                         logging.error('RPCServer: Exception ->', exc_info=True)
-                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Error writing image',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE,
+                                                      'Error writing image',
                                                       msgid=method_id)
                         return
 
                     # TESTING ONLY!!!
                     # COPY a test file over to requested name so pyfocusstars3 works!
-                    if False:
-                        logging.warning('#########################################')
-                        logging.warning('USING TEST DATA INSTEAD OF CAMERA DATA!!!')
-                        logging.warning('#########################################')
-                        from shutil import copyfile
-                        copyfile('C:\\Users/msf/Documents/Astronomy/AutoFocus/testdata/20180828_024611/20180828_024611_FINAL_focus_08146.fits', filename)
+                    # if False:
+                    #     logging.warning('#########################################')
+                    #     logging.warning('USING TEST DATA INSTEAD OF CAMERA DATA!!!')
+                    #     logging.warning('#########################################')
+                    #     from shutil import copyfile
+                    #     copyfile('INSERT_SRC_FITS_NAME_HERE', filename)
 
                     self.send_method_complete_message(socket, method_id)
 
@@ -451,14 +487,16 @@ class RPCServer:
 
                     if not self.device_manager.camera.is_connected():
                         logging.error(f'request {method} - camera not connected!')
-                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Camera not connected!',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE,
+                                                      'Camera not connected!',
                                                       msgid=method_id)
                         continue
 
                     if 'params' not in j:
                         logging.info('set_camera_gain - no params provided!')
                         self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
-                                                      'Invalid request - missing parameters!',
+                                                      'Invalid request - '
+                                                      'missing parameters!',
                                                       msgid=method_id)
                         continue
 
@@ -468,8 +506,11 @@ class RPCServer:
 
                     logging.debug(f'set_camera_gain: gain = {camera_gain}')
 
-                    if camera_gain is None or (not isinstance(camera_gain, int) and not isinstance(camera_gain, float)):
-                        logging.error(f'RPCServer:set_camera_gain method request but need gain - recvd {camera_gain}')
+                    if (camera_gain is None
+                        or (not isinstance(camera_gain, int)
+                            and not isinstance(camera_gain, float))):
+                        logging.error(f'RPCServer:set_camera_gain method request '
+                                      'but need gain - recvd {camera_gain}')
                         self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
                                                       'Invalid request - camera_gain',
                                                       msgid=method_id)
@@ -481,14 +522,16 @@ class RPCServer:
                 elif method == 'set_cooler_state':
                     if not self.device_manager.camera.is_connected():
                         logging.error(f'request {method} - camera not connected!')
-                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Camera not connected!',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE,
+                                                      'Camera not connected!',
                                                       msgid=method_id)
                         continue
 
                     if 'params' not in j:
                         logging.info('set_cooler_state - no params provided!')
                         self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
-                                                      'Invalid request - missing parameters!',
+                                                      'Invalid request - '
+                                                      'missing parameters!',
                                                       msgid=method_id)
                         continue
 
@@ -499,7 +542,8 @@ class RPCServer:
                     logging.debug(f'set_cooler_state: state = {state}')
 
                     if state is None or not isinstance(state, bool):
-                        logging.error(f'RPCServer:set_cooler_state method request but need state - recvd {state}')
+                        logging.error('RPCServer:set_cooler_state method '
+                                      f'request but need state - recvd {state}')
                         self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
                                                       'Invalid request - state',
                                                       msgid=method_id)
@@ -510,14 +554,16 @@ class RPCServer:
                 elif method == 'set_target_temperature':
                     if not self.device_manager.camera.is_connected():
                         logging.error(f'request {method} - camera not connected!')
-                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Camera not connected!',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE,
+                                                      'Camera not connected!',
                                                       msgid=method_id)
                         continue
 
                     if 'params' not in j:
                         logging.info('set_target_temperature - no params provided!')
                         self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
-                                                      'Invalid request - missing parameters!',
+                                                      'Invalid request - '
+                                                      'missing parameters!',
                                                       msgid=method_id)
                         continue
 
@@ -527,8 +573,11 @@ class RPCServer:
 
                     logging.debug(f'set_target_temperature: target = {target}')
 
-                    if target is None or (not isinstance(target, float) and not isinstance(target, int)):
-                        logging.error(f'RPCServer:set_target_temperature method request but need target - recvd {target}')
+                    if (target is None
+                        or (not isinstance(target, float)
+                            and not isinstance(target, int))):
+                        logging.error('RPCServer:set_target_temperature method '
+                                      f'request but need target - recvd {target}')
                         self.send_json_error_response(socket, JSON_INVALID_ERRCODE,
                                                       'Invalid request - target',
                                                       msgid=method_id)
@@ -573,7 +622,8 @@ class RPCServer:
                                 'get_camera_gain']:
                     if not self.device_manager.camera.is_connected():
                         logging.error(f'request {method} - camera not connected!')
-                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Camera not connected!',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE,
+                                                      'Camera not connected!',
                                                       msgid=method_id)
                         continue
 
@@ -584,15 +634,15 @@ class RPCServer:
                     camera = self.device_manager.camera
 
                     func = {
-                            'get_current_temperature' : camera.get_current_temperature,
-                            'get_target_temperature' : camera.get_target_temperature,
-                            'get_cooler_state' : camera.get_cooler_state,
-                            'get_cooler_power' : camera.get_cooler_power,
-                            'get_camera_x_pixelsize' : camera.get_pixelsize,
-                            'get_camera_y_pixelsize' : camera.get_pixelsize,
-                            'get_camera_max_binning' : camera.get_max_binning,
-                            'get_camera_egain' : camera.get_egain,
-                            'get_camera_gain' : camera.get_camera_gain
+                            'get_current_temperature': camera.get_current_temperature,
+                            'get_target_temperature': camera.get_target_temperature,
+                            'get_cooler_state': camera.get_cooler_state,
+                            'get_cooler_power': camera.get_cooler_power,
+                            'get_camera_x_pixelsize': camera.get_pixelsize,
+                            'get_camera_y_pixelsize': camera.get_pixelsize,
+                            'get_camera_max_binning': camera.get_max_binning,
+                            'get_camera_egain': camera.get_egain,
+                            'get_camera_gain': camera.get_camera_gain
                             }
 
                     # get value
@@ -608,20 +658,21 @@ class RPCServer:
                         ret_val = func[method]()
 
                     ret_key = {
-                               'get_current_temperature' : 'current_temperature',
-                               'get_target_temperature' : 'target_temperature',
-                               'get_cooler_state' : 'cooler_state',
-                               'get_cooler_power' : 'cooler_power',
-                               'get_camera_x_pixelsize' : 'camera_x_pixelsize',
-                               'get_camera_y_pixelsize' : 'camera_y_pixelsize',
-                               'get_camera_max_binning' : 'camera_max_binning',
-                               'get_camera_egain' : 'camera_egain',
-                               'get_camera_gain' : 'camera_gain'
+                               'get_current_temperature': 'current_temperature',
+                               'get_target_temperature': 'target_temperature',
+                               'get_cooler_state': 'cooler_state',
+                               'get_cooler_power': 'cooler_power',
+                               'get_camera_x_pixelsize': 'camera_x_pixelsize',
+                               'get_camera_y_pixelsize': 'camera_y_pixelsize',
+                               'get_camera_max_binning': 'camera_max_binning',
+                               'get_camera_egain': 'camera_egain',
+                               'get_camera_gain': 'camera_gain'
                               }
-                    logging.debug(f'method {method} returns {ret_key[method]} = {ret_val}')
+                    logging.debug(f'method {method} returns '
+                                  f'{ret_key[method]} = {ret_val}')
 
                     # normal code
-                    setdict = {ret_key[method] : ret_val}
+                    setdict = {ret_key[method]: ret_val}
 
                     # rest of it
                     resdict['result'] = setdict
@@ -635,7 +686,8 @@ class RPCServer:
                                 'focuser_stop']:
                     if not self.device_manager.focuser.is_connected():
                         logging.error(f'request {method} - focuser not connected!')
-                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Focuser not connected!',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE,
+                                                      'Focuser not connected!',
                                                       msgid=method_id)
                         continue
 
@@ -643,23 +695,28 @@ class RPCServer:
                     resdict['jsonrpc'] = '2.0'
                     resdict['id'] = method_id
                     focuser = self.device_manager.focuser
-                    func = {'focuser_get_absolute_position' : focuser.get_absolute_position,
-                            'focuser_get_max_absolute_position' : focuser.get_max_absolute_position,
-                            'focuser_get_current_temperature' : focuser.get_current_temperature,
-                            'focuser_is_moving' : focuser.is_moving,
-                            'focuser_stop' : focuser.stop}
+                    func = {
+                            'focuser_get_absolute_position': focuser.get_absolute_position,
+                            'focuser_get_max_absolute_position': focuser.get_max_absolute_position,
+                            'focuser_get_current_temperature': focuser.get_current_temperature,
+                            'focuser_is_moving': focuser.is_moving,
+                            'focuser_stop': focuser.stop
+                            }
 
                     # get value
                     ret_val = func[method]()
 
                     # strip 'focuser_' off to get return key
-                    ret_key = {'focuser_get_absolute_position' : 'absolute_position',
-                            'focuser_get_max_absolute_position' : 'max_absolute_position',
-                            'focuser_get_current_temperature' : 'current_temperature',
-                            'focuser_is_moving' : 'is_moving',
-                            'focuser_stop' : 'stop'}
+                    ret_key = {
+                               'focuser_get_absolute_position': 'absolute_position',
+                               'focuser_get_max_absolute_position': 'max_absolute_position',
+                               'focuser_get_current_temperature': 'current_temperature',
+                               'focuser_is_moving': 'is_moving',
+                               'focuser_stop': 'stop'
+                              }
 
-                    logging.debug(f'method {method} returns {ret_key[method]} = {ret_val}')
+                    logging.debug(f'method {method} returns {ret_key[method]}'
+                                  f' = {ret_val}')
 
                     setdict = {ret_key[method] : ret_val}
                     resdict['result'] = setdict
@@ -682,9 +739,11 @@ class RPCServer:
                     abspos = params.get('absolute_position', None)
                     logging.debug(f'focuser_move_absolute_position: abspos = {abspos}')
                     if abspos is None or not isinstance(abspos, int):
-                        logging.error('RPCServer:focuser_move_absolute_position method request but need absolute position - recvd {abspos}')
+                        logging.error('RPCServer:focuser_move_absolute_position '
+                                      f'method request but need absolute position - recvd {abspos}')
                         self.send_json_error_response(socket,
-                                                      JSON_INVALID_ERRCODE, 'Invalid request - absolute position',
+                                                      JSON_INVALID_ERRCODE,
+                                                      'Invalid request - absolute position',
                                                       msgid=method_id)
                         continue
 
@@ -698,7 +757,8 @@ class RPCServer:
                                 'mount_get_tracking']:
                     if not self.device_manager.mount.is_connected():
                         logging.error(f'request {method} - mount not connected!')
-                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Mount not connected!',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE,
+                                                      'Mount not connected!',
                                                       msgid=method_id)
                         continue
 
@@ -706,23 +766,28 @@ class RPCServer:
                     resdict['jsonrpc'] = '2.0'
                     resdict['id'] = method_id
                     mount = self.device_manager.mount
-                    func = {'mount_can_park' : mount.can_park,
-                            'mount_at_park' : mount.is_parked,
-                            'mount_pier_side' : mount.get_pier_side,
-                            'mount_is_slewing' : mount.is_slewing,
-                            'mount_get_tracking' : mount.get_tracking}
+                    func = {
+                            'mount_can_park': mount.can_park,
+                            'mount_at_park': mount.is_parked,
+                            'mount_pier_side': mount.get_pier_side,
+                            'mount_is_slewing': mount.is_slewing,
+                            'mount_get_tracking': mount.get_tracking
+                           }
 
                     # get value
                     ret_val = func[method]()
 
                     # strip 'focuser_' off to get return key
-                    ret_key = {'mount_can_park' : 'can_park',
-                            'mount_at_park' : 'at_park',
-                            'mount_pier_side' : 'pier_side',
-                            'mount_is_slewing' : 'is_slewing',
-                            'mount_get_tracking' : 'tracking'}
+                    ret_key = {
+                               'mount_can_park': 'can_park',
+                               'mount_at_park': 'at_park',
+                               'mount_pier_side': 'pier_side',
+                               'mount_is_slewing': 'is_slewing',
+                               'mount_get_tracking': 'tracking'
+                              }
 
-                    logging.debug(f'method {method} returns {ret_key[method]} = {ret_val}')
+                    logging.debug(f'method {method} returns {ret_key[method]} = '
+                                  f'{ret_val}')
 
                     setdict = {ret_key[method] : ret_val}
                     resdict['result'] = setdict
@@ -730,7 +795,8 @@ class RPCServer:
                 elif method in ['mount_abort_slew', 'mount_unpark', 'mount_park']:
                     if not self.device_manager.mount.is_connected():
                         logging.error(f'request {method} - mount not connected!')
-                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Mount not connected!',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE,
+                                                      'Mount not connected!',
                                                       msgid=method_id)
                         continue
 
@@ -746,12 +812,13 @@ class RPCServer:
                 elif method == 'mount_get_radec':
                     if not self.device_manager.mount.is_connected():
                         logging.error(f'request {method} - mount not connected!')
-                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Mount not connected!',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE,
+                                                      'Mount not connected!',
                                                       msgid=method_id)
                         continue
 
                     ra, dec = self.device_manager.mount.get_position_radec()
-                    setdict = {'ra' : ra, 'dec' : dec}
+                    setdict = {'ra': ra, 'dec': dec}
                     resdict = {}
                     resdict['jsonrpc'] = '2.0'
                     resdict['id'] = method_id
@@ -761,12 +828,13 @@ class RPCServer:
                 elif method == 'mount_get_altaz':
                     if not self.device_manager.mount.is_connected():
                         logging.error(f'request {method} - mount not connected!')
-                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Mount not connected!',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE,
+                                                      'Mount not connected!',
                                                       msgid=method_id)
                         continue
 
                     alt, az = self.device_manager.mount.get_position_altaz()
-                    setdict = {'alt' : alt, 'az' : az}
+                    setdict = {'alt': alt, 'az': az}
                     resdict = {}
                     resdict['jsonrpc'] = '2.0'
                     resdict['id'] = method_id
@@ -776,7 +844,8 @@ class RPCServer:
                 elif method in ['mount_slew_radec', 'mount_sync_radec']:
                     if not self.device_manager.mount.is_connected():
                         logging.error(f'request {method} - mount not connected!')
-                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Mount not connected!',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE,
+                                                      'Mount not connected!',
                                                       msgid=method_id)
                         continue
 
@@ -795,9 +864,11 @@ class RPCServer:
                     dec_problem = dec is None or (not isinstance(dec, int) and not isinstance(dec, float))
 
                     if ra_problem or dec_problem:
-                        logging.error(f'RPCServer:method {method}: method request but need ra/dec - recvd {ra}/{dec}')
+                        logging.error(f'RPCServer:method {method}: method request
+                                      f'but need ra/dec - recvd {ra}/{dec}')
                         self.send_json_error_response(socket,
-                                                      JSON_INVALID_ERRCODE, f'Invalid request - {method}',
+                                                      JSON_INVALID_ERRCODE,
+                                                      f'Invalid request - {method}',
                                                       msgid=method_id)
                         continue
 
@@ -814,7 +885,8 @@ class RPCServer:
                 elif method == 'mount_set_tracking':
                     if not self.device_manager.mount.is_connected():
                         logging.error(f'request {method} - mount not connected!')
-                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Mount not connected!',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE,
+                                                      'Mount not connected!',
                                                       msgid=method_id)
                         continue
 
@@ -831,9 +903,11 @@ class RPCServer:
 
                     track_problem = track is None or not isinstance(track, bool)
                     if track_problem:
-                        logging.error(f'RPCServer:method {method}: method request but need tracking - recvd {track}')
+                        logging.error(f'RPCServer:method {method}: method request '
+                                      f'but need tracking - recvd {track}')
                         self.send_json_error_response(socket,
-                                                      JSON_INVALID_ERRCODE, f'Invalid request - {method}',
+                                                      JSON_INVALID_ERRCODE,
+                                                      f'Invalid request - {method}',
                                                       msgid=method_id)
                         continue
 
@@ -844,7 +918,8 @@ class RPCServer:
                 elif method == 'filterwheel_move_position':
                     if not self.device_manager.filterwheel.is_connected():
                         logging.error(f'request {method} - filter wheel not connected!')
-                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Filter wheel not connected!',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE,
+                                                      'Filter wheel not connected!',
                                                       msgid=method_id)
                         continue
 
@@ -861,9 +936,11 @@ class RPCServer:
 
                     pos_problem = pos is None or not isinstance(pos, int)
                     if pos_problem:
-                        logging.error(f'RPCServer:method {method}: method request but need position - recvd {pos}')
+                        logging.error(f'RPCServer:method {method}: method request ;
+                                      fbut need position - recvd {pos}')
                         self.send_json_error_response(socket,
-                                                      JSON_INVALID_ERRCODE, f'Invalid request - {method}',
+                                                      JSON_INVALID_ERRCODE,
+                                                      f'Invalid request - {method}',
                                                       msgid=method_id)
                         continue
 
@@ -874,7 +951,8 @@ class RPCServer:
                 elif method in ['filterwheel_get_position', 'filterwheel_get_filter_names']:
                     if not self.device_manager.filterwheel.is_connected():
                         logging.error(f'request {method} - filter wheel not connected!')
-                        self.send_json_error_response(socket, JSON_APP_ERRCODE, 'Filter wheel not connected!',
+                        self.send_json_error_response(socket, JSON_APP_ERRCODE,
+                                                      'Filter wheel not connected!',
                                                       msgid=method_id)
                         continue
 
@@ -884,18 +962,18 @@ class RPCServer:
 
                     wheel = self.device_manager.filterwheel
                     func = {'filterwheel_get_position' : wheel.get_position,
-                            'filterwheel_get_filter_names' : wheel.get_names}
+                            'filterwheel_get_filter_names': wheel.get_names}
 
                     # get value
                     ret_val = func[method]()
 
                     # strip 'filterwheel_' off to get return key
-                    ret_key = {'filterwheel_get_position' : 'filter_position',
-                            'filterwheel_get_filter_names' : 'filter_names'}
+                    ret_key = {'filterwheel_get_position': 'filter_position',
+                            'filterwheel_get_filter_names': 'filter_names'}
 
                     logging.debug(f'method {method} returns {ret_key[method]} = {ret_val}')
 
-                    setdict = {ret_key[method] : ret_val}
+                    setdict = {ret_key[method]: ret_val}
                     resdict['result'] = setdict
                     self.__send_json_response(socket, resdict)
 
@@ -939,7 +1017,8 @@ class RPCServer:
             self.current_image = None
 
             # FIXME prob need to return an error message not complete message!
-            self.send_method_complete_message(self.exposure_ongoing_socket, self.exposure_ongoing_method_id)
+            self.send_method_complete_message(self.exposure_ongoing_socket,
+                                              self.exposure_ongoing_method_id)
             return
 
         self.handle_new_image(fitsimage)
@@ -957,7 +1036,8 @@ class RPCServer:
 
         self.current_image = fitsimage
 
-        self.send_method_complete_message(self.exposure_ongoing_socket, self.exposure_ongoing_method_id)
+        self.send_method_complete_message(self.exposure_ongoing_socket,
+                                          self.exposure_ongoing_method_id)
 
         # used by old code that take and wrote image to disk
 #        self.out_image_filename = None
@@ -986,7 +1066,8 @@ class RPCServer:
         fits_doc.set_focal_length(settings.telescope_focallen)
         aper_diam = settings.telescope_aperture
         aper_obst = settings.telescope_obstruction
-        aper_area = math.pi*(aper_diam/2.0*aper_diam/2.0)*(1-aper_obst*aper_obst/100.0/100.0)
+        aper_area = math.pi * (aper_diam / 2.0 * aper_diam / 2.0)
+                            * (1 - aper_obst * aper_obst / 100.0 / 100.0)
         fits_doc.set_aperture_diameter(aper_diam)
         fits_doc.set_aperture_area(aper_area)
 
@@ -1012,32 +1093,32 @@ class RPCServer:
         if self.device_manager.mount.is_connected():
             ra, dec = self.device_manager.mount.get_position_radec()
 
-            radec = SkyCoord(ra=ra*u.hour, dec=dec*u.degree, frame='fk5')
+            radec = SkyCoord(ra=ra * u.hour, dec=dec * u.degree, frame='fk5')
             rastr = radec.ra.to_string(u.hour, sep=":", pad=True)
             decstr = radec.dec.to_string(alwayssign=True, sep=":", pad=True)
             fits_doc.set_object_radec(rastr, decstr)
 
             alt, az = self.device_manager.mount.get_position_altaz()
-            altaz = AltAz(alt=alt*u.degree, az=az*u.degree)
+            altaz = AltAz(alt=alt * u.degree, az=az * u.degree)
             altstr = altaz.alt.to_string(alwayssign=True, sep=":", pad=True)
             azstr = altaz.az.to_string(alwayssign=True, sep=":", pad=True)
             fits_doc.set_object_altaz(altstr, azstr)
 
             now = Time.now()
             local_sidereal = now.sidereal_time('apparent',
-                                               longitude=settings.location_longitude*u.degree)
+                                               longitude=settings.location_longitude * u.degree)
             hour_angle = local_sidereal - radec.ra
-            logging.info(f'locsid = {local_sidereal} HA={hour_angle}')
+            logging.debug(f'locsid = {local_sidereal} HA={hour_angle}')
             if hour_angle.hour > 12:
-                hour_angle = (hour_angle.hour - 24.0)*u.hourangle
+                hour_angle = (hour_angle.hour - 24.0) * u.hourangle
 
             hastr = Angle(hour_angle).to_string(u.hour, sep=":", pad=True)
-            logging.info(f'HA={hour_angle} HASTR={hastr} {type(hour_angle)}')
+            logging.debug(f'HA={hour_angle} HASTR={hastr} {type(hour_angle)}')
             fits_doc.set_object_hourangle(hastr)
 
         # controlled by user selection in camera or sequence config
         # FIXME allow client to control frame type
-        fits_doc.set_image_type(self.exposure_frametype) #self.sequence.frame_type.pretty_name())
+        fits_doc.set_image_type(self.exposure_frametype)
         fits_doc.set_object('TEST-OBJECT')
 
         # set by application version
@@ -1045,7 +1126,9 @@ class RPCServer:
 
     def send_initial_message(self, socket):
         """Send message to new client"""
-        msgdict = {'Event' : 'Connection', 'Server' : 'pyastroimageview', 'Version' : '1.0'}
+        msgdict = {'Event': 'Connection',
+                   'Server': 'pyastroimageview',
+                   'Version': '1.0'}
         msgstr = json.dumps(msgdict) + '\n'
 
         logging.info(f'Sending initial message {msgstr}')
@@ -1053,7 +1136,8 @@ class RPCServer:
         try:
             socket.write(bytes(msgstr, encoding='ascii'))
         except Exception:
-            logging.error(f'send_initial_message - exception - msg was {msgstr}!', exc_info=True)
+            logging.error(f'send_initial_message - exception - msg was {msgstr}!',
+                          exc_info=True)
             return False
 
         return True
@@ -1107,7 +1191,7 @@ class RPCServer:
         logging.info(f'send_json_error_response: {errcode} {errmsg} {msgid}')
         errdict = {}
         errdict['jsonrpc'] = '2.0'
-        errdict['error'] = {'code' : errcode, 'message' : errmsg}
+        errdict['error'] = {'code': errcode, 'message': errmsg}
         if msgid is not None:
             errdict['id'] = msgid
         else:
@@ -1140,7 +1224,6 @@ if __name__ == '__main__':
     # just put something in for the camera for testing
     AppContainer.register('/dev/camera', None)
 
-
     if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
         logging.info('starting event loop')
 
@@ -1148,4 +1231,3 @@ if __name__ == '__main__':
         s.listen()
 
         QtCore.QCoreApplication.instance().exec_()
-

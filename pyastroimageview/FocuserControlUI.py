@@ -1,3 +1,22 @@
+#
+# Focuser UI
+#
+# Copyright 2019 Michael Fulbright
+#
+#
+#    pyastroimageview is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 import logging
 
 from PyQt5 import QtCore, QtWidgets
@@ -17,7 +36,7 @@ class FocuserControlUI(QtWidgets.QWidget):
         self.ui = Ui_focuser_settings_widget()
         self.ui.setupUi(self)
 
-        #FIXME have CameraControl send signals - dont connect on internal widgets from here!
+        # FIXME have CameraControl send signals - dont connect on internal widgets from here!
         self.ui.focuser_setting_setup.pressed.connect(self.focuser_setup)
         self.ui.focuser_setting_connect.pressed.connect(self.focuser_connect)
         self.ui.focuser_setting_disconnect.pressed.connect(self.focuser_disconnect)
@@ -149,7 +168,8 @@ class FocuserControlUI(QtWidgets.QWidget):
         if self.settings.focuser_driver:
             rc = self.focuser_manager.connect(self.settings.focuser_driver)
             if not rc:
-                QtWidgets.QMessageBox.critical(None, 'Error', 'Unable to connect to focuser!',
+                QtWidgets.QMessageBox.critical(None, 'Error',
+                                               'Unable to connect to focuser!',
                                                QtWidgets.QMessageBox.Ok)
                 return
 

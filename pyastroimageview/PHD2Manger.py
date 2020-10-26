@@ -1,4 +1,22 @@
-#!/usr/bin/python
+#
+# PHD2 manager
+#
+# Copyright 2019 Michael Fulbright
+#
+#
+#    pyastroimageview is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 import sys
 import json
 import time
@@ -34,25 +52,25 @@ class DitherState(Enum):
     TIMEOUT = 6
 
 class PHD2ManagerSignals(QtCore.QObject):
-        dither_start = QtCore.pyqtSignal()
-        dither_settlebegin = QtCore.pyqtSignal()
-        dither_settling = QtCore.pyqtSignal(float, float, float)
-        dither_settledone = QtCore.pyqtSignal(bool)
-        dither_timeout = QtCore.pyqtSignal()
-        guidestep = QtCore.pyqtSignal()
-        guiding_stop = QtCore.pyqtSignal()
-        paused = QtCore.pyqtSignal()
-        resumed = QtCore.pyqtSignal()
-        looping_start = QtCore.pyqtSignal()
-        looping_stop = QtCore.pyqtSignal()
-        starlost = QtCore.pyqtSignal()
-        request = QtCore.pyqtSignal(str, object)
+    dither_start = QtCore.pyqtSignal()
+    dither_settlebegin = QtCore.pyqtSignal()
+    dither_settling = QtCore.pyqtSignal(float, float, float)
+    dither_settledone = QtCore.pyqtSignal(bool)
+    dither_timeout = QtCore.pyqtSignal()
+    guidestep = QtCore.pyqtSignal()
+    guiding_stop = QtCore.pyqtSignal()
+    paused = QtCore.pyqtSignal()
+    resumed = QtCore.pyqtSignal()
+    looping_start = QtCore.pyqtSignal()
+    looping_stop = QtCore.pyqtSignal()
+    starlost = QtCore.pyqtSignal()
+    request = QtCore.pyqtSignal(str, object)
 
-        # FIXME we should get this down to just a single signal
-        # to indicate connection is lost
-        tcperror = QtCore.pyqtSignal()
-        connect_close = QtCore.pyqtSignal(int)
-        disconnected = QtCore.pyqtSignal()
+    # FIXME we should get this down to just a single signal
+    # to indicate connection is lost
+    tcperror = QtCore.pyqtSignal()
+    connect_close = QtCore.pyqtSignal(int)
+    disconnected = QtCore.pyqtSignal()
 
 class PHD2Manager:
 
@@ -70,7 +88,8 @@ class PHD2Manager:
 
     def connect(self):
         if self.socket:
-            logging.warning('PHD2Manager:connect() socket appears to be active already!')
+            logging.warning('PHD2Manager:connect() socket appears to be '
+                            'active already!')
 
         # FIXME Need some error handling!
         self.socket = QtNetwork.QTcpSocket()
@@ -102,12 +121,14 @@ class PHD2Manager:
 
     def disconnect(self):
         if not self.connected:
-             logging.warning('PHD2Manager:connect() socket appears to be inactive already!')
-             return
+            logging.warning('PHD2Manager:connect() socket appears to be '
+                            'inactive already!')
+            return
 
         try:
             self.socket.disconnectFromHost()
-        except Exception as e:
+        except Exception:
+            # FIXME need more specific exception
             logging.error('Exception PHD2Manager:disconnect()!', exc_info=True)
 
         self.connected = False
@@ -140,12 +161,12 @@ class PHD2Manager:
     def state_changed(self, state):
         logging.info(f'socket state_changed -> {state}')
         # FIXME is this only error we need to catch?
-        if state == QtNetwork.QAbstractSocket.ClosingState or \
-            state == QtNetwork.QAbstractSocket.UnconnectedState:
-                if self.connected:
-                    self.connected = False
+        if (state == QtNetwork.QAbstractSocket.ClosingState
+            or state == QtNetwork.QAbstractSocket.UnconnectedState):
+            if self.connected:
+                self.connected = False
 #                    self.socket = None
-                    self.signals.connect_close.emit(state)
+                self.signals.connect_close.emit(state)
 
     def error(self, socket_error):
         logging.error(f'PHD2Manager:error called! socket_error = {socket_error}')
@@ -163,7 +184,7 @@ class PHD2Manager:
         while True:
             resp = self.socket.readLine(2048)
 
-            if len(resp)<1:
+            if len(resp) < 1:
                 break
 
 #            logging.info(f'{resp}')
@@ -184,12 +205,14 @@ class PHD2Manager:
                         # sniff to see if appstate affects guiding
                         if reqtype == 'get_appstate':
                             appstate = j['result']
-                            logging.info(f'phd2manager: detected app_state msg with state = {appstate}')
+                            logging.debug('phd2manager: detected app_state msg with '
+                                          f'state = {appstate}')
                             if appstate != 'Guiding' or appstate != 'LostLock':
                                 self.guiding = True
                             else:
                                 self.guiding = False
-                            logging.info(f'phd2manager: based on app_state set guiding to {self.guiding}')
+                            logging.debug('phd2manager: based on app_state set '
+                                          f'guiding to {self.guiding}')
                         self.signals.request.emit(reqtype, j['result'])
 
                         del self.requests[id]
@@ -236,7 +259,8 @@ class PHD2Manager:
                 elif event == 'GuideStep':
                     self.guiding = True
                     self.signals.guidestep.emit()
-            except Exception as e:
+            except Exception:
+                # FIXME need more specific exception?
                 logging.error(f'phd2_process - exception message was {resp}!')
                 logging.error('Exception ->', exc_info=True)
                 continue
@@ -267,11 +291,11 @@ class PHD2Manager:
             a problem communicating with PHD2 and False is returned.
         """
 
-        cmd = {"method" : "dither",
-               "params" : [dither_pix, False,
-                           {"pixels" : settle_pix,
-                            "time" : settle_start_time,
-                            "timeout" : settle_finish_time}]}
+        cmd = {"method": "dither",
+               "params": [dither_pix, False,
+                          {"pixels": settle_pix,
+                           "time": settle_start_time,
+                           "timeout": settle_finish_time}]}
 
         while True:
             # reset dither state
@@ -288,9 +312,9 @@ class PHD2Manager:
             #                a dither doesnt start on first try
             logging.info('Waiting for settling to start!')
             ts = time.time()
-            logging.info(f'0 self.dither_state = {self.dither_state}')
+            logging.debug(f'0 self.dither_state = {self.dither_state}')
 
-            while (time.time()-ts) < 3:
+            while (time.time() - ts) < 3:
 #                logging.info(f'1 self.dither_state = {self.dither_state}')
                 if self.dither_state != DitherState.IDLE:
                     logging.info('Dither started!')
@@ -308,7 +332,7 @@ class PHD2Manager:
         self.dither_timeout_timer = QtCore.QTimer()
         self.dither_timeout_timer.setSingleShot(True)
         self.dither_timeout_timer.timeout.connect(self.dither_timed_out)
-        self.dither_timeout_timer.start(settle_timeout*1000)
+        self.dither_timeout_timer.start(settle_timeout * 1000)
         logging.info(f'dither_timeout_timer started for {settle_timeout} seconds!')
 
         return True
@@ -317,18 +341,17 @@ class PHD2Manager:
         logging.error('phd2manager: dither_timed_out(): Dither timed out!')
         self.dither_state = DitherState.SETTLED
         self.signals.dither_timeout.emit()
-        self.dither_timeout_timer = None # we'll make new one if needed
+        self.dither_timeout_timer = None  # we'll make new one if needed
 
     def set_pause(self, state):
-        cmd = {"method" : "set_paused",
-               "params" : [state, "Full"]}
+        cmd = {"method": "set_paused",
+               "params": [state, "Full"]}
 
         return self.__send_json_command(cmd)
 
 #        cmdstr = json.dumps(cmd) + '\n'
 #        logging.info(f'{bytes(cmdstr, encoding="ascii")}')
 #        self.socket.writeData(bytes(cmdstr, encoding='ascii'))
-
 
     def get_connected(self):
         """This tests if PHD2 is connected to hardware, not if the connection
@@ -351,7 +374,7 @@ class PHD2Manager:
 
         cmdstr = json.dumps(reqdict) + '\n'
         if 'app_state' not in req:
-            logging.info(f'jsonrequest->{bytes(cmdstr, encoding="ascii")}')
+            logging.debug(f'jsonrequest->{bytes(cmdstr, encoding="ascii")}')
 
         if not self.connected:
             logging.warning('__send_json_request: not connected!')
@@ -363,7 +386,8 @@ class PHD2Manager:
         # need locking?
         try:
             self.socket.writeData(bytes(cmdstr, encoding='ascii'))
-        except Exception as e:
+        except Exception:
+            # FIXME need more specific exception
             logging.error(f'__send_json_request - req was {req}!')
             logging.error('Exception ->', exc_info=True)
             return False
@@ -375,7 +399,7 @@ class PHD2Manager:
         self.request_id += 1
 
         cmdstr = json.dumps(cmd) + '\n'
-        logging.info(f'jsoncmd->{bytes(cmdstr, encoding="ascii")}')
+        logging.debug(f'jsoncmd->{bytes(cmdstr, encoding="ascii")}')
 
         # FIXME this isnt good enough - could be set to None before
         # we actually get to writing
@@ -386,12 +410,14 @@ class PHD2Manager:
 
         try:
             self.socket.writeData(bytes(cmdstr, encoding='ascii'))
-        except Exception as e:
+        except Exception:
+            # FIXME need more specific exception
             logging.error(f'__send_json_command - cmd was {cmd}!')
             logging.error('Exception ->', exc_info=True)
             return False
 
         return True
+
 
 # TESTING ONLY
 p = None
@@ -443,5 +469,3 @@ if __name__ == '__main__':
         timer2.start(5000)
 
         QtCore.QCoreApplication.instance().exec_()
-
-

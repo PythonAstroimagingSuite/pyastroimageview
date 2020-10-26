@@ -1,3 +1,22 @@
+#
+# Camera ROI dialog
+#
+# Copyright 2019 Michael Fulbright
+#
+#
+#    pyastroimageview is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 import logging
 
 from PyQt5 import QtWidgets
@@ -25,22 +44,22 @@ class CameraSetROIDialog(QtWidgets.QDialog):
         """
         if left:
             width = self.ui.width_spinbox.value()
-            left = min(left, self.maxx-width)
+            left = min(left, self.maxx - width)
             self.ui.left_spinbox.setValue(left)
 
         if top:
             height = self.ui.height_spinbox.value()
-            top = min(top, self.maxy-height)
+            top = min(top, self.maxy - height)
             self.ui.top_spinbox.setValue(top)
 
         if width:
             left = self.ui.left_spinbox.value()
-            left = min(left, self.maxx-width)
+            left = min(left, self.maxx - width)
             self.ui.left_spinbox.setValue(left)
 
         if height:
             top = self.ui.top_spinbox.value()
-            top = min(top, self.maxy-height)
+            top = min(top, self.maxy - height)
             self.ui.top_spinbox.setValue(top)
 
     def left_changed(self, new_left):
@@ -59,8 +78,8 @@ class CameraSetROIDialog(QtWidgets.QDialog):
         width = self.ui.width_spinbox.value()
         height = self.ui.height_spinbox.value()
 
-        top = int((self.maxy-height)/2)
-        left = int((self.maxx-width)/2)
+        top = int((self.maxy - height) / 2)
+        left = int((self.maxx - width) / 2)
 
         self.ui.top_spinbox.setValue(top)
         self.ui.left_spinbox.setValue(left)
@@ -69,8 +88,8 @@ class CameraSetROIDialog(QtWidgets.QDialog):
 
         self.roi = roi
 
-        self.maxx = int(settings.frame_width/settings.binning)
-        self.maxy = int(settings.frame_height/settings.binning)
+        self.maxx = int(settings.frame_width / settings.binning)
+        self.maxy = int(settings.frame_height / settings.binning)
 
         self.ui.left_spinbox.setValue(roi[0])
         self.ui.top_spinbox.setValue(roi[1])
@@ -96,6 +115,6 @@ class CameraSetROIDialog(QtWidgets.QDialog):
 
         if result == QtWidgets.QDialog.Accepted:
             return (self.ui.left_spinbox.value(), self.ui.top_spinbox.value(),
-                        self.ui.width_spinbox.value(), self.ui.height_spinbox.value())
+                    self.ui.width_spinbox.value(), self.ui.height_spinbox.value())
         else:
             return None

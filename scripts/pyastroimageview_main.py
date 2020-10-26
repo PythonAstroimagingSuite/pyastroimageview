@@ -1,5 +1,24 @@
 #!/usr/bin/python
 #
+# pyastroimageview main script
+#
+# Copyright 2019 Michael Fulbright
+#
+#
+#    pyastroimageview is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
 # pyastroimageview
 #
 # Copyright 2018 Michael Fulbright <mike.fulbright@pobox.com>
@@ -8,7 +27,7 @@
 import logging
 
 # try to disable requests logging DEBUG
-import requests
+#import requests
 
 # for key in logging.Logger.manager.loggerDict:
 #     #print(key)
@@ -21,11 +40,6 @@ import math
 import sys
 from pyastrobackend.BackendConfig import get_backend_for_os
 BACKEND = get_backend_for_os()
-
-#if BACKEND == 'ASCOM':
-#    blacklist = sys.version_info.major == 3 and sys.version_info.minor == 6
-#    assert blacklist, 'ASCOM backend should be used with Python 3.6 ONLY'
-
 
 from datetime import datetime
 
@@ -136,7 +150,7 @@ class MainWindow(QtGui.QMainWindow):
 #        self.hfr_server = MeasureHFRServer()
 #        self.hfr_server.start()
         self.hfr_server = None
-        self.hfr_cur_widget = None # when doing a calc set to where result should go
+        self.hfr_cur_widget = None  # when doing a calc set to where result should go
 
         self.resize(560, 380)
         self.show()
@@ -154,9 +168,12 @@ class MainWindow(QtGui.QMainWindow):
         AppContainer.register('/program_settings', self.settings)
 
         # FIXME I don't like how this is working out:
-        #  - I have to pass settings into everything that accesses it (some ppl would consider this good design though)
-        #  - DeviceManager() is really just a container to make it convenient to hold all the actual hw managers - is this good design?
-        #  - coupling between UI and manager classes for a device (eg camera) seems like it could be handled more gracefully
+        #  - I have to pass settings into everything that accesses it (some ppl
+        #    would consider this good design though)
+        #  - DeviceManager() is really just a container to make it convenient
+        #    to hold all the actual hw managers - is this good design?
+        #  - coupling between UI and manager classes for a device (eg camera)
+        #    seems like it could be handled more gracefully
         #
         #  I don't have any ideas at the moment how to make this cleaner
 
@@ -214,11 +231,9 @@ class MainWindow(QtGui.QMainWindow):
             if not self.last_win_focus:
                 if not self.device_control_ui.isMinimized():
                     if not self.device_control_ui.isActiveWindow():
-#                        logging.info('activate device')
                         self.device_control_ui.activateWindow()
                 if not self.sequence_control_ui.isMinimized():
                     if not self.sequence_control_ui.isActiveWindow():
-#                        logging.info('activate seq')
                         self.sequence_control_ui.activateWindow()
         self.last_win_focus = win
 
@@ -229,7 +244,8 @@ class MainWindow(QtGui.QMainWindow):
 
         file_menu = self.menuBar().addMenu("&File")
 
-        open_file_action = QtGui.QAction(QtGui.QIcon(self.style().standardIcon(getattr(QtWidgets.QStyle, 'SP_DialogOpenButton'))), "Open file...", self)
+        open_button = getattr(QtWidgets.QStyle, 'SP_DialogOpenButton')
+        open_file_action = QtGui.QAction(QtGui.QIcon(self.style().standardIcon(open_button)), "Open file...", self)
         open_file_action.setStatusTip("Open file")
         open_file_action.triggered.connect(self.file_open)
         file_menu.addAction(open_file_action)
@@ -264,7 +280,7 @@ class MainWindow(QtGui.QMainWindow):
         self.status.showMessage(f'({int(x)}, {int(y)}) : {val}')
 
     def image_mouse_click(self, ev):
-        logging.info(f'image_mouse_click: {ev.pos()}, {ev.button()}')
+        logging.debug(f'image_mouse_click: {ev.pos()}, {ev.button()}')
 
     def current_view_changed(self, index):
         self.image_area_ui.clear_info()
@@ -282,8 +298,6 @@ class MainWindow(QtGui.QMainWindow):
         dlg.run(self.settings)
 
     def new_camera_image(self, result):
-#        logging.info(f'new_camera_image: {result}')
-
         complete_status, fits_doc = result
 
         if not complete_status:
@@ -300,7 +314,7 @@ class MainWindow(QtGui.QMainWindow):
         self.image_area_ui.update_info(imgdoc)
 
     def new_sequence_image(self, result):
-        logging.info(f'new_sequence_image: {result}')
+        logging.debug(f'new_sequence_image: {result}')
 
         fits_doc, filename, target_dir = result
 
@@ -314,13 +328,11 @@ class MainWindow(QtGui.QMainWindow):
         self.image_area_ui.clear_info()
         self.image_area_ui.update_info(imgdoc)
 
-
     # this is truncated version of handle_new_image() that DOES NOT
     # add all the FITS headers - it just finds the proper tab
     # and loads the image there
     def find_tab_for_new_image(self, tab_name, fits_doc):
-        logging.info('find_tab_for_new_image: START')
-
+        logging.debug('find_tab_for_new_image: START')
 
         tab_widget = self.image_area_ui.find_view_widget(tab_name)
 
@@ -430,7 +442,8 @@ class MainWindow(QtGui.QMainWindow):
         imgdoc.fits.set_focal_length(self.settings.telescope_focallen)
         aper_diam = self.settings.telescope_aperture
         aper_obst = self.settings.telescope_obstruction
-        aper_area = math.pi*(aper_diam/2.0*aper_diam/2.0)*(1-aper_obst*aper_obst/100.0/100.0)
+        aper_area = math.pi * (aper_diam / 2.0 * aper_diam / 2.0) \
+                            * (1 - aper_obst * aper_obst / 100.0 / 100.0)
         imgdoc.fits.set_aperture_diameter(aper_diam)
         imgdoc.fits.set_aperture_area(aper_area)
 
@@ -452,7 +465,7 @@ class MainWindow(QtGui.QMainWindow):
         if self.device_manager.mount.is_connected():
             ra, dec = self.device_manager.mount.get_position_radec()
 
-            radec = SkyCoord(ra=ra*u.hour, dec=dec*u.degree, frame='fk5')
+            radec = SkyCoord(ra=ra * u.hour, dec=dec * u.degree, frame='fk5')
             rastr = radec.ra.to_string(u.hour, sep=":", pad=True)
             decstr = radec.dec.to_string(alwayssign=True, sep=":", pad=True)
             imgdoc.fits.set_object_radec(rastr, decstr)
@@ -461,16 +474,16 @@ class MainWindow(QtGui.QMainWindow):
             if alt is None or az is None:
                 logging.warning('imagesequi: alt/az are None!')
             else:
-                altaz = AltAz(alt=alt*u.degree, az=az*u.degree)
+                altaz = AltAz(alt=alt * u.degree, az=az * u.degree)
                 altstr = altaz.alt.to_string(alwayssign=True, sep=":", pad=True)
                 azstr = altaz.az.to_string(alwayssign=True, sep=":", pad=True)
                 imgdoc.fits.set_object_altaz(altstr, azstr)
 
             now = Time.now()
             local_sidereal = now.sidereal_time('apparent',
-                                               longitude=self.settings.location_longitude*u.degree)
+                                               longitude=self.settings.location_longitude * u.degree)
             hour_angle = local_sidereal - radec.ra
-            logging.info(f'locsid = {local_sidereal} HA={hour_angle}')
+            logging.debug(f'locsid = {local_sidereal} HA={hour_angle}')
             if hour_angle.hour > 12:
                 hour_angle = (hour_angle.hour - 24.0)*u.hourangle
 
@@ -485,17 +498,20 @@ class MainWindow(QtGui.QMainWindow):
         # set by application version
         imgdoc.fits.set_software_info('pyastroview TEST')
 
-        logging.info('handle_new_image: DONE')
+        logging.debug('handle_new_image: DONE')
 
         return (imgdoc, tab_index)
 
     def file_open(self):
-        logging.info('file_open')
+        logging.debug('file_open')
         #self.image_filename = '../tmp/test3.fits'
 
-        filename, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open Image', '', 'FITS (*.fit *.fits)')
+        filename, _ = QtWidgets.QFileDialog.getOpenFileName(None,
+                                                            'Open Image',
+                                                            '',
+                                                            'FITS (*.fit *.fits)')
 
-        logging.info(f'file_open: {filename}')
+        logging.debug(f'file_open: {filename}')
 
         if len(filename) < 1:
             return
@@ -543,10 +559,9 @@ class MainWindow(QtGui.QMainWindow):
             filename = 'camera-temp.fits'
             imgdoc.fits.save_to_file(filename, overwrite=True)
 
-
         # FIXME make measure hfr params configurable
         if self.hfr_server is None:
-            logging.info('MeasureHFRServer is DISABLE so image will not be analyzed!')
+            logging.warning('MeasureHFRServer is DISABLED so image will not be analyzed!')
         else:
             worker = self.hfr_server.setup_measure_file_thread(filename, maxstars=100)
             worker.signals.result.connect(self._measure_hfr_result)
@@ -555,7 +570,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def _measure_hfr_result(self, result):
 #        if result:
-        logging.info(f'measure_hfr result RESULT0:{result[0]}\nRESULT1:{result[1]}')
+        logging.debug(f'measure_hfr result RESULT0:{result[0]}\nRESULT1:{result[1]}')
 
         if not result or (result[1].n_in + result[1].n_out) < 1:
             logging.error('_measure_hfr_result: no stars found!')
@@ -574,8 +589,9 @@ class MainWindow(QtGui.QMainWindow):
 
 # FOR DEBUGGING - enable setstyle in main below it will draw red boxes around elements
 class DiagnosticStyle(QtWidgets.QProxyStyle):
-    def drawControl(*args): #element, option, painter, widget):
-        logging.info(f'{len(args)} f{args}')
+
+    def drawControl(*args):  # element, option, painter, widget):
+        logging.debug(f'{len(args)} f{args}')
 #        if len(args) != 4:
 #            return
         element, tmpint, option, painter, widget = args

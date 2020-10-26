@@ -1,3 +1,22 @@
+#
+# Filterwheel interface
+#
+# Copyright 2019 Michael Fulbright
+#
+#
+#    pyastroimageview is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 import os
 import time
 import logging
@@ -11,7 +30,7 @@ from pyastroimageview.DeviceConfigurationUI import device_setup_ui
 
 class FilterWheelControlUI(QtWidgets.QWidget):
 
-    def __init__(self): #, filterwheel_manager, settings):
+    def __init__(self):
         super().__init__()
 
         self.ui = Ui_filterwheel_settings_widget()
@@ -67,7 +86,7 @@ class FilterWheelControlUI(QtWidgets.QWidget):
             pos = self.filterwheel_manager.get_position()
             posstr = f'{pos:05d}'
             if pos >= 0:
-#                logging.info(f'pos = {pos}')
+                # logging.debug(f'pos = {pos}')
                 posstr += f' {self.names[pos]}'
             self.ui.filterwheel_setting_position.setText(posstr)
 
@@ -89,7 +108,8 @@ class FilterWheelControlUI(QtWidgets.QWidget):
                 logging.warning('5 second delay for INDI to settle')
 
             if not rc:
-                QtWidgets.QMessageBox.critical(None, 'Error', 'Unable to connect to filterwheel!',
+                QtWidgets.QMessageBox.critical(None, 'Error',
+                                               'Unable to connect to filterwheel!',
                                                QtWidgets.QMessageBox.Ok)
                 return
 
@@ -99,12 +119,6 @@ class FilterWheelControlUI(QtWidgets.QWidget):
 
             self.ui.filterwheel_setting_filter_combobox.clear()
 
-# old un-pythonic!
-#            idx=0
-#            for n in self.names:
-#                self.ui.filterwheel_setting_filter_combobox.insertItem(idx, n)
-#                idx += 1
-
             for pos, name in enumerate(self.names):
                 self.ui.filterwheel_setting_filter_combobox.insertItem(pos, name)
 
@@ -113,7 +127,8 @@ class FilterWheelControlUI(QtWidgets.QWidget):
 
     def filterwheel_disconnect(self):
         if not self.filterwheel_manager.get_lock():
-            logging.error('FilterWheelControlUI: filterwheel_disconnect : could not get lock!')
+            logging.error('FilterWheelControlUI: filterwheel_disconnect : '
+                          'could not get lock!')
             QtWidgets.QMessageBox.critical(None, 'Error', 'Filterwheel is busy',
                                            QtWidgets.QMessageBox.Ok)
             return

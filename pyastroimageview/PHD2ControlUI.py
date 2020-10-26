@@ -1,3 +1,24 @@
+#
+# PHD2 control UI
+#
+# Copyright 2019 Michael Fulbright
+#
+#
+#    pyastroimageview is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+import sys
+import traceback
 import logging
 
 from PyQt5 import QtCore, QtWidgets
@@ -46,7 +67,7 @@ class PHD2ControlUI(QtWidgets.QWidget):
         self.ui = Ui_PHD2ControlUI()
         self.ui.setupUi(self)
 
-        #FIXME have CameraControl send signals - dont connect on internal widgets from here!
+         #FIXME have CameraControl send signals - dont connect on internal widgets from here!
         self.ui.phd2_connect.toggled.connect(self.phd2_connect_toggled)
         self.ui.phd2_pause.toggled.connect(self.phd2_pause_toggled)
         self.ui.phd2_settings.pressed.connect(self.phd2_settings)
@@ -79,7 +100,6 @@ class PHD2ControlUI(QtWidgets.QWidget):
             self.ui.phd2_connect.setText('Disconnect')
         else:
             self.ui.phd2_connect.setText('Connect')
-
 
     def set_pauseunpause_state(self, state):
         """Controls pause/unpause button state"""
@@ -169,17 +189,16 @@ class PHD2ControlUI(QtWidgets.QWidget):
             self.phd2_resume()
 
     def phd2_pause(self):
-        logging.info('phd2_pause')
+        logging.debug('phd2_pause')
         self.phd2_manager.set_pause(True)
         self.set_pauseunpause_state(True)
 
     def phd2_resume(self):
         logging.info('phd2 resume')
 
-        import sys, traceback
         stack = sys._getframe(1)
         f = traceback.extract_stack(stack)[-1]
-        logging.info(f'phd2_resume called from {f}')
+        logging.debug(f'phd2_resume called from {f}')
 
         self.phd2_manager.set_pause(False)
         self.set_pauseunpause_state(False)
@@ -220,5 +239,3 @@ class PHD2ControlUI(QtWidgets.QWidget):
         self.set_widget_states()
         self.set_pauseunpause_state(False)
         self.disconnecting = False
-
-

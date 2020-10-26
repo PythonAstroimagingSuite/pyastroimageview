@@ -1,3 +1,22 @@
+#
+# FITS image object
+#
+# Copyright 2019 Michael Fulbright
+#
+#
+#    pyastroimageview is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 import time
 import logging
 from astropy.io import fits
@@ -61,6 +80,7 @@ class FITSImage:
             dateobs = time.strptime(datestr, '%Y-%m-%dT%H:%M:%S')
             #logging.debug(f'get_dateobs: dateobs = {dateobs}')
         except:
+            # FIXME need more specific exception
             logging.error(f'Unable do convert dateobs {datestr}', exc_info=True)
         return dateobs
 
@@ -125,10 +145,9 @@ class FITSImage:
         self.set_header_keyvalue('SWCREATE', swinfo)
 
     def __str__(self):
-        r=''
+        r = ''
         r += 'FITS HEADER:\n'
-        # FIXME this is unpythonic!
+        # FIXME this is unpythonic but isnt too ugly
         for k in self.hdulist[0].header.keys():
             r += f' {k}: {self.hdulist[0].header[k]}'
         return r
-

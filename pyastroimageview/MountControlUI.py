@@ -1,3 +1,22 @@
+#
+# Mount control UI
+#
+# Copyright 2019 Michael Fulbright
+#
+#
+#    pyastroimageview is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 import logging
 
 # work in offline mode for now get timeouts for IERS
@@ -22,7 +41,7 @@ from pyastroimageview.DeviceConfigurationUI import device_setup_ui
 
 class MountControlUI(QtWidgets.QWidget):
 
-    def __init__(self): #, mount_manager, settings):
+    def __init__(self):
         super().__init__()
 
         self.ui = Ui_mount_settings_widget()
@@ -73,7 +92,7 @@ class MountControlUI(QtWidgets.QWidget):
 
         if self.mount_manager.is_connected():
             (ra, dec) = self.mount_manager.get_position_radec()
-            radec = SkyCoord(ra=ra*u.hour, dec=dec*u.degree, frame='fk5')
+            radec = SkyCoord(ra=ra * u.hour, dec=dec * u.degree, frame='fk5')
             rastr = radec.ra.to_string(u.hour, sep=":", precision=1, pad=True)
             decstr = radec.dec.to_string(alwayssign=True, sep=":", precision=1, pad=True)
             self.ui.mount_setting_position_ra.setText(rastr)
@@ -82,7 +101,7 @@ class MountControlUI(QtWidgets.QWidget):
             (alt, az) = self.mount_manager.get_position_altaz()
 
             if alt is not None and az is not None:
-                altaz = AltAz(alt=alt*u.degree, az=az*u.degree)
+                altaz = AltAz(alt=alt * u.degree, az=az * u.degree)
 #                logging.info(f'altaz from mount is {altaz}')
             else:
                 # FIXME Add code to compute alt/az when not given by mount
@@ -90,9 +109,9 @@ class MountControlUI(QtWidgets.QWidget):
 
                 # FIXME we don't really force user to set lat/lon so this will give
                 #       wrong results by default!
-                site_loc = EarthLocation(lat=self.settings.location_latitude*u.degree,
-                                         lon=self.settings.location_longitude*u.degree,
-                                         height=self.settings.location_altitude*u.meter)
+                site_loc = EarthLocation(lat=self.settings.location_latitude * u.degree,
+                                         lon=self.settings.location_longitude * u.degree,
+                                         height=self.settings.location_altitude * u.meter)
 
 #                logging.info(f'site_loc = {site_loc}')
 #                logging.info(f'timezeon = {self.settings.location_tz}')
@@ -130,7 +149,8 @@ class MountControlUI(QtWidgets.QWidget):
         if self.settings.mount_driver:
             rc = self.mount_manager.connect(self.settings.mount_driver)
             if not rc:
-                QtWidgets.QMessageBox.critical(None, 'Error', 'Unable to connect to mount!',
+                QtWidgets.QMessageBox.critical(None, 'Error',
+                                               'Unable to connect to mount!',
                                                QtWidgets.QMessageBox.Ok)
                 return
 

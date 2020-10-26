@@ -1,3 +1,22 @@
+#
+# Camera hardware manager
+#
+# Copyright 2019 Michael Fulbright
+#
+#
+#    pyastroimageview is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 import sys
 import traceback
 import time
@@ -20,8 +39,12 @@ class CameraState(Enum):
     ERROR = 5          # fatal error condition in camera
 
     def exposure_in_progress(self):
-        r = self.value != self.UNKNOWN.value and self.value != self.IDLE.value and self.value != self.ERROR.value
-        return r
+        return self.value not in [self.UNKNOWN.value,
+                                  self.IDLE.value,
+                                  self.ERROR.value]
+        # older way not as nice I think left here for reference
+        # r = self.value != self.UNKNOWN.value and self.value != self.IDLE.value and self.value != self.ERROR.value
+        # return r
 
     def pretty_name(self):
         return self._name_
@@ -34,10 +57,10 @@ class CameraStatus:
         self.image_ready = False
 
     def __str__(self):
-        return f'connected = {self.connected} ' + \
-               f'state = {self.state} ' + \
-               f'exposure_progress = {self.exposure_progress} ' + \
-               f'image_ready = {self.image_ready}\n'
+        return f'connected = {self.connected} ' \
+               + f'state = {self.state} ' \
+               + f'exposure_progress = {self.exposure_progress} ' \
+               + f'image_ready = {self.image_ready}\n'
 
 class CameraSettings:
     def __init__(self):
@@ -48,10 +71,10 @@ class CameraSettings:
         self.camera_gain = None
 
     def __str__(self):
-        return f'size = {self.frame_width} x {self.frame_height} ' + \
-               f'bin = {self.binning} ' + \
-               f'roi = {self.roi} ' + \
-               f'camera_gain = {self.camera_gain}\n'
+        return f'size = {self.frame_width} x {self.frame_height} ' \
+               + f'bin = {self.binning} ' \
+               + f'roi = {self.roi} ' \
+               + f'camera_gain = {self.camera_gain}\n'
 
 class CameraManagerSignals(QtCore.QObject):
     """ Signals for camera state.
@@ -69,7 +92,6 @@ class CameraManagerSignals(QtCore.QObject):
     exposure_status = QtCore.pyqtSignal(int)
     status = QtCore.pyqtSignal(CameraStatus)
 
-#class CameraManager(Backend.Camera):
 
 class CameraManager:
 
@@ -93,8 +115,6 @@ class CameraManager:
             return method(self, *args, **kwargs)
         return wrapped
 
-
-#    def __init__(self, backend):
     def __init__(self, backend):
         super().__init__(backend)
 
@@ -115,7 +135,7 @@ class CameraManager:
         self.timer.start(1000)
 
     def camera_status_poll(self):
-#        logging.info('camera_manager:camera_status_poll()')
+        # logging.debug('camera_manager:camera_status_poll()')
         status = self.get_status()
         self.signals.status.emit(status)
 
@@ -127,14 +147,15 @@ class CameraManager:
                     self.exposure_start_time = time.time()
 
             if status.image_ready:
-                logging.info('cameramanager: image_ready!')
+                logging.debug('cameramanager: image_ready!')
                 self.watch_for_exposure_end = False
 
                 # FIXME this doesnt seem to detect aborted exposures reliably
                 progress = self.get_exposure_progress()
-                remaining = (self.current_exposure_length*progress)/100.0
+                remaining = (self.current_exposure_length * progress) / 100.0
                 complete = progress >= 98 or remaining < 1
-                logging.info(f'{self.get_exposure_progress()} {progress} {self.current_exposure_length} { remaining} {complete}')
+                logging.debug(f'{self.get_exposure_progress()} {progress} '
+                              f'{self.current_exposure_length} { remaining} {complete}')
 
                 # FIXME Assumes exposure length was equal to requested - should
                 # check backend to see if actual exposure length is available
@@ -142,7 +163,7 @@ class CameraManager:
                 # to None if image failed!
 
                 # put together a FITS document with image data
-                logging.info('get_image_data')
+                logging.debug('get_image_data')
                 image_data = super().get_image_data()
 
                 #
@@ -154,17 +175,19 @@ class CameraManager:
                 try:
                     pri_header = image_data[0].header
                     fits_image = FITSImage(image_data[0].data)
+
                     # must be FITS so munge into a FITSImage() object
-                    logging.info('get_image_data() returned a FITS object')
+                    logging.debug('get_image_data() returned a FITS object')
                     for key, val in pri_header.items():
                         fits_image.set_header_keyvalue(key, val)
 
                 except:
+                    # FIXME need better way to determine the return image type
                     # must be numpy array
-                    logging.info('get_image_data() returned numpy array')
-                    logging.info('FITSImage()')
+                    logging.debug('get_image_data() returned numpy array')
+                    logging.debug('FITSImage()')
                     fits_image = FITSImage(image_data)
-                    logging.info('FITSimage data xfer done')
+                    logging.debug('FITSimage data xfer done')
 
                 fits_image.set_exposure(self.current_exposure_length)
                 fits_image.set_dateobs(self.exposure_start_time)
@@ -195,7 +218,7 @@ class CameraManager:
                 if ccd_usb is not None:
                     fits_image.set_header_keyvalue('CCD_USBBANDWIDTH', ccd_usb)
 
-                logging.info('cameramanager: image ready about to clean state vars')
+                logging.debug('cameramanager: image ready about to clean state vars')
                 self.exposure_start_time = None
                 self.current_exposure_length = None
                 self.exposure_camera_settings = None
@@ -211,27 +234,27 @@ class CameraManager:
 
                 self.signals.exposure_complete.emit((complete, fits_image))
 
-                logging.info('poll image handling complete')
+                logging.debug('poll image handling complete')
 
     def get_lock(self):
-        logging.info(f'camera get_lock before: {self.lock.available()}')
+        logging.debugo(f'camera get_lock before: {self.lock.available()}')
 
         stack = sys._getframe(1)
         f = traceback.extract_stack(stack)[-1]
-        logging.info(f'get_lock: called from {f}')
+        logging.debug(f'get_lock: called from {f}')
 
         rc = self.lock.tryAcquire(1)
-        logging.info(f'camera get_lock after: {rc} {self.lock.available()}')
+        logging.debug(f'camera get_lock after: {rc} {self.lock.available()}')
         if rc:
             self.signals.lock.emit(True)
         return rc
 
     def release_lock(self):
-        logging.info(f'camera release lock before: {self.lock.available()}')
+        logging.debug(f'camera release lock before: {self.lock.available()}')
 
         stack = sys._getframe(1)
-        f = traceback.extract_stack(stack)#[-1]
-        logging.info(f'release_lock: called from {f}')
+        f = traceback.extract_stack(stack)  # [-1]
+        logging.debug(f'release_lock: called from {f}')
 
         # if we release when resources are available it ADDS more resources
         if self.lock.available() == 0:
@@ -241,7 +264,7 @@ class CameraManager:
             logging.error('lock was already released!')
             raise Exception
 
-        logging.info(f'camera release lock after: {self.lock.available()}')
+        logging.debug(f'camera release lock after: {self.lock.available()}')
         self.signals.lock.emit(False)
         return True
 
@@ -253,7 +276,7 @@ class CameraManager:
 
     @checklock
     def connect(self, driver):
-        logging.info('cameramanager.connect!')
+        logging.debug('cameramanager.connect!')
         if not super().is_connected():
             try:
                 rc = super().connect(driver)
@@ -262,6 +285,7 @@ class CameraManager:
                     return False
 
             except Exception:
+                # FIXME need more specific expection
                 logging.error('CameraManager:connect() Exception ->', exc_info=True)
                 return False
 
@@ -300,7 +324,8 @@ class CameraManager:
         settings.roi = super().get_frame()
 
         settings.camera_gain = super().get_camera_gain()
-        logging.debug(f'get_camera_settings: camera_gain = {settings.camera_gain} {type(settings.camera_gain)}')
+        logging.debug(f'get_camera_settings: camera_gain = {settings.camera_gain}'
+                      f' {type(settings.camera_gain)}')
 
         return settings
 
@@ -320,15 +345,15 @@ class CameraManager:
             super().start_exposure(expose)
 
             if not super().supports_progress():
-                logging.info('camera_manager:start_exposure() started timer')
+                logging.debug('camera_manager:start_exposure() started timer')
                 self.exposure_timer = QtCore.QTimer()
-                self.exposure_timer.start(expose*1000)
+                self.exposure_timer.start(expose * 1000)
 
             self.watch_for_exposure_end = True
             self.exposure_start_time = None
             self.current_exposure_length = expose
             self.exposure_camera_settings = self.get_camera_settings()
-            logging.info(f'exposure_camera_settings = {self.exposure_camera_settings}')
+            logging.debug(f'exposure_camera_settings = {self.exposure_camera_settings}')
             self.signals.exposure_start.emit(False)
 
     @checklock
@@ -340,16 +365,16 @@ class CameraManager:
 
     def get_exposure_progress(self):
         # if we setup a timer use it other rely on backend
-#        logging.info(f'camera_manager:get_exposure_progress() ')
+        # logging.debug(f'camera_manager:get_exposure_progress() ')
         if self.exposure_timer:
             interval = self.exposure_timer.interval()
             remaining = self.exposure_timer.remainingTime()
-#            logging.info(f'camera_manager:get_exposure_progress()  {interval} {remaining}')
+            # logging.debug(f'camera_manager:get_exposure_progress()  {interval} {remaining}')
             if interval == 0 or remaining < 0:
                 remaining = 0
                 progress = 100.0
             else:
-                progress = (100.0*(interval-remaining)/interval)
+                progress = (100.0 * (interval - remaining) / interval)
             return progress
         else:
             return super().get_exposure_progress()
@@ -364,9 +389,8 @@ class CameraManager:
             Data is in row-major
         """
         if self.camera.is_connected():
-            logging.info('getting image data')
+            logging.debug('getting image data')
             return super().get_image_data()
         else:
             logging.warning('cant get image data not connected!')
             return None
-

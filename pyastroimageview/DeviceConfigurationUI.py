@@ -1,8 +1,27 @@
+#
+# Device setup interface
+#
+# Copyright 2019 Michael Fulbright
+#
+#
+#    pyastroimageview is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 import logging
 
 from PyQt5 import QtWidgets
 
-from pyastrobackend.BackendConfig import get_backend_for_os, get_backend, get_backend_choices
+from pyastrobackend.BackendConfig import get_backend_choices
 from pyastroimageview.ApplicationContainer import AppContainer
 
 # FIXME nasty looks into objects with getattr but
@@ -69,15 +88,18 @@ def backend_setup_ui(current_backend):
     else:
         selection = 0
 
-    choice, ok = QtWidgets.QInputDialog.getItem(None, 'Choose Backend',
-                                                       'Backend', possible_backends, selection)
+    choice, ok = QtWidgets.QInputDialog.getItem(None,
+                                                'Choose Backend',
+                                                'Backend',
+                                                possible_backends,
+                                                selection)
     if ok:
         new_backend = choice
 
     return new_backend
 
 def driver_setup_ui(backend, manager, driver, device_class):
-    logging.debug(f'driver_setup_ui: backend={backend} manager={manager} ' + \
+    logging.debug(f'driver_setup_ui: backend={backend} manager={manager} '
                   f'driver={driver} device_class={device_class}')
     if driver:
         last_choice = driver
@@ -87,7 +109,8 @@ def driver_setup_ui(backend, manager, driver, device_class):
     new_driver = None
     logging.debug(f'manager = {dir(manager)}')
     logging.debug(f'manager module = {manager.__module__}')
-    logging.debug(f'manager.has_chooser = {manager.has_chooser} {manager.has_chooser()}')
+    logging.debug(f'manager.has_chooser = {manager.has_chooser} '
+                  f'{manager.has_chooser()}')
     if manager.has_chooser():
         choice = manager.show_chooser(last_choice)
         if len(choice) > 0:
@@ -105,8 +128,11 @@ def driver_setup_ui(backend, manager, driver, device_class):
         else:
             selection = 0
 
-        choice, ok = QtWidgets.QInputDialog.getItem(None, 'Choose Driver',
-                                                           'Driver', choices, selection)
+        choice, ok = QtWidgets.QInputDialog.getItem(None,
+                                                    'Choose Driver',
+                                                    'Driver',
+                                                    choices,
+                                                    selection)
         if ok:
             new_driver = choice
 
