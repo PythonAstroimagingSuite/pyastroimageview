@@ -144,7 +144,7 @@ class CameraControlUI(QtWidgets.QWidget):
                     perc = min(100, status.exposure_progress)
                     perc_string = f'EXPOSING {perc:.0f}% ' \
                                   + f'{perc/100.0 * self.current_exposure:.2f} ' \
-                                  + 'of {self.current_exposure}'
+                                  + f'of {self.current_exposure}'
                 else:
                     perc_string = f'{status.state.pretty_name()}'
             else:
@@ -157,9 +157,8 @@ class CameraControlUI(QtWidgets.QWidget):
 
             self.ui.camera_setting_progress.setText(perc_string)
 
-            delta_t = time.time() - self.temperature_poll_last
             if (self.temperature_poll_last is None
-                or delta_t > self.temperature_poll_interval):
+                or (time.time() - self.temperature_poll_last) > self.temperature_poll_interval):
                 curtemp = self.camera_manager.get_current_temperature()
                 curpower = self.camera_manager.get_cooler_power()
                 if curpower is None:
@@ -178,7 +177,7 @@ class CameraControlUI(QtWidgets.QWidget):
 
     def camera_exposure_complete(self, result):
         logging.debug(f'CameraControlUI:cam_exp_comp: result={result} '
-                     f'self.state={self.state}')
+                      f'self.state={self.state}')
         if self.state != EXPOSURE_STATE_IDLE:
             if self.state != EXPOSURE_STATE_CANCEL:
                 # notify about current image

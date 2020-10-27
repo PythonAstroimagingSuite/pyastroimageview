@@ -237,7 +237,7 @@ class CameraManager:
                 logging.debug('poll image handling complete')
 
     def get_lock(self):
-        logging.debugo(f'camera get_lock before: {self.lock.available()}')
+        logging.debug(f'camera get_lock before: {self.lock.available()}')
 
         stack = sys._getframe(1)
         f = traceback.extract_stack(stack)[-1]

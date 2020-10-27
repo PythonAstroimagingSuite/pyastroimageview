@@ -864,7 +864,7 @@ class RPCServer:
                     dec_problem = dec is None or (not isinstance(dec, int) and not isinstance(dec, float))
 
                     if ra_problem or dec_problem:
-                        logging.error(f'RPCServer:method {method}: method request
+                        logging.error(f'RPCServer:method {method}: method request '
                                       f'but need ra/dec - recvd {ra}/{dec}')
                         self.send_json_error_response(socket,
                                                       JSON_INVALID_ERRCODE,
@@ -936,8 +936,8 @@ class RPCServer:
 
                     pos_problem = pos is None or not isinstance(pos, int)
                     if pos_problem:
-                        logging.error(f'RPCServer:method {method}: method request ;
-                                      fbut need position - recvd {pos}')
+                        logging.error(f'RPCServer:method {method}: method request '
+                                      f'but need position - recvd {pos}')
                         self.send_json_error_response(socket,
                                                       JSON_INVALID_ERRCODE,
                                                       f'Invalid request - {method}',
@@ -1066,7 +1066,7 @@ class RPCServer:
         fits_doc.set_focal_length(settings.telescope_focallen)
         aper_diam = settings.telescope_aperture
         aper_obst = settings.telescope_obstruction
-        aper_area = math.pi * (aper_diam / 2.0 * aper_diam / 2.0)
+        aper_area = math.pi * (aper_diam / 2.0 * aper_diam / 2.0) \
                             * (1 - aper_obst * aper_obst / 100.0 / 100.0)
         fits_doc.set_aperture_diameter(aper_diam)
         fits_doc.set_aperture_area(aper_area)
