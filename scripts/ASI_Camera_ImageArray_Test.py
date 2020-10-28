@@ -52,11 +52,11 @@ def print_members(obj, obj_name="placeholder_name"):
     # return VARIANT(VT_VARIENT, data)
 
 # def vararr(*data):
-    # if (  len(data) == 1 and 
+    # if (  len(data) == 1 and
           # isinstance(data, collections.Iterable) ):
         # data = data[0]
-    # return map(variant, data)    
-    
+    # return map(variant, data)
+
 #camChooser = win32com.client.Dispatch("DriverHelper.Chooser")
 #camChooser.DeviceType = "camera"
 #camID = "ASCOM.ASICamera2_2.Camera"
@@ -108,9 +108,9 @@ print("SetCCDTemperature    : ", cam.SetCCDTemperature)
     # else:
         # print("method:\t",method)
 
-print_members(cam)        
-        
-        
+print_members(cam)
+
+
 import time
 print('start')
 cam.StartExposure(1, True)

@@ -32,7 +32,7 @@ print("DriverVersion        : ", cam.DriverVersion)
 print("MaxBinX x MaxBinY    : ", cam.MaxBinX, cam.MaxBinY)
 print("PixelSize            : ", cam.PixelSizeX, cam.PixelSizeY)
 print("SetCCDTemperature    : ", cam.SetCCDTemperature)
-        
+
 import time
 print('start')
 cam.StartExposure(1, True)
