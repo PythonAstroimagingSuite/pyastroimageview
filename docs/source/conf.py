@@ -31,19 +31,24 @@ release = '0.0.1'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.doctest',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.todo',
-    'sphinx.ext.coverage',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.ifconfig',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.githubpages',
+        'sphinx.ext.autodoc',
+        'sphinx.ext.autosummary',
+        'sphinx.ext.autosectionlabel',
+        'sphinx.ext.napoleon',
+        'sphinx_rtd_theme'
 ]
+
+
+# prevent name collision from 'Bugfixes' in all release notes
+autosectionlabel_prefix_document = True
+
+# disable Google style (use NumPy)
+napoleon_google_docstring = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
+
+autosummary_generate = True
 
 # The master toctree document.
 master_doc = 'index'
@@ -56,6 +61,9 @@ exclude_patterns = []
 # by default do not highlight keywords in blocks
 highlight_language = 'none'
 
+# document __init__() also
+autoclass_content = 'both'
+
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
@@ -63,15 +71,15 @@ highlight_language = 'none'
 #
 #html_theme = 'alabaster'
 
-html_theme = 'agogo'
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-html_theme_options = {
-                        'body_max_width' : '80%'
-                     }
+# html_theme_options = {
+#                         'body_max_width' : '80%'
+#                      }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
