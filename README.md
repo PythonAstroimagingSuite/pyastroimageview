@@ -3,8 +3,8 @@ Python Astroimaging Suite
 
 Check out the PythonAstroimagingSuite at https://github.com/PythonAstroimagingSuite/.
 
-pyastrometry
-------------
+pyastroimageview
+----------------
 
 Imaging control program that handles connections to all equipment as well as running
 imaging sequences to capture data.
