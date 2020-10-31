@@ -182,6 +182,7 @@ class MainWindow(QtGui.QMainWindow):
         rc = self.device_manager.connect_backends()
         if not rc:
             logging.error('Failed to connect to backend!')
+            logging.error('Make sure any device servers (eg. INDI/Alpaca) are running.')
             sys.exit(-1)
 
 #        self.camera_control_ui = CameraControlUI(self.device_manager.camera, self.settings)
