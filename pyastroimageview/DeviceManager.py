@@ -100,7 +100,7 @@ class DeviceManager:
     def __init__(self):
         # get settings
         self.settings = AppContainer.find('/program_settings')
-        logging.debug(f'DeviceManaer init(): self.settings = {self.settings}')
+        logging.debug(f'DeviceManager init(): self.settings = {self.settings}')
 
         # set proxy backend objects that will never change
         self.camera_backend = BackendProxy()
@@ -237,7 +237,7 @@ class DeviceManager:
             logging.error('Error connecting to camera backend')
             return rc
 
-        logging.debug('Connected focsuer backend')
+        logging.debug('Connected focuser backend')
         rc = self.focuser_backend.connect()
         if not rc:
             logging.error('Error connecting to focuser backend')
