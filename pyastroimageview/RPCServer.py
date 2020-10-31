@@ -346,67 +346,72 @@ class RPCServer:
                     self.exposure_ongoing_socket = socket
 
                     # if doing DSS download grab image and call exposure complete handler
-                    if DSS_CAMERA:
-                        MAX_DSS_DOWNLOAD_PIXELS = 1024 * 1024  # largest # pixels to download
+                    #
+                    # MSF 10/31/20 - Disabled this completely as it was causing
+                    #                problems building conda packages and I
+                    #                don't use it often.
+                    #
+                    # if DSS_CAMERA:
+                    #     MAX_DSS_DOWNLOAD_PIXELS = 1024 * 1024  # largest # pixels to download
 
-                        if new_settings.roi[2] * new_settings.roi[3] > MAX_DSS_DOWNLOAD_PIXELS:
-                            logging.error('Attempt to SkyView download too large an image!')
-                            logging.error(f'roi = {new_settings.roi}')
-                            logging.error(f'MAX PIX DOWNLOAD = {MAX_DSS_DOWNLOAD_PIXELS}')
-                            sys.exit(1)
+                    #     if new_settings.roi[2] * new_settings.roi[3] > MAX_DSS_DOWNLOAD_PIXELS:
+                    #         logging.error('Attempt to SkyView download too large an image!')
+                    #         logging.error(f'roi = {new_settings.roi}')
+                    #         logging.error(f'MAX PIX DOWNLOAD = {MAX_DSS_DOWNLOAD_PIXELS}')
+                    #         sys.exit(1)
 
-                        from astroquery.skyview import SkyView
-                        import astropy.units as u
+                    #     from astroquery.skyview import SkyView
+                    #     import astropy.units as u
 
-                        if not self.device_manager.mount.is_connected():
-                            logging.error(f'DSS_CAMERA - mount not connected!')
-                            sys.exit(1)
+                    #     if not self.device_manager.mount.is_connected():
+                    #         logging.error(f'DSS_CAMERA - mount not connected!')
+                    #         sys.exit(1)
 
-                        ra, dec = self.device_manager.mount.get_position_radec()
-                        logging.debug(f'mount ra/dec (hour/deg) = {ra} {dec}')
+                    #     ra, dec = self.device_manager.mount.get_position_radec()
+                    #     logging.debug(f'mount ra/dec (hour/deg) = {ra} {dec}')
 
-                        # we are assuming mount coordinates are JNOW - need to precess
-                        radec_jnow = SkyCoord(f'{ra} {dec}', unit=(u.hour, u.deg), frame='fk5', equinox=Time.now())
-                        logging.debug(f'mount jnow = {radec_jnow.ra.to_string(u.hour, sep=":")} '
-                                      f'{radec_jnow.dec.to_string(u.deg, sep=":", alwayssign=True)}')
+                    #     # we are assuming mount coordinates are JNOW - need to precess
+                    #     radec_jnow = SkyCoord(f'{ra} {dec}', unit=(u.hour, u.deg), frame='fk5', equinox=Time.now())
+                    #     logging.debug(f'mount jnow = {radec_jnow.ra.to_string(u.hour, sep=":")} '
+                    #                   f'{radec_jnow.dec.to_string(u.deg, sep=":", alwayssign=True)}')
 
-                        radec_j2000 = radec_jnow.transform_to(FK5(equinox='J2000'))
-                        logging.debug(f'mount j2000 = {radec_j2000.ra.to_string(u.hour, sep=":")} '
-                                      f'{radec_j2000.dec.to_string(u.deg, sep=":", alwayssign=True)}')
+                    #     radec_j2000 = radec_jnow.transform_to(FK5(equinox='J2000'))
+                    #     logging.debug(f'mount j2000 = {radec_j2000.ra.to_string(u.hour, sep=":")} '
+                    #                   f'{radec_j2000.dec.to_string(u.deg, sep=":", alwayssign=True)}')
 
-                        sv = SkyView()
+                    #     sv = SkyView()
 
-                        posstr = f'{radec_j2000.ra.degree} {radec_j2000.dec.degree}'
-                        pixelstr = f'{int(new_settings.roi[2])}, {int(new_settings.roi[3])}'
-                        width = new_settings.roi[2] * DSS_CAMERA_PIXELSCALE * new_settings.binning / 3600.0
-                        height = new_settings.roi[3] * DSS_CAMERA_PIXELSCALE * new_settings.binning / 3600.0
-                        logging.debug(f'Loading SkyView with pos={posstr} (J2000)'
-                                      f' pixels={pixelstr} '
-                                      f' height={height} '
-                                      f' width={width}')
-                        paths = sv.get_images(position=posstr,
-                                              coordinates='J2000',
-                                              survey=['DSS'],
-                                              pixels=pixelstr,
-                                              width=width * u.degree,
-                                              height=height * u.degree)
-                        logging.debug(f'paths={paths}')
-                        p = paths[0]
-                        p.writeto('a.fits', overwrite=True)
+                    #     posstr = f'{radec_j2000.ra.degree} {radec_j2000.dec.degree}'
+                    #     pixelstr = f'{int(new_settings.roi[2])}, {int(new_settings.roi[3])}'
+                    #     width = new_settings.roi[2] * DSS_CAMERA_PIXELSCALE * new_settings.binning / 3600.0
+                    #     height = new_settings.roi[3] * DSS_CAMERA_PIXELSCALE * new_settings.binning / 3600.0
+                    #     logging.debug(f'Loading SkyView with pos={posstr} (J2000)'
+                    #                   f' pixels={pixelstr} '
+                    #                   f' height={height} '
+                    #                   f' width={width}')
+                    #     paths = sv.get_images(position=posstr,
+                    #                           coordinates='J2000',
+                    #                           survey=['DSS'],
+                    #                           pixels=pixelstr,
+                    #                           width=width * u.degree,
+                    #                           height=height * u.degree)
+                    #     logging.debug(f'paths={paths}')
+                    #     p = paths[0]
+                    #     p.writeto('a.fits', overwrite=True)
 
-                        from pyastroimageview.FITSImage import FITSImage
+                    #     from pyastroimageview.FITSImage import FITSImage
 
-                        pri_header = p[0].header
-                        fits_image = FITSImage(p[0].data)
-                        # must be FITS so munge into a FITSImage() object
-                        logging.debug('get_image_data() returned a FITS object')
-                        for key, val in pri_header.items():
-                            # Comment/history tends to cause output issues when debugging so just skip
-                            if key in ['COMMENT', 'HISTORY']:
-                                continue
-                            fits_image.set_header_keyvalue(key, val)
+                    #     pri_header = p[0].header
+                    #     fits_image = FITSImage(p[0].data)
+                    #     # must be FITS so munge into a FITSImage() object
+                    #     logging.debug('get_image_data() returned a FITS object')
+                    #     for key, val in pri_header.items():
+                    #         # Comment/history tends to cause output issues when debugging so just skip
+                    #         if key in ['COMMENT', 'HISTORY']:
+                    #             continue
+                    #         fits_image.set_header_keyvalue(key, val)
 
-                        self.camera_exposure_complete((True, fits_image))
+                    #     self.camera_exposure_complete((True, fits_image))
                 elif method == 'abort_image':
                     # 2019/10/07 MSF Added to allow RPC stop of exposure
                     logging.info('RPC - aborting current exposure (if any)')
