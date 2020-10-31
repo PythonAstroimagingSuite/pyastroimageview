@@ -61,8 +61,8 @@ setup(
                       'numpy>=1.11.0',
                       'configobj==5.0.6',
                       'astropy>=3.1.0',
-                      'astroquery>=0.3.0',
                       'pyqtgraph<=0.10.0',
+                    #  'astroquery>=0.3.0',
                     #  'PyQt5>=5.0.0'
                      ],  # Optional
 
