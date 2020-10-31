@@ -3,3 +3,8 @@
 *__pycache**
 *.fit
 *.fits
+conda_build
+conda_packages
+.spyproject/
+docs/build/
+pyastroimageview.egg-info/
