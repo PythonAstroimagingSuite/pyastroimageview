@@ -4,6 +4,7 @@ package:
 
 source:
   git_rev:
+  #git_url: git@waxwing:/opt/git/Astronomy/Python/Utilities/pyastroimageview.gits
   git_url: git@waxwing:/opt/git/Astronomy/Python/Utilities/pyastroimageview.git
 
 requirements:
@@ -11,11 +12,11 @@ requirements:
    - python
    - setuptools
   run:
-   - python >= 3.6, <3.7
+   - python >=3.7, <3.8
    - numpy >=1.15
    - astropy >=3.0.4
    - configobj >=5.0.6
-   - pystarutils >=0.6
+   - pyastrobackend >=0.10.0
    - pyqt >=5.9.2
    - pyqtgraph >=0.10.0
 
