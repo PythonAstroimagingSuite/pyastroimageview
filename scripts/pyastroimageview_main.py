@@ -42,6 +42,8 @@ import math
 import sys
 import time
 import json
+import subprocess
+import shlex
 
 from pyastrobackend.BackendConfig import get_backend_for_os
 BACKEND = get_backend_for_os()
@@ -69,7 +71,7 @@ from PyQt5 import QtCore, QtWidgets, QtGui
 # need to work out a better solution using HFD code in hfdfocus?
 #from pystarutils.measurehfrserver import MeasureHFRServer
 
-from hfdfocus.measure_hfr_server import MeasureHFRClient
+from hfdfocus.measure_hfr_server import MeasureHFRClientStdin
 from hfdfocus.MultipleStarFitHFD import StarFitResult
 
 from pyastroimageview.DeviceManager import DeviceManager
@@ -160,6 +162,91 @@ class MeasureHFRWorker(QtCore.QRunnable):
         self.signals.result.emit((self.args, stars))
         self.signals.finished.emit(self.args)
 
+class MeasureHFRWorkerStdin(QtCore.QThread):
+    def __init__(self, job_queue, result_queue):
+        super().__init__()
+        self.job_queue = job_queue
+        self.result_queue = result_queue
+        self.signals = MeasureHFRWorkerSignals()
+        self.args = None
+
+    def set_args(self, args):
+        self.args = args
+
+    @QtCore.pyqtSlot()
+    def run(self):
+        logging.debug('MeasureHFRWorkerStdin: waiting for job in queue')
+        job_dict = self.job_queue.get()
+        logging.info(f'Starting image analysis job_dict={job_dict}')
+
+        # cmd_line to run server and have it listen to command line for requests
+        cmd_line = 'python -u -c "from hfdfocus.measure_hfr_server ' \
+                   + 'import MeasureHFRClientStdin; c=MeasureHFRClientStdin(); c.run()"'
+
+        jobstr = json.dumps(job_dict)
+
+        logging.info(f'jobstr = {jobstr}')
+
+        logging.debug(f'run_program() command line = |{cmd_line}|')
+
+        # seems like we have to do things differently for Windows and Linux
+        if os.name == 'nt':
+            cmd_val = cmd_line
+        elif os.name == 'posix':
+            cmd_val = shlex.split(cmd_line)
+
+        logging.debug(f'run_program() command value = |{cmd_val}|')
+
+        with subprocess.Popen(cmd_val,
+                              stdin=subprocess.PIPE,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.STDOUT,
+                              universal_newlines=True) as ps_proc:
+
+            ps_proc.stdin.write(jobstr)
+            ps_proc.stdin.write('\n')
+            ps_proc.stdin.flush()
+
+            result = None
+            for rawline in ps_proc.stdout:
+                line = rawline.strip()
+                logging.info(line)
+                if line.startswith("{") and line.endswith("}"):
+                    result = line
+                elif line == 'done':
+                    logging.info('done seen!')
+                    ps_proc.stdin.write('exit\n')
+                    ps_proc.stdin.flush()
+                    break
+
+
+
+        # convert result dict to a StarFitResult object
+        rdict = json.loads(result)
+        status = rdict.get('Result')
+        sdict = rdict.get('Value')
+        if status is None or status != 'Success' or sdict is None:
+            stars = None
+        else:
+            logging.info(f'sdict = {sdict}')
+            stars = StarFitResult(
+                                  np.array(sdict['star_cx']),
+                                  np.array(sdict['star_cy']),
+                                  np.array(sdict['star_r1']),
+                                  np.array(sdict['star_r2']),
+                                  np.array(sdict['star_angle']),
+                                  np.array(sdict['star_f']),
+                                  sdict['nstars'],
+                                  sdict['bgest'],
+                                  sdict['noiseest'],
+                                  sdict['width'],
+                                  sdict['height']
+                                 )
+
+        self.signals.result.emit((self.args, stars))
+        self.signals.finished.emit(self.args)
+
+
 class MainWindow(QtGui.QMainWindow):
     class ImageDocument:
         """Represents a loaded image and any analysis/metadata
@@ -219,9 +306,10 @@ class MainWindow(QtGui.QMainWindow):
 #        self.hfr_server.start()
         self.starfit_job_queue = Queue()
         self.starfit_result_queue = Queue()
-        self.hfr_client = MeasureHFRClient(self.starfit_job_queue,
-                                            self.starfit_result_queue)
-        self.hfr_client.start()
+        self.hfr_client = True
+        #self.hfr_client = MeasureHFRClient(self.starfit_job_queue,
+        #                                        self.starfit_result_queue)
+        #self.hfr_client.start()
         #self.hfr_client = None
         self.hfr_cur_widget = None  # when doing a calc set to where result should go
         logging.info(f'HFR client started {self.hfr_client}')
@@ -649,13 +737,16 @@ class MainWindow(QtGui.QMainWindow):
             #worker = self.hfr_server.setup_measure_file_thread(filename, maxstars=100)
             logging.info(f'rdict = {rdict}')
             logging.info('creating worker')
-            worker = MeasureHFRWorker(self.starfit_job_queue,
-                                      self.starfit_result_queue)
+            # worker = MeasureHFRWorker(self.starfit_job_queue,
+            #                           self.starfit_result_queue)
+            worker = MeasureHFRWorkerStdin(self.starfit_job_queue,
+                                           self.starfit_result_queue)
+            self.starfit_job_queue.put(rdict)
             worker.set_args(rdict)
             worker.signals.result.connect(self._measure_hfr_result)
             worker.signals.finished.connect(self._measure_hfr_complete)
             logging.info('running worker')
-            worker.run()
+            worker.start()
             logging.info('star fit started returning to flow')
 
     def _measure_hfr_result(self, result):
