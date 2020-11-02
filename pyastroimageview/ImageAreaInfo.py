@@ -111,21 +111,22 @@ class ImageAreaInfo(QtWidgets.QWidget):
         self.ui.image_median_label.setText(f'{image_doc.median:6.1f}')
 
         if image_doc.hfr_result:
-            self.ui.hfr_in_label.setText(f'{image_doc.hfr_result.hfr_in:4.2f}')
-            self.ui.hfr_out_label.setText(f'{image_doc.hfr_result.hfr_out:4.2f}')
-            self.ui.number_stars_label.setText(f'{image_doc.hfr_result.n_tot}')
-            self.ui.image_median_label.setText(f'{image_doc.hfr_result.bgest:6.1f}')
+            self.ui.hfr_in_label.setText(f'{np.median(image_doc.hfr_result.star_r):4.2f}')
+            #self.ui.hfr_out_label.setText(f'{image_doc.hfr_result.hfr_out:4.2f}')
+            self.ui.number_stars_label.setText(f'{image_doc.hfr_result.nstars}')
+            #self.ui.image_median_label.setText(f'{image_doc.hfr_result.bgest:6.1f}')
             self.ui.image_size_label.setText(f'{image_doc.hfr_result.width} x '
                                              f'{image_doc.hfr_result.height}')
 
             # update histogram plot
             logging.debug('update_info: Start hist calc')
-            hy, hx = np.histogram(image_doc.hfr_result.FWHM_R,
-                                  range=(0, image_doc.hfr_result.hfr_in*2))
+            max_star_r = np.max(image_doc.hfr_result.star_r*2)
+            hy, hx = np.histogram(image_doc.hfr_result.star_r,
+                                  range=(0, max_star_r))
             logging.debug('update_info: End hist calc')
             self.ui.hfr_histogram.plotItem.clear()
             #self.hfr_histogram.plotItem.setLogMode(x=True)
-            self.ui.hfr_histogram.plotItem.vb.setXRange(0, image_doc.hfr_result.hfr_in * 2)
+            self.ui.hfr_histogram.plotItem.vb.setXRange(0, max_star_r)
             logging.debug('update_info: Start hist plot')
             curve = pg.PlotCurveItem(hx, hy, stepMode=True, fillLevel=0, brush=(0, 0, 255, 80))
             self.ui.hfr_histogram.plotItem.addItem(curve)

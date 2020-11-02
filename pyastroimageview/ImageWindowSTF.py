@@ -323,26 +323,26 @@ class ImageWindowSTF(pg.GraphicsLayoutWidget):
 
         Parameters
         ----------
-        hfr_result : MeasureHFRRest
+        hfr_result : MultipleStarFitHFD.StarFitResult
             Result from star detection routine.
         filter : bool
             If True then restrict to values near median of HFR to reject invalid star detections.
         """
 
         if filter:
-            min_cut = np.percentile(hfr_result.FWHM_R, 5)
-            max_cut = np.percentile(hfr_result.FWHM_R, 90)
+            min_cut = np.percentile(hfr_result.star_r, 5)
+            max_cut = np.percentile(hfr_result.star_r, 90)
         else:
             min_cut = 0.0
             max_cut = np.inf
 
         logging.info(f'overlay_stars min_cut={min_cut} max_cut={max_cut}')
-        logging.info(f'overlay_stars; min_hfr = {np.min(hfr_result.FWHM_R)} '
-                     f'max_hfr={np.max(hfr_result.FWHM_R)}')
+        logging.info(f'overlay_stars; min_hfr = {np.min(hfr_result.star_r)} '
+                     f'max_hfr={np.max(hfr_result.star_r)}')
 
-        idx = range(1, len(hfr_result.FWHM_X) + 1)
+        idx = range(1, len(hfr_result.star_cx) + 1)
         ndrawn = 0
-        for i, x, y, r in zip(idx, hfr_result.FWHM_X, hfr_result.FWHM_Y, hfr_result.FWHM_R):
+        for i, x, y, r in zip(idx, hfr_result.star_cx, hfr_result.star_cy, hfr_result.star_r):
 #            logging.info(f'Star #{i} x/r/r -> {x}, {y}, {r}')
 
 #            text = pg.TextItem(f'{r:3.2f}', anchor=(0.5,2.0), border='r')

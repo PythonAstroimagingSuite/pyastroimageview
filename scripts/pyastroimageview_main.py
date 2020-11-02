@@ -25,6 +25,8 @@
 #
 
 import logging
+from queue import Empty as QueueEmpty
+from multiprocessing import Queue
 
 # try to disable requests logging DEBUG
 #import requests
@@ -38,6 +40,9 @@ import logging
 import os
 import math
 import sys
+import time
+import json
+
 from pyastrobackend.BackendConfig import get_backend_for_os
 BACKEND = get_backend_for_os()
 
@@ -63,6 +68,9 @@ from PyQt5 import QtCore, QtWidgets, QtGui
 # not using pystarutils to measure stars any more
 # need to work out a better solution using HFD code in hfdfocus?
 #from pystarutils.measurehfrserver import MeasureHFRServer
+
+from hfdfocus.measure_hfr_server import MeasureHFRClient
+from hfdfocus.MultipleStarFitHFD import StarFitResult
 
 from pyastroimageview.DeviceManager import DeviceManager
 from pyastroimageview.ImageWindowSTF import ImageWindowSTF
@@ -91,6 +99,66 @@ if importlib.util.find_spec('pyastroimageview.build_version'):
     from pyastroimageview.build_version import VERSION
 else:
     VERSION='UNKNOWN'
+
+
+class MeasureHFRWorkerSignals(QtCore.QObject):
+    finished = QtCore.pyqtSignal(object)
+    result = QtCore.pyqtSignal(object)
+
+class MeasureHFRWorker(QtCore.QRunnable):
+    def __init__(self, job_queue, result_queue):
+        super().__init__()
+        self.job_queue = job_queue
+        self.result_queue = result_queue
+        self.signals = MeasureHFRWorkerSignals()
+        self.args = None
+
+    def set_args(self, args):
+        self.args = args
+
+    @QtCore.pyqtSlot()
+    def run(self):
+        logging.info(f'Starting image analysis args={self.args}')
+        self.job_queue.put(self.args)
+        logging.info('waiting on result')
+        while True:
+            logging.info('checking queue')
+            try:
+                result = self.result_queue.get(False)
+            except QueueEmpty:
+                logging.info('empty')
+            else:
+                logging.info('not empty')
+                break
+            time.sleep(1)
+        logging.info('done waiting in main')
+        logging.info('reading result queue')
+        logging.info(f'stars = {result}')
+
+        # convert result dict to a StarFitResult object
+        rdict = json.loads(result)
+        status = rdict.get('Result')
+        sdict = rdict.get('Value')
+        if status is None or status != 'Success' or sdict is None:
+            stars = None
+        else:
+            logging.info(f'sdict = {sdict}')
+            stars = StarFitResult(
+                                  np.array(sdict['star_cx']),
+                                  np.array(sdict['star_cy']),
+                                  np.array(sdict['star_r1']),
+                                  np.array(sdict['star_r2']),
+                                  np.array(sdict['star_angle']),
+                                  np.array(sdict['star_f']),
+                                  sdict['nstars'],
+                                  sdict['bgest'],
+                                  sdict['noiseest'],
+                                  sdict['width'],
+                                  sdict['height']
+                                 )
+
+        self.signals.result.emit((self.args, stars))
+        self.signals.finished.emit(self.args)
 
 class MainWindow(QtGui.QMainWindow):
     class ImageDocument:
@@ -146,11 +214,17 @@ class MainWindow(QtGui.QMainWindow):
         #self.observatory_location = EarthLocation(lat=35.75*u.degree, lon=-78.8*u.degree)
 
         # start HFR Server
-        logging.info('MeasureHFRServer is DISABLED!!!')
+        #logging.info('MeasureHFRServer is DISABLED!!!')
 #        self.hfr_server = MeasureHFRServer()
 #        self.hfr_server.start()
-        self.hfr_server = None
+        self.starfit_job_queue = Queue()
+        self.starfit_result_queue = Queue()
+        self.hfr_client = MeasureHFRClient(self.starfit_job_queue,
+                                            self.starfit_result_queue)
+        self.hfr_client.start()
+        #self.hfr_client = None
         self.hfr_cur_widget = None  # when doing a calc set to where result should go
+        logging.info(f'HFR client started {self.hfr_client}')
 
         self.resize(560, 380)
         self.show()
@@ -561,26 +635,53 @@ class MainWindow(QtGui.QMainWindow):
             imgdoc.fits.save_to_file(filename, overwrite=True)
 
         # FIXME make measure hfr params configurable
-        if self.hfr_server is None:
+        if self.hfr_client is None:
             logging.warning('MeasureHFRServer is DISABLED so image will not be analyzed!')
         else:
-            worker = self.hfr_server.setup_measure_file_thread(filename, maxstars=100)
+            rdict = dict(
+                         filename=filename,
+                         #filename='../test2/SH2-157-m14.0C-gain200-bin_1-300s-Ha-Light-010.fits',
+                         #filename='TestImageForHFR.fits',
+                         #filename='crop_256_1.fits',
+                         request_id=10,
+                         maxstars=100
+                        )
+            #worker = self.hfr_server.setup_measure_file_thread(filename, maxstars=100)
+            logging.info(f'rdict = {rdict}')
+            logging.info('creating worker')
+            worker = MeasureHFRWorker(self.starfit_job_queue,
+                                      self.starfit_result_queue)
+            worker.set_args(rdict)
             worker.signals.result.connect(self._measure_hfr_result)
             worker.signals.finished.connect(self._measure_hfr_complete)
-            self.hfr_server.run_measure_file_thread(worker)
+            logging.info('running worker')
+            worker.run()
+            logging.info('star fit started returning to flow')
 
     def _measure_hfr_result(self, result):
 #        if result:
-        logging.debug(f'measure_hfr result RESULT0:{result[0]}\nRESULT1:{result[1]}')
+        logging.debug(f'measure_hfr result = {result} {type(result)}')
 
-        if not result or (result[1].n_in + result[1].n_out) < 1:
+        if result is None or not isinstance(result, tuple):
+            logging.error(f'_measure_hfr_result: result is None or is not a 2-tuple!')
+            return
+
+        if len(result) != 2:
+            logging.error(f'_measure_hfr_result: result should contain 2 '
+                          'values but contains {len(result}}')
+            return
+
+        args = result[0]
+        stars =result[1]
+
+        if stars is None or stars.nstars < 1:
             logging.error('_measure_hfr_result: no stars found!')
             self.hfr_cur_widget = None
             return
 
         image_widget = self.image_documents[self.hfr_cur_widget].image_widget
-        image_widget.overlay_stars(result[1], filter=True)
-        self.image_documents[self.hfr_cur_widget].hfr_result = result[1]
+        image_widget.overlay_stars(stars, filter=True)
+        self.image_documents[self.hfr_cur_widget].hfr_result = stars
         self.image_area_ui.update_info(self.image_documents[self.hfr_cur_widget])
         self.hfr_cur_widget = None
 
